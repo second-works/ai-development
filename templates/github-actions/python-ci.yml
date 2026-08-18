@@ -32,6 +32,11 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f pyproject.toml ]; then pip install .; fi
 
+      - name: Import check
+        run: |
+          if [ -d app ]; then python -m compileall -q app; fi
+          if [ -d tests ]; then python -m compileall -q tests; fi
+
       - name: Lint
         run: |
           if command -v ruff >/dev/null 2>&1; then ruff check .; else echo 'ruff not installed; skipping'; fi
@@ -42,4 +47,13 @@ jobs:
 
       - name: Test
         run: |
-          if command -v pytest >/dev/null 2>&1; then pytest -q; else echo 'pytest not installed; skipping'; fi
+          if [ -d tests ] && find tests -type f \( -name 'test_*.py' -o -name '*_test.py' \) | grep -q .; then
+            if command -v pytest >/dev/null 2>&1; then
+              pytest -q
+            else
+              echo 'Test files exist but pytest is not installed.'
+              exit 1
+            fi
+          else
+            echo 'Bootstrap stage: no test files yet; skipping pytest.'
+          fi
