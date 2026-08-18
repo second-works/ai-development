@@ -18,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
@@ -55,5 +55,6 @@ jobs:
               exit 1
             fi
           else
-            echo 'Bootstrap stage: no test files yet; skipping pytest.'
+            echo 'Bootstrap stage only: no test files yet; skipping pytest.'
+            echo 'Once the first test is added, pytest must run and pass.'
           fi

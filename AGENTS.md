@@ -24,6 +24,7 @@
 - 公開APIや既存インターフェースを勝手に変更しない。
 - 判断不能な仕様は推測で拡張せず、Issue上の仕様を優先する。
 - 実装とテストが完了したらPRを作成して、そのIssueの作業を終了する。
+- warning / deprecationはテスト成功と別に評価し、V1を止めない場合でも必要に応じて後続メンテナンスIssueへ記録する。
 
 ## Child Issue Quality Gate
 
@@ -58,6 +59,8 @@ Issue化を依頼されたAIは、仮Issueをそのまま登録せず、必要�
 
 依存関係が不明確、または複数Issueが同じ重要ファイルを変更する可能性が高い場合は、推測で並列実装せず人間に確認する。
 
+Dependabot等の自動保守PRは開発本線の子Issueとは別枠として扱う。開発順序を乱さず、必要に応じて本線完了後または適切な保守タイミングで処理する。
+
 ## Issue / PR Rule
 
 実装前にIssueから以下を確認する。
@@ -89,6 +92,18 @@ Issue本文とコードベースに矛盾がある場合は、勝手に仕様を
 12. PR本文に対応Issue、変更内容、テスト結果、CI結果、注意点を記載する。
 13. PR作成後は勝手に次のIssueへ範囲を拡張しない。
 
+## Parent Issue Completion
+
+子IssueのPRが `Closes #<Issue番号>` で自動Closeされても、親Issue本文の子Issueチェックボックスは自動更新されない場合がある。
+
+親IssueをCloseする前に以下を必ず確認する。
+
+1. すべての必要な子IssueがMerge / Close済みか。
+2. 親Issue本文の子Issueチェックボックスを最終状態へ更新したか。
+3. 全体完了条件を実際のPR、CI、セキュリティチェック、手動確認結果と照合したか。
+4. warning / deprecation等の残課題を確認し、必要なら後続メンテナンスIssueへ切り出したか。
+5. 人間が最終確認したか。
+
 ## GitHub Actions CI
 
 各プロジェクトでは、原則として `main` 向けPull RequestでGitHub Actions CIを自動実行する。
@@ -108,6 +123,8 @@ CIでは、技術スタックに応じて以下を可能な範囲で自動検証
 - その他: `templates/github-actions/generic-ci.yml`
 
 各プロジェクトでは選択したテンプレートを `.github/workflows/ci.yml` として配置し、そのプロジェクトの実コマンドに合わせて調整する。
+
+PythonのBootstrap例外は、まだテストファイルが存在しない初期基盤期間だけに限定する。最初のテストが追加された後はpytestが実行・成功することを必須とする。
 
 CIが失敗しているPRは原則mergeしない。
 
@@ -140,7 +157,11 @@ Codex側の自己チェックだけ、GitHub側の自動チェックだけ、の
 
 各プロジェクトでは `.github/dependabot.yml` として配置する。
 
-Dependabotが作成したPRも通常のCIとレビューを通してからmergeする。
+Dependabotが作成したPRは開発本線のIssue番号とは別の保守PRである。PR番号が本線の番号の間に入ることは正常であり、作業順序の根拠にはしない。
+
+Dependabot PRも通常のCIとレビューを通してからmergeする。古いベースで作成されCIが失敗している場合は、最新mainへrebase / updateしてCIを再実行してから判断する。
+
+メジャーバージョン更新ではrelease notesとbreaking changesを確認し、CI成功だけでなくワークフローの用途との互換性も確認する。
 
 ## Secrets
 
@@ -173,6 +194,8 @@ Dependabotが作成したPRも通常のCIとレビューを通してからmerge�
 
 実行できないテストや検証がある場合は、成功したことにせずPR本文に理由を明記する。
 
+warning / deprecationが残る場合はPR本文へ記載し、現Issueで解消しない合理的理由と後続対応の要否を明確にする。
+
 ## PR Description
 
 PRには最低限以下を書く。
@@ -182,6 +205,7 @@ PRには最低限以下を書く。
 - ローカルテスト結果
 - GitHub Actions CI結果
 - セキュリティチェック結果（有効な場合）
+- warning / deprecationの有無
 - 注意点・残課題
 
 可能な場合は `Closes #<Issue番号>` を使用し、PRのmergeとIssueの完了を関連付ける。
