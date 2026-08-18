@@ -172,6 +172,12 @@ Python系プロジェクト向けです。
 
 プロジェクトで使用するpytest、ruff、mypy等に合わせて調整します。
 
+#### Bootstrap例外
+
+新規リポジトリでは最初の基盤Issueより前にテストファイルが0件の場合があります。この状態でpytestをそのまま実行するとCIが失敗することがあるため、標準Pythonテンプレートは**テストファイルが存在しない期間だけ**Bootstrapとしてpytestをskipします。
+
+テストファイルが1件でも作成された後は、pytest未導入やテスト失敗をCI失敗として扱います。これはテスト回避のための例外ではありません。
+
 ### Generic
 
 `generic-ci.yml`
@@ -206,31 +212,36 @@ AGENTS.mdに書いたルールを、GitHub側でも強制します。
 - force push禁止
 - branch削除の制限
 
-これにより、Codexが誤って直接pushしようとしてもGitHub側で防止できます。
+### 標準設定手順
+
+1. リポジトリの `Settings` を開く
+2. `Rules` → `Rulesets`
+3. `New ruleset` → `New branch ruleset`
+4. Ruleset名を `protect-main` にする
+5. Enforcement statusを `Active`
+6. Target branchesで `main` を対象にする
+7. `Require a pull request before merging` をON
+8. `Require status checks to pass before merging` をON
+9. `Block force pushes` をON
+10. `Restrict deletions` をON推奨
+
+CIのrequired status checkは、workflowを一度実行しないと候補に出ない場合があります。その場合は最初のPRでActionsを動かした後、Ruleset設定へ戻ってCI checkを必須化します。
+
+個人開発の初期段階ではRequired approvalsを必須にすると自分でMergeできなくなる場合があるため、まず0件で運用し、必要に応じて後から増やします。
+
+詳細は `templates/github-security/ruleset-guide.md` を参照してください。
 
 ## 10. Dependabot
 
-テンプレート:
-
-`templates/github-security/dependabot.yml`
+テンプレートはプロジェクトのpackage ecosystemに合わせて `.github/dependabot.yml` として配置します。
 
 ### 目的
 
 依存パッケージの更新を継続的に確認します。
 
-新規プロジェクトでは利用しているpackage ecosystemに合わせて設定し、
-
-`.github/dependabot.yml`
-
-として配置します。
-
 不要なecosystemは削除し、更新頻度や対象ディレクトリをプロジェクトに合わせます。
 
 ## 11. Secrets管理
-
-関連資料:
-
-`templates/github-security/secrets-guide.md`
 
 ### 基本原則
 
@@ -244,15 +255,11 @@ Codexへの指示にも秘密情報をコードへ埋め込まないことを含
 
 ## 12. CodeQL
 
-テンプレート:
-
-`templates/github-security/codeql.yml`
+利用可能なリポジトリでは `.github/workflows/codeql.yml` として配置します。
 
 ### 目的
 
 GitHub側でソースコードのセキュリティ問題を静的解析します。
-
-利用可能なリポジトリでは `.github/workflows/codeql.yml` として配置します。
 
 CodeQLは通常のCIとは役割が異なります。
 
@@ -336,7 +343,12 @@ Merge
 - [ ] 子Issueテンプレートを配置
 - [ ] PRテンプレートを配置
 - [ ] 技術スタックに合うActions CIを配置
+- [ ] 初期Bootstrap時にテスト0件でも意図せずCI失敗しないことを確認
+- [ ] 最初のテスト作成後はテスト失敗がCIを確実に失敗させることを確認
 - [ ] Ruleset / Branch protectionを設定
+- [ ] PR経由を必須化
+- [ ] Actions実行後にCI status checkをrequiredに設定
+- [ ] force push禁止を確認
 - [ ] Dependabotを設定
 - [ ] Secrets管理を確認
 - [ ] 利用可能ならSecret scanning / push protectionを有効化
