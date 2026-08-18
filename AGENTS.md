@@ -111,9 +111,54 @@ CIでは、技術スタックに応じて以下を可能な範囲で自動検証
 
 CIが失敗しているPRは原則mergeしない。
 
-可能な場合はGitHubのbranch protection / rulesetでCI status checkを必須化する。
-
 Codexがローカルでテスト済みと報告していても、GitHub Actionsによる再検証を省略しない。
+
+## GitHub Guardrails
+
+GitHub側の強制チェックは [`docs/github-repository-security-baseline.md`](docs/github-repository-security-baseline.md) を標準とする。
+
+新規プロジェクトでは可能な範囲で以下を設定する。
+
+- Ruleset / branch protectionでPR経由を必須化
+- GitHub Actions CIをrequired status checkにする
+- force pushとmainの直接変更を禁止
+- Dependabotを設定
+- SecretsはGitHub Actions Secrets等で管理
+- Secret scanning / push protectionが利用可能なら有効化
+- CodeQL / code scanningが利用可能なら有効化
+
+Codex側の自己チェックだけ、GitHub側の自動チェックだけ、のどちらか一方に依存しない。
+
+## Dependabot
+
+依存関係は技術スタックに応じてDependabotで定期確認する。
+
+標準テンプレート:
+
+- Node.js: `templates/dependabot/dependabot-node.yml`
+- Python: `templates/dependabot/dependabot-python.yml`
+
+各プロジェクトでは `.github/dependabot.yml` として配置する。
+
+Dependabotが作成したPRも通常のCIとレビューを通してからmergeする。
+
+## Secrets
+
+- `.env` をcommitしない。
+- API key / token / passwordをコード、Issue、PR本文へ直接記載しない。
+- GitHub Actionsで必要な秘密情報は原則としてGitHub Actions Secretsから参照する。
+- ログへ秘密情報を出力しない。
+- Secret scanning / push protectionが利用可能な場合は有効化する。
+
+## CodeQL / Code Scanning
+
+利用可能なプロジェクトではCodeQLまたはGitHub code scanningを有効化する。
+
+標準workflow: `templates/github-actions/codeql.yml`
+
+対象言語はプロジェクトに合わせて調整する。
+
+プラン、リポジトリ種別、対象言語等の条件により利用できない場合は、その事実を記録し、通常CIとレビューで補完する。
 
 ## Before PR
 
@@ -136,6 +181,7 @@ PRには最低限以下を書く。
 - 変更内容
 - ローカルテスト結果
 - GitHub Actions CI結果
+- セキュリティチェック結果（有効な場合）
 - 注意点・残課題
 
 可能な場合は `Closes #<Issue番号>` を使用し、PRのmergeとIssueの完了を関連付ける。
@@ -162,10 +208,11 @@ PRには最低限以下を書く。
 - 破壊的変更
 - セキュリティ上重要な判断
 - CI例外の許可
+- セキュリティチェック例外の許可
 - mainへのmerge
 
 ## Standard Codex Instruction
 
 Codexにリポジトリを指定して作業させる場合の基本指示は次のとおりとする。
 
-> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIの結果を確認し、失敗している場合はIssue範囲内で修正してください。依存関係や仕様が不明確な場合は推測で進めず確認してください。
+> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果を確認し、失敗している場合はIssue範囲内で修正してください。依存関係や仕様が不明確な場合は推測で進めず確認してください。
