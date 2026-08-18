@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f pyproject.toml ]; then pip install .; fi
+
+      - name: Lint
+        run: |
+          if command -v ruff >/dev/null 2>&1; then ruff check .; else echo 'ruff not installed; skipping'; fi
+
+      - name: Type check
+        run: |
+          if command -v mypy >/dev/null 2>&1; then mypy .; else echo 'mypy not installed; skipping'; fi
+
+      - name: Test
+        run: |
+          if command -v pytest >/dev/null 2>&1; then pytest -q; else echo 'pytest not installed; skipping'; fi
