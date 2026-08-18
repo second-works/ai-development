@@ -1,12 +1,12 @@
 # Nine標準AI開発フロー
 
-## ChatGPT × GitHub × Codex
+## ChatGPT × GitHub × Codex × GitHub Actions
 
 ## 1. 基本方針
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → テスト → PR → レビュー → 人間確認 → Merge**
+**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → AIレビュー → 人間確認 → Merge**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
@@ -61,13 +61,15 @@ ChatGPTは開発マネージャー兼設計担当として使う。
 - テスト
 - 依存関係
 
+子IssueはGitHub登録前に `docs/issue-quality-check.md` に従って妥当性チェックを行う。
+
 ## 5. Codex実装
 
 Codexには原則として子Issueを1件ずつ渡す。
 
 標準指示：
 
-> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。
+> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIの結果も確認してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。
 
 ## 6. 並列化
 
@@ -87,66 +89,122 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 Codex実装終了後は以下の流れとする。
 
-**Issue → Branch → 実装 → テスト → Commit → PR**
+**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI**
 
 PR本文には最低限以下を書く。
 
 - 対応Issue
 - 変更内容
-- テスト結果
+- ローカルテスト結果
+- GitHub Actions CI結果
 - 注意点・残課題
 
-## 8. レビュー
+## 8. GitHub Actions CI
 
-PR作成後はAIレビューと人間レビューを組み合わせる。
+各プロジェクトでは原則として `main` 向けPull RequestでCIを自動実行する。
+
+技術スタックに応じて、以下を自動検証する。
+
+- dependency install
+- lint
+- type check
+- unit / integration tests
+- build
+
+標準テンプレート：
+
+- `templates/github-actions/node-ci.yml`
+- `templates/github-actions/python-ci.yml`
+- `templates/github-actions/generic-ci.yml`
+
+新規プロジェクト準備時は、技術スタックに合うテンプレートを `.github/workflows/ci.yml` として配置し、実際のコマンドやバージョンに合わせて調整する。
+
+CodexのローカルテストとGitHub Actions CIは二重チェックとして扱う。
+
+CIが失敗しているPRは原則mergeしない。
+
+可能な場合はGitHubのbranch protection / rulesetでCI status checkを必須化する。
+
+## 9. CI失敗時
+
+CIが失敗した場合は以下の順で対応する。
+
+1. 失敗したjob / stepを確認する。
+2. ログから原因を特定する。
+3. Issue範囲内で修正する。
+4. PR branchへ追加commitする。
+5. Actionsの再実行結果を確認する。
+6. 成功するまで完了扱いにしない。
+
+CIを通すためにテストを削除・無効化したり、Issue範囲外の大規模変更を行わない。
+
+## 10. レビュー
+
+CI成功後はAIレビューと人間レビューを組み合わせる。
 
 確認ポイント：
 
 - Issueの要求を満たしているか
 - Issue範囲外の変更がないか
 - テストが十分か
+- GitHub Actions CIが成功しているか
 - セキュリティ問題がないか
 - 不要な依存追加がないか
 - 既存機能への影響がないか
 
 最終mergeは人間が判断する。
 
-## 9. プロジェクト規模
+## 11. プロジェクト規模
 
 ### 小規模
 
-1 Issue → Codex → 1 PR
+1 Issue → Codex → 1 PR → CI → Merge
 
 ### 中規模
 
-親Issue → 3〜8程度の子Issue → 各PR
+親Issue → 3〜8程度の子Issue → 各PR → CI → Merge
 
 ### 大規模
 
-親Issue → Phase分割 → 子Issue → 各PR
+親Issue → Phase分割 → 子Issue → 各PR → CI → Merge
 
 大規模プロジェクトではPhase間の依存関係を明示する。
 
-## 10. 短縮指示
+## 12. 新規リポジトリ準備
+
+新規プロジェクトのリポジトリを作成したら、標準として以下を準備する。
+
+- `AGENTS.md`
+- `.github/ISSUE_TEMPLATE/`
+- `.github/pull_request_template.md`
+- `.github/workflows/ci.yml`
+
+CI workflowはプロジェクトの技術スタックに合わせてテンプレートから選択する。
+
+## 13. 短縮指示
 
 ChatGPTに **「GitHub Issue方式で計画して」** と依頼された場合、原則として以下を作る。
 
 - 親Issue
 - 1 PR単位の子Issue
+- 子Issue妥当性チェック
 - 依存関係
 - 並列/直列判断
 - Codex用指示
 - 完了条件
+- 推奨CI構成
 
 **「Codex実装用にして」** と依頼された場合、各子IssueをCodexがそのまま実行できる粒度まで具体化する。
 
-## 11. 基本原則
+## 14. 基本原則
 
 **ChatGPTは考える。**
 
 **GitHubは仕事を管理する。**
 
 **Codexは実装する。**
+
+**GitHub Actionsは機械的に検証する。**
 
 **PRは品質の関門にする。**
 
