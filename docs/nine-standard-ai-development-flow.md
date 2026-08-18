@@ -6,11 +6,13 @@
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → AIレビュー → 人間確認 → Merge**
+**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → AIレビュー → 人間確認 → Merge**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
 原則は **1子Issue = 1 PR**。
+
+品質保証は、Codex側の自己チェックとGitHub側の強制チェックを二重化する。
 
 ## 2. ChatGPTの役割
 
@@ -69,7 +71,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 標準指示：
 
-> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIの結果も確認してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。
+> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。
 
 ## 6. 並列化
 
@@ -89,7 +91,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 Codex実装終了後は以下の流れとする。
 
-**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI**
+**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → セキュリティチェック**
 
 PR本文には最低限以下を書く。
 
@@ -97,6 +99,7 @@ PR本文には最低限以下を書く。
 - 変更内容
 - ローカルテスト結果
 - GitHub Actions CI結果
+- セキュリティチェック結果（有効な場合）
 - 注意点・残課題
 
 ## 8. GitHub Actions CI
@@ -123,24 +126,67 @@ CodexのローカルテストとGitHub Actions CIは二重チェックとして�
 
 CIが失敗しているPRは原則mergeしない。
 
-可能な場合はGitHubのbranch protection / rulesetでCI status checkを必須化する。
+## 9. GitHub側ガードレール
 
-## 9. CI失敗時
+GitHub側の標準防御は `docs/github-repository-security-baseline.md` に従う。
 
-CIが失敗した場合は以下の順で対応する。
+### Ruleset / Branch Protection
 
-1. 失敗したjob / stepを確認する。
-2. ログから原因を特定する。
+`main` は保護し、可能な範囲で以下を強制する。
+
+- Pull Request経由の変更
+- GitHub Actions CIのrequired status check
+- force push禁止
+- branch deletion禁止
+- mainへの直接push禁止
+
+AIエージェントが誤った操作を試みてもGitHub側で止められる状態を目標とする。
+
+### Dependabot
+
+依存関係更新を定期確認する。
+
+標準テンプレート：
+
+- `templates/dependabot/dependabot-node.yml`
+- `templates/dependabot/dependabot-python.yml`
+
+各プロジェクトでは `.github/dependabot.yml` として配置する。
+
+Dependabot PRも通常のCI・レビューを通してmergeする。
+
+### Secrets
+
+- `.env` をcommitしない
+- API key / token / passwordをコード、Issue、PR本文へ書かない
+- GitHub Actionsで必要な秘密情報はGitHub Actions Secrets等から参照する
+- Secret scanning / push protectionが利用可能なら有効化する
+- ログへの秘密情報出力を避ける
+
+### CodeQL / Code Scanning
+
+利用可能なプロジェクトではCodeQLまたはcode scanningを有効化する。
+
+標準workflow：`templates/github-actions/codeql.yml`
+
+対象言語はプロジェクトに合わせて変更する。利用条件を満たさない場合は、その事実を記録し、CIとレビューで補完する。
+
+## 10. CI / セキュリティチェック失敗時
+
+失敗した場合は以下の順で対応する。
+
+1. 失敗したjob / step / alertを確認する。
+2. ログや検出内容から原因を特定する。
 3. Issue範囲内で修正する。
 4. PR branchへ追加commitする。
-5. Actionsの再実行結果を確認する。
+5. 自動チェックの再実行結果を確認する。
 6. 成功するまで完了扱いにしない。
 
-CIを通すためにテストを削除・無効化したり、Issue範囲外の大規模変更を行わない。
+チェックを通すためにテストやセキュリティ検査を削除・無効化しない。
 
-## 10. レビュー
+## 11. レビュー
 
-CI成功後はAIレビューと人間レビューを組み合わせる。
+自動チェック成功後はAIレビューと人間レビューを組み合わせる。
 
 確認ポイント：
 
@@ -148,29 +194,29 @@ CI成功後はAIレビューと人間レビューを組み合わせる。
 - Issue範囲外の変更がないか
 - テストが十分か
 - GitHub Actions CIが成功しているか
-- セキュリティ問題がないか
+- セキュリティチェックに重大な問題がないか
 - 不要な依存追加がないか
 - 既存機能への影響がないか
 
 最終mergeは人間が判断する。
 
-## 11. プロジェクト規模
+## 12. プロジェクト規模
 
 ### 小規模
 
-1 Issue → Codex → 1 PR → CI → Merge
+1 Issue → Codex → 1 PR → CI / Security → Merge
 
 ### 中規模
 
-親Issue → 3〜8程度の子Issue → 各PR → CI → Merge
+親Issue → 3〜8程度の子Issue → 各PR → CI / Security → Merge
 
 ### 大規模
 
-親Issue → Phase分割 → 子Issue → 各PR → CI → Merge
+親Issue → Phase分割 → 子Issue → 各PR → CI / Security → Merge
 
 大規模プロジェクトではPhase間の依存関係を明示する。
 
-## 12. 新規リポジトリ準備
+## 13. 新規リポジトリ準備
 
 新規プロジェクトのリポジトリを作成したら、標準として以下を準備する。
 
@@ -178,10 +224,15 @@ CI成功後はAIレビューと人間レビューを組み合わせる。
 - `.github/ISSUE_TEMPLATE/`
 - `.github/pull_request_template.md`
 - `.github/workflows/ci.yml`
+- Ruleset / branch protection
+- `.github/dependabot.yml`
+- GitHub Actions Secrets（必要な場合）
+- Secret scanning / push protection（利用可能な場合）
+- CodeQL / code scanning（利用可能な場合）
 
-CI workflowはプロジェクトの技術スタックに合わせてテンプレートから選択する。
+詳細チェックリストは `docs/github-repository-security-baseline.md` を参照する。
 
-## 13. 短縮指示
+## 14. 短縮指示
 
 ChatGPTに **「GitHub Issue方式で計画して」** と依頼された場合、原則として以下を作る。
 
@@ -193,18 +244,21 @@ ChatGPTに **「GitHub Issue方式で計画して」** と依頼された場合�
 - Codex用指示
 - 完了条件
 - 推奨CI構成
+- 推奨GitHubガードレール
 
 **「Codex実装用にして」** と依頼された場合、各子IssueをCodexがそのまま実行できる粒度まで具体化する。
 
-## 14. 基本原則
+## 15. 基本原則
 
 **ChatGPTは考える。**
 
 **GitHubは仕事を管理する。**
 
-**Codexは実装する。**
+**Codexは実装し自己チェックする。**
 
-**GitHub Actionsは機械的に検証する。**
+**GitHub Actionsは機械的に再検証する。**
+
+**GitHub Ruleset / Securityは誤操作と脆弱性を止める。**
 
 **PRは品質の関門にする。**
 
