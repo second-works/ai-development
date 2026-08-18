@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify project CI command
+        run: |
+          if [ -x ./scripts/ci.sh ]; then
+            ./scripts/ci.sh
+          elif [ -f Makefile ] && grep -qE '^ci:' Makefile; then
+            make ci
+          else
+            echo 'No CI entrypoint found.'
+            echo 'Provide ./scripts/ci.sh or a Makefile target named ci.'
+            exit 1
+          fi
