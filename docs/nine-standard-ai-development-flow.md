@@ -102,6 +102,16 @@ PR本文には最低限以下を書く。
 - セキュリティチェック結果（有効な場合）
 - 注意点・残課題
 
+### Merge後のbranch管理
+
+PRをMergeした後は、役目を終えたIssue用の短命head branchを原則削除する。
+
+新規リポジトリでは、SettingsのPull Requests設定にある `Automatically delete head branches` をONにし、Merge済みPRのIssue用head branchが自動削除されるようにする。
+
+`main` などの保護対象branchは削除禁止を維持する。自動削除の対象はMerge済みPRのIssue用head branchであり、保護対象branchとは区別して扱う。
+
+次のIssueに着手するときは、最新の `main` から新しいIssue用branchを作成する。
+
 ## 8. GitHub Actions CI
 
 各プロジェクトでは原則として `main` 向けPull RequestでCIを自動実行する。
@@ -137,7 +147,7 @@ GitHub側の標準防御は `docs/github-repository-security-baseline.md` に従
 - Pull Request経由の変更
 - GitHub Actions CIのrequired status check
 - force push禁止
-- branch deletion禁止
+- `main` など保護対象branchの削除禁止
 - mainへの直接push禁止
 
 AIエージェントが誤った操作を試みてもGitHub側で止められる状態を目標とする。
@@ -225,6 +235,7 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 - `.github/pull_request_template.md`
 - `.github/workflows/ci.yml`
 - Ruleset / branch protection
+- Merge済みPRのhead branch自動削除（`Automatically delete head branches`）
 - `.github/dependabot.yml`
 - GitHub Actions Secrets（必要な場合）
 - Secret scanning / push protection（利用可能な場合）

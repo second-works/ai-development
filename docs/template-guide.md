@@ -29,6 +29,7 @@
 7. Secrets管理方針
 8. 利用可能ならCodeQL
 9. Ruleset / Branch protection
+10. `Automatically delete head branches` の有効化
 
 設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。
 
@@ -225,7 +226,9 @@ AGENTS.mdに書いたルールを、GitHub側でも強制します。
 - Pull Requestを必須化
 - GitHub Actions CI成功を必須化
 - force push禁止
-- branch削除の制限
+- `main` など保護対象branchの削除を禁止
+
+Rulesetの削除禁止は `main` などの保護対象branchに適用します。Issue用の短命head branchは、リポジトリ設定の `Automatically delete head branches` をONにして、PR Merge後に原則自動削除します。
 
 ### 標準設定手順
 
@@ -346,6 +349,10 @@ AIレビュー
     ↓
 Merge
     ↓
+Merge済みIssue用branchを自動削除
+    ↓
+最新mainから次のIssue用branchを作成
+    ↓
 次の子Issue
 ```
 
@@ -361,6 +368,8 @@ Merge
 - [ ] 初期Bootstrap時にテスト0件でも意図せずCI失敗しないことを確認
 - [ ] 最初のテスト作成後はテスト失敗がCIを確実に失敗させることを確認
 - [ ] Ruleset / Branch protectionを設定
+- [ ] `Automatically delete head branches` をONにする
+- [ ] `main` など保護対象branchの削除禁止とIssue用短命branchの自動削除を確認
 - [ ] PR経由を必須化
 - [ ] Actions実行後にCI status checkをrequiredに設定
 - [ ] force push禁止を確認
