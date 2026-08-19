@@ -55,7 +55,9 @@ GitHub Actionsを一度実行してから、CI workflowのstatus checkを必須�
 
 ### Restrict deletions
 
-main branchを誤って削除しないよう有効化を推奨する。
+`main` branchを誤って削除しないよう有効化を推奨する。これは保護対象branchの削除を制限する設定であり、Issue用の短命head branchを自動削除する設定とは別である。
+
+リポジトリのPull Requests設定で `Automatically delete head branches` をONにし、Merge済みPRのIssue用head branchは原則自動削除する。
 
 ### Require conversation resolution before merging
 
@@ -93,6 +95,7 @@ Required approvals: 0（初期個人開発）
 Require status checks: ON
 Block force pushes: ON
 Restrict deletions: ON
+Automatically delete head branches: ON
 Conversation resolution: 推奨
 ```
 
