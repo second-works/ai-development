@@ -12,10 +12,12 @@ Nine標準AI開発フローで新規リポジトリを準備するときのGitHu
 - GitHub Actions CIの成功を必須化
 - CodeQLを利用する場合はセキュリティチェックも確認する
 - force push禁止
-- branch deletion禁止
+- `main` など保護対象branchの削除禁止
 - merge前に最新baseとの整合性を確認
 
 AGENTS.mdのルールだけに依存せず、GitHub側でも強制する。
+
+Issue用の短命head branchは保護対象branchとは区別する。新規リポジトリでは `Automatically delete head branches` をONにし、Merge済みPRのIssue用head branchを原則自動削除する。
 
 ## 2. Dependabot
 
@@ -77,6 +79,8 @@ Codexが見落としてもGitHubで止め、GitHub設定だけでは判断でき
 - [ ] `.github/workflows/ci.yml` を配置
 - [ ] Ruleset / branch protectionを設定
 - [ ] `.github/dependabot.yml` を配置
+- [ ] `Automatically delete head branches` をONにする
+- [ ] `main` など保護対象branchの削除禁止とIssue用短命branchの自動削除を確認
 - [ ] GitHub Actions Secretsを必要に応じて登録
 - [ ] Secret scanning / push protectionの利用可否を確認
 - [ ] CodeQLの利用可否を確認し、有効なら設定
