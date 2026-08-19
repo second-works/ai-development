@@ -235,7 +235,8 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 - `.github/pull_request_template.md`
 - `.github/workflows/ci.yml`
 - Ruleset / branch protection
-- Merge済みPRのhead branch自動削除（`Automatically delete head branches`）- `.github/dependabot.yml`
+- Merge済みPRのhead branch自動削除（`Automatically delete head branches`）
+- `.github/dependabot.yml`
 - GitHub Actions Secrets（必要な場合）
 - Secret scanning / push protection（利用可能な場合）
 - CodeQL / code scanning（利用可能な場合）
