@@ -79,6 +79,22 @@ Dependabot等の自動保守PRは開発本線の子Issueとは別枠として扱
 
 Issue本文とコードベースに矛盾がある場合は、勝手に仕様を変更せず問題を明示する。
 
+## RAG Architecture Standard
+
+RAGを新規構築・変更する場合は [`docs/architecture/rag-guidelines.md`](docs/architecture/rag-guidelines.md) を標準設計指針として参照する。
+
+原則として最小構成から開始し、検索品質・回答品質・運用コストを評価してから上位Phaseへ進む。高機能であることだけを理由にRAPTORやGraphRAG等を先行導入しない。
+
+RAGを採用する各プロジェクトでは、原則として `docs/architecture/rag-design.md` を作成し、少なくとも次を記録する。
+
+- 採用Phase
+- 採用するRetriever / Reranker / Metadata構成
+- 未採用Phaseと理由
+- 品質評価指標
+- 標準から逸脱する場合の理由
+
+本番RAGでは、引用・出典追跡・根拠整合性・ハルシネーション検証・権限制御を要件に応じて評価対象とする。
+
 ## Test Design / Safe Test Deletion
 
 テストは「数を増やすこと」ではなく、「必要な検証責務を適切な層で保証すること」を目的とする。
