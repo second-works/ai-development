@@ -1,6 +1,6 @@
 ---
 name: Child Issue
-description: 1 PR単位でCodexに実装させる子Issue
+about: 1 PR単位でCodexに実装させる子Issue
 title: "[Task] "
 labels: []
 assignees: []

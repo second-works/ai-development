@@ -1,6 +1,6 @@
 ---
 name: Parent Issue
-description: 開発テーマ全体を管理する親Issue
+about: 開発テーマ全体を管理する親Issue
 title: "[Project] "
 labels: []
 assignees: []
