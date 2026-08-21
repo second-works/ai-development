@@ -14,15 +14,19 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 4. Codexで実装
 5. テスト実行
 6. PR作成
-7. Codexレビュー
-8. 人間が最終確認
-9. Merge
+7. GitHub Actions CI
+8. Codex Code Review
+9. P0 / P1 / P2指摘があれば修正 → CI再実行 → 再レビュー
+10. 人間が最終確認
+11. Merge
+
+CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
 
 詳細は [`docs/nine-standard-ai-development-flow.md`](docs/nine-standard-ai-development-flow.md) を参照してください。
 
 ## 主要ファイル
 
-- `AGENTS.md` — AIエージェント共通ルール
+- `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール
 - `docs/nine-standard-ai-development-flow.md` — 標準開発フロー
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート
@@ -33,5 +37,7 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 - ChatGPTは考える
 - GitHubは仕事を管理する
 - Codexは実装する
+- GitHub Actionsは機械的に検証する
+- Codex Code ReviewはPR差分をレビューする
 - PRを品質の関門にする
 - 人間が仕様とマージを決める
