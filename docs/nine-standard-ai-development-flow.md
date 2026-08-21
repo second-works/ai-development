@@ -6,13 +6,13 @@
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → AIレビュー → 人間確認 → Merge**
+**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 必要なら修正・再CI・再レビュー → 人間確認 → Merge**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
 原則は **1子Issue = 1 PR**。
 
-品質保証は、Codex側の自己チェックとGitHub側の強制チェックを二重化する。
+品質保証は、Codex側の自己チェック、GitHub Actionsによる機械検証、Codex Code Review、人間の最終判断を組み合わせる。
 
 ## 2. ChatGPTの役割
 
@@ -71,7 +71,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 標準指示：
 
-> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。
+> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。CI成功後はCodex Code Reviewを実行し、P0 / P1 / P2指摘があればIssue範囲内で修正してCIとレビューを再実行してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。最終Mergeは人間が判断します。
 
 ## 6. 並列化
 
@@ -91,7 +91,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 Codex実装終了後は以下の流れとする。
 
-**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → セキュリティチェック**
+**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review**
 
 PR本文には最低限以下を書く。
 
@@ -100,6 +100,7 @@ PR本文には最低限以下を書く。
 - ローカルテスト結果
 - GitHub Actions CI結果
 - セキュリティチェック結果（有効な場合）
+- Codex Code Review結果
 - 注意点・残課題
 
 ### Merge後のbranch管理
@@ -136,7 +137,54 @@ CodexのローカルテストとGitHub Actions CIは二重チェックとして�
 
 CIが失敗しているPRは原則mergeしない。
 
-## 9. GitHub側ガードレール
+## 9. Codex Code Review
+
+Codex Code Reviewを、CI成功後・人間の最終確認前の標準品質ゲートとして使う。
+
+### 起動方法
+
+1. CodexのAutomatic reviewsが利用可能なリポジトリでは、自動レビューを原則有効化する。
+2. Automatic reviewsが無効または利用できない場合は、PR上で `@codex review` を依頼する。
+3. 実装担当Codexの自己レビューだけで完了扱いにせず、PR単位のCode Review結果を確認する。
+
+### レビュー観点
+
+- Issueの要求・Acceptance Criteriaを満たしているか
+- Issue範囲外の変更がないか
+- 明確なバグ、回帰、境界値・異常系の見落としがないか
+- テストが十分か
+- 認証・認可、入力検証、秘密情報などのセキュリティ問題がないか
+- 不要な依存追加や破壊的変更がないか
+- テスト削除・skip・例外握りつぶしで品質ゲートを回避していないか
+
+### SeverityとMerge条件
+
+- **P0 / P1**: Merge禁止。必ず修正する。
+- **P2**: 原則としてMerge前に修正する。残す場合は人間が理由を確認して明示判断する。
+- **P3**: 改善候補。原則としてMerge阻害条件にはしない。必要なら後続Issueへ切り出す。
+
+標準Merge条件：
+
+- GitHub Actions CI成功
+- 利用可能なセキュリティチェック成功、または例外を人間が明示判断
+- Codex Code ReviewのP0 / P1が0件
+- P2が0件、または残置理由を人間が明示判断
+- 人間の最終確認完了
+
+### 修正ループ
+
+CodexレビューでP0 / P1 / P2が出た場合：
+
+1. 指摘がIssue範囲内か確認する。
+2. Issue範囲内ならCodexへ修正を依頼する。PRコメントから実行可能な場合は `@codex` への修正指示を使ってよい。
+3. 修正後にローカルテストとGitHub Actions CIを再実行する。
+4. CI成功後にCodex Code Reviewを再実行する。
+5. 前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
+6. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、Issue範囲外へ広がる場合は自律修正を停止し人間へ戻す。
+
+AIレビューは補助であり、自動Mergeには使わない。最終Merge判断は人間が行う。
+
+## 10. GitHub側ガードレール
 
 GitHub側の標準防御は `docs/github-repository-security-baseline.md` に従う。
 
@@ -181,7 +229,7 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 
 対象言語はプロジェクトに合わせて変更する。利用条件を満たさない場合は、その事実を記録し、CIとレビューで補完する。
 
-## 10. CI / セキュリティチェック失敗時
+## 11. CI / セキュリティチェック失敗時
 
 失敗した場合は以下の順で対応する。
 
@@ -194,9 +242,9 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 
 チェックを通すためにテストやセキュリティ検査を削除・無効化しない。
 
-## 11. レビュー
+## 12. レビュー
 
-自動チェック成功後はAIレビューと人間レビューを組み合わせる。
+自動チェック成功後はCodex Code Reviewと人間レビューを組み合わせる。
 
 確認ポイント：
 
@@ -205,28 +253,29 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 - テストが十分か
 - GitHub Actions CIが成功しているか
 - セキュリティチェックに重大な問題がないか
+- Codex Code ReviewのP0 / P1 / P2が解消されているか
 - 不要な依存追加がないか
 - 既存機能への影響がないか
 
 最終mergeは人間が判断する。
 
-## 12. プロジェクト規模
+## 13. プロジェクト規模
 
 ### 小規模
 
-1 Issue → Codex → 1 PR → CI / Security → Merge
+1 Issue → Codex → 1 PR → CI / Security → Codex Review → Merge
 
 ### 中規模
 
-親Issue → 3〜8程度の子Issue → 各PR → CI / Security → Merge
+親Issue → 3〜8程度の子Issue → 各PR → CI / Security → Codex Review → Merge
 
 ### 大規模
 
-親Issue → Phase分割 → 子Issue → 各PR → CI / Security → Merge
+親Issue → Phase分割 → 子Issue → 各PR → CI / Security → Codex Review → Merge
 
 大規模プロジェクトではPhase間の依存関係を明示する。
 
-## 13. 新規リポジトリ準備
+## 14. 新規リポジトリ準備
 
 新規プロジェクトのリポジトリを作成したら、標準として以下を準備する。
 
@@ -234,6 +283,7 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 - `.github/ISSUE_TEMPLATE/`
 - `.github/pull_request_template.md`
 - `.github/workflows/ci.yml`
+- Codex Code Review（Automatic reviewsが利用可能なら有効化）
 - Ruleset / branch protection
 - Merge済みPRのhead branch自動削除（`Automatically delete head branches`）
 - `.github/dependabot.yml`
@@ -243,7 +293,7 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 
 詳細チェックリストは `docs/github-repository-security-baseline.md` を参照する。
 
-## 14. 短縮指示
+## 15. 短縮指示
 
 ChatGPTに **「GitHub Issue方式で計画して」** と依頼された場合、原則として以下を作る。
 
@@ -255,11 +305,12 @@ ChatGPTに **「GitHub Issue方式で計画して」** と依頼された場合�
 - Codex用指示
 - 完了条件
 - 推奨CI構成
+- 推奨Codex Code Review構成
 - 推奨GitHubガードレール
 
 **「Codex実装用にして」** と依頼された場合、各子IssueをCodexがそのまま実行できる粒度まで具体化する。
 
-## 15. 基本原則
+## 16. 基本原則
 
 **ChatGPTは考える。**
 
@@ -268,6 +319,8 @@ ChatGPTに **「GitHub Issue方式で計画して」** と依頼された場合�
 **Codexは実装し自己チェックする。**
 
 **GitHub Actionsは機械的に再検証する。**
+
+**Codex Code ReviewはPR差分を独立した品質ゲートとして確認する。**
 
 **GitHub Ruleset / Securityは誤操作と脆弱性を止める。**
 
