@@ -21,6 +21,15 @@ Closes #
 - [ ] GitHub Actions CI成功
 - [ ] 利用可能なセキュリティチェック成功
 
+# Codex Code Review
+
+- [ ] Codex Code Review実行済み
+- [ ] P0 / P1 指摘なし、またはすべて解消済み
+- [ ] P2 指摘なし、または人間が残置理由を確認済み
+- [ ] 修正を行った場合、CI再実行・再レビュー済み
+
+<!-- Automatic reviewsが無効な場合はPR上で @codex review を依頼する -->
+
 # Issue範囲の確認
 
 - [ ] Issueで要求された範囲に収まっている
