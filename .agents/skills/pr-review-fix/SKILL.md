@@ -16,7 +16,7 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 - `main` / default branchへ直接pushしない。
 - 対象PRのhead branch以外へpushしない。
 - P0 / P1 / P2だけをIssue範囲内で修正する。P3は原則として修正必須にしない。
-- 同じ問題が3回以上繰り返す、仕様判断が必要、Issue範囲外へ広がる、branch/SHAが一致しない場合は停止して人間へ戻す。
+- 同じ問題が3回以上繰り返す、仕様判断が必要、Issue範囲外へ広がる、branch/SHAが一致しない場合は停止して人間へ戻す。人間が明示的に継続を指示した場合だけ再開する。
 - Mergeは絶対に実行しない。最終Mergeは人間が判断する。
 
 ## 前提
@@ -66,7 +66,8 @@ prepare scriptは次を確認する。
 - cross-repository PRではない
 - head branchがdefault branchではない
 - Git作業ツリーがclean
-- `origin` のfetch URLとpush URLが同じGitHub repositoryを指す
+- `origin` のfetch URLと**全push URL**が同一のGitHub repository identityを指す
+- repository identityは `HOST/owner/repo` で比較し、GitHub.com / GitHub Enterpriseのhost違いを見落とさない
 - GitHub操作対象repositoryをその検証済み`origin`から固定
 - GitHub上のhead branch/head SHAを取得
 - remote-tracking refを明示的なrefspecで最新化
@@ -127,7 +128,7 @@ EXPECTED_SHA="$(git rev-parse HEAD)"
 git push origin "HEAD:refs/heads/$HEAD_BRANCH"
 ```
 
-prepare scriptで`origin`のfetch/push repository一致を確認済みであることを前提とする。`HEAD_BRANCH`以外へpushしてはいけない。
+prepare scriptで`origin`のfetch URLと全push URLが同じ `HOST/owner/repo` を指すことを確認済みであることを前提とする。`HEAD_BRANCH`以外へpushしてはいけない。
 
 ### 6. GitHub PR head SHAを照合する
 
@@ -178,7 +179,7 @@ test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
 ### 8. CI / セキュリティチェックを対象SHAで待機・確認する
 
-push直後にcheck runがまだ登録されていないケースを考慮し、`EXPECTED_SHA`に対するcheck runs/statusesを一定時間pollする。
+push直後にcheck runがまだ登録されていないケースや、複数workflow / 後発jobが時間差で登録されるケースを考慮し、`EXPECTED_SHA`に対するcheck runs/statusesをpollする。
 
 ```bash
 bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA"
@@ -189,7 +190,9 @@ bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA"
 - `EXPECTED_SHA` のcheck runs/statusesが出現するまでgrace期間待つ
 - queued / in_progress / pending中は待機する
 - failure / error / cancelled / timed_out等は失敗として停止する
-- すべて成功・neutral・skipped等の許容終了状態になった場合だけ成功扱いにする
+- 全checkが許容終了状態になっても即終了せず、**check/status集合と結果が一定時間変化しない安定期間**を待つ
+- 安定期間中に後発checkが追加されたりpendingが戻った場合は安定判定をリセットする
+- 安定期間を通過した場合だけ `CHECKS_PASSED_STABLE` とする
 - grace期間後もcheck/statusが0件なら `NO_CHECKS_OBSERVED` として明示報告する
 
 必要に応じてAPI結果を追加確認する。
