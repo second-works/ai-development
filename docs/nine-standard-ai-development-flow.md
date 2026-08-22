@@ -71,7 +71,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 標準指示：
 
-> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。CI成功後はCodex Code Reviewを実行し、P0 / P1 / P2指摘があればIssue範囲内で修正してCIとレビューを再実行してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。最終Mergeは人間が判断します。
+> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。CI成功後はCodex Code Reviewを実行し、P0 / P1 / P2指摘があればIssue範囲内で修正し、修正後にローカルテスト（tests / lint / type check / build）、GitHub Actions CI、利用可能なセキュリティチェックを再実行してからCodex Code Reviewを再実行してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。最終Mergeは人間が判断します。
 
 ## 6. 並列化
 
