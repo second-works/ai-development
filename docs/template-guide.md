@@ -171,7 +171,7 @@ PRテンプレートには、修正時の対象PR番号、head branch、修正�
 2. P0 / P1 / P2の修正は `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをCodex Desktop / Work等でチェックアウトして行う。
 3. 修正前にPR番号・head branch・head SHAを確認する。
 4. 同じhead branchへcommit / pushし、新しいPRを作らず既存PRを再利用する。
-5. GitHub上でhead SHAが更新されたことを確認する。SHAを確認できない、または更新されていない場合は再検証へ進まない。
+5. pushした修正コミットSHAを記録し、GitHub上の同じPRのhead branchとhead SHAがそのSHAと一致することを確認する。SHAを確認できない、更新されていない、または一致しない場合は再検証へ進まない。
 6. 更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証する。
 7. AIはMergeせず、人間が最終Mergeを判断する。
 
