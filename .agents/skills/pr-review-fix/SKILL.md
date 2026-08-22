@@ -172,29 +172,49 @@ bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
 
 ### 9. 更新後headへ再レビュー依頼
 
-実改行を含む本文を投稿する。
+今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、**再レビュー依頼コメント自身のGitHub comment IDを取得して基準点にする**。
 
 ```bash
-gh pr comment <PR番号> --repo "$REPO" --body-file - <<EOF
+HOST="${REPO%%/*}"
+REPO_PATH="${REPO#*/}"
+REVIEW_REQUEST_BODY="$(cat <<EOF
 更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。
 
 @codex review
 EOF
+)"
+
+REVIEW_REQUEST_COMMENT_ID="$(
+  gh api --hostname "$HOST" \
+    --method POST \
+    "repos/$REPO_PATH/issues/<PR番号>/comments" \
+    -f body="$REVIEW_REQUEST_BODY" \
+    --jq '.id'
+)"
+
+test -n "$REVIEW_REQUEST_COMMENT_ID"
 ```
 
 ### 10. 再レビュー完了を待つ
 
 ```bash
-bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" "$REPO" <PR番号> "$EXPECTED_SHA"
+bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
+  "$REPO" <PR番号> "$EXPECTED_SHA" "$REVIEW_REQUEST_COMMENT_ID"
 ```
 
-このscriptも `REPO` をhostとpathへ分離し、`gh api --hostname` とpaginationを使う。
+このscriptは次を保証する。
+
+- `REPO` をhostとpathへ分離し、`gh api --hostname` とpaginationを使う
+- `Reviewed commit` が `EXPECTED_SHA` と一致する
+- **`REVIEW_REQUEST_COMMENT_ID` より後に作成されたCodex結果だけを今回の再レビュー完了として受理する**
+- 同じSHAに対する古い自動レビュー/再レビュー結果は完了判定に使わない
+- 新しいP0/P1/P2 inline指摘の有無を確認する
+
+結果:
 
 - `STATUS=REVIEW_PASSED`: 次へ
 - `STATUS=REVIEW_CHANGES_REQUIRED`: 同じ修正ループへ戻る
 - timeout: 再レビュー待ちとして停止
-
-reviewed commit = `EXPECTED_SHA` であること、新しいP0/P1/P2がないことを確認する。
 
 ### 11. 最終SHA再照合
 
@@ -207,7 +227,7 @@ CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを
 
 ### 12. 最終報告
 
-最低限、PR番号、repository、head branch、修正前後SHA、push SHA、修正したP0/P1/P2、local test、CI/security、reviewed commit、未解決指摘、最終SHA照合結果を報告する。
+最低限、PR番号、repository、head branch、修正前後SHA、push SHA、修正したP0/P1/P2、local test、CI/security、再レビュー依頼comment ID、reviewed commit、未解決指摘、最終SHA照合結果を報告する。
 
 最後に「最終Mergeは人間判断」と明記して停止する。
 
