@@ -2,11 +2,11 @@
 set -euo pipefail
 
 if [[ $# -lt 2 || $# -gt 5 ]]; then
-  echo "Usage: $0 <repo> <expected-sha> [timeout-seconds] [no-checks-grace-seconds] [stability-seconds]" >&2
+  echo "Usage: $0 <repo-identity> <expected-sha> [timeout-seconds] [no-checks-grace-seconds] [stability-seconds]" >&2
   exit 2
 fi
 
-REPO="$1"
+REPO_IDENTITY="$1"
 EXPECTED_SHA="$2"
 TIMEOUT="${3:-300}"
 NO_CHECKS_GRACE="${4:-60}"
@@ -20,6 +20,13 @@ command -v gh >/dev/null 2>&1 || { echo "ERROR: gh not found" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exit 1; }
 gh auth status >/dev/null 2>&1 || { echo "ERROR: gh authentication is not available" >&2; exit 1; }
 
+if [[ "$REPO_IDENTITY" != */*/* ]]; then
+  echo "ERROR: repository identity must be HOST/owner/repo" >&2
+  exit 1
+fi
+HOST="${REPO_IDENTITY%%/*}"
+REPO_PATH="${REPO_IDENTITY#*/}"
+
 TMPDIR_RUN="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-checks.XXXXXX")"
 trap 'rm -rf "$TMPDIR_RUN"' EXIT
 
@@ -27,15 +34,30 @@ while :; do
   NOW="$(date +%s)"
   ELAPSED=$((NOW - START))
 
-  gh api "repos/$REPO/commits/$EXPECTED_SHA/check-runs?per_page=100" >"$TMPDIR_RUN/check-runs.json"
-  gh api "repos/$REPO/commits/$EXPECTED_SHA/status" >"$TMPDIR_RUN/status.json"
+  gh api --hostname "$HOST" --paginate --slurp \
+    "repos/$REPO_PATH/commits/$EXPECTED_SHA/check-runs?per_page=100" \
+    >"$TMPDIR_RUN/check-runs.json"
+  gh api --hostname "$HOST" --paginate --slurp \
+    "repos/$REPO_PATH/commits/$EXPECTED_SHA/status?per_page=100" \
+    >"$TMPDIR_RUN/status.json"
 
   RESULT="$(python3 - "$TMPDIR_RUN/check-runs.json" "$TMPDIR_RUN/status.json" <<'PY'
 import json, sys, hashlib
+
 with open(sys.argv[1], encoding='utf-8') as f:
-    checks = json.load(f).get('check_runs', [])
+    check_pages = json.load(f)
 with open(sys.argv[2], encoding='utf-8') as f:
-    statuses = json.load(f).get('statuses', [])
+    status_pages = json.load(f)
+
+checks = []
+for page in check_pages:
+    if isinstance(page, dict):
+        checks.extend(page.get('check_runs', []))
+
+statuses = []
+for page in status_pages:
+    if isinstance(page, dict):
+        statuses.extend(page.get('statuses', []))
 
 ok_conclusions = {'success', 'neutral', 'skipped'}
 failed = []
@@ -45,7 +67,7 @@ for r in checks:
     name = r.get('name') or '<unnamed-check>'
     status = r.get('status')
     conclusion = r.get('conclusion')
-    items.append(('check', name, status or '', conclusion or ''))
+    items.append(('check', str(r.get('id') or ''), name, status or '', conclusion or ''))
     if status != 'completed':
         pending.append(name)
     elif conclusion not in ok_conclusions:
@@ -53,7 +75,7 @@ for r in checks:
 for s in statuses:
     name = s.get('context') or '<unnamed-status>'
     state = s.get('state')
-    items.append(('status', name, state or '', ''))
+    items.append(('status', str(s.get('id') or ''), name, state or '', ''))
     if state == 'pending':
         pending.append(name)
     elif state != 'success':
@@ -97,7 +119,6 @@ PY
       exit 0
     fi
   else
-    # pendingが戻った、またはcheck集合がまだない場合は安定判定をリセットする。
     STABLE_SINCE=""
     LAST_SIGNATURE="$SIGNATURE"
   fi
