@@ -251,9 +251,11 @@ CodexレビューでP0 / P1 / P2が見つかった場合は、次の順で対応
 4. 指摘がIssue範囲内なら既存PRのhead branch上で修正し、同じhead branchへcommit / pushする。新しいPRを作らず、既存PRを再利用する。
 5. pushした修正コミットのSHAを確認し、GitHub上の同じPRのhead branchとhead SHAが、そのpushしたコミットSHAと一致することを確認する。単に修正前後でSHAが異なるだけでは完了扱いにしない。
 6. head branchまたはSHAを確認できない、pushした修正コミットSHAとGitHub上のPR head SHAが一致しない、またはSHAが更新されていない場合は、ローカルテスト、CI、セキュリティチェック、再レビューへ進まず停止して人間に確認を求める。
-7. head SHAの更新確認後に、次の順で更新後のheadを再検証する: ローカルテスト（tests / lint / type check / build） → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review`。
-8. 更新後のheadに対する再レビューで前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
-9. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
+7. head SHAの更新確認後、修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象に次の順で再検証する: ローカルテスト（tests / lint / type check / build） → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review`。
+8. ローカルテスト、CI、セキュリティチェック、再レビューの各結果が、記録した同じ検証対象SHAに対するものか確認する。
+9. 再検証完了時に、GitHub上のPR head SHAが、pushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認する。不一致の場合は完了扱いにせず停止して人間に確認を求める。
+10. 更新後のheadに対する再レビューで前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
+11. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
 
 AIレビューは品質判断を補助するものであり、AI自身にMerge権限を委譲しない。最終Mergeは必ず人間が判断する。
 
@@ -372,4 +374,4 @@ PRには最低限以下を書く。
 
 Codexにリポジトリを指定して作業させる場合の基本指示は次のとおりとする。
 
-> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果を確認し、失敗している場合はIssue範囲内で修正してください。CI成功後は `@codex review` をレビュー専用で実行し、P0 / P1 / P2指摘があれば `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして修正してください。修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / pushした後、pushした修正コミットSHAとGitHub上の同じPRのhead SHAが一致することを確認してください。head branchまたはSHAを確認できない、SHAが更新されていない、またはpushした修正コミットSHAとPR head SHAが一致しない場合は再テスト・CI・セキュリティチェック・再レビューへ進まず人間に確認してください。更新後のheadに対してローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証し、新しいPRを作らず既存PRを再利用してください。最終Mergeは人間が判断します。
+> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果を確認し、失敗している場合はIssue範囲内で修正してください。CI成功後は `@codex review` をレビュー専用で実行し、P0 / P1 / P2指摘があれば `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして修正してください。修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / pushした後、pushした修正コミットSHAとGitHub上の同じPRのhead SHAが一致することを確認してください。head branchまたはSHAを確認できない、SHAが更新されていない、またはpushした修正コミットSHAとPR head SHAが一致しない場合は再テスト・CI・セキュリティチェック・再レビューへ進まず人間に確認してください。修正コミットSHAを検証対象SHAとして記録し、更新後のheadに対してローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証してください。各チェックの対象SHAを記録し、再検証完了時にGitHub上のPR head SHAがpushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認してください。不一致の場合は完了扱いにせず人間に確認してください。新しいPRを作らず既存PRを再利用し、最終Mergeは人間が判断します。
