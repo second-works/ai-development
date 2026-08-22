@@ -10,6 +10,7 @@ PR="$1"
 
 command -v git >/dev/null 2>&1 || { echo "ERROR: git not found" >&2; exit 1; }
 command -v gh >/dev/null 2>&1 || { echo "ERROR: gh not found" >&2; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exit 1; }
 
 gh auth status >/dev/null 2>&1 || { echo "ERROR: gh authentication is not available" >&2; exit 1; }
 
@@ -22,9 +23,9 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 DEFAULT_BRANCH="$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')"
-
 PR_JSON="$(gh pr view "$PR" --json number,state,headRefName,headRefOid,baseRefName,isCrossRepository,url)"
-STATE="$(printf '%s' "$PR_JSON" | gh api --method POST /graphql -f query='query($v:String!){__typename}' -f v=x >/dev/null 2>&1; printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"])')"
+
+STATE="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"])')"
 HEAD_BRANCH="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefName"])')"
 HEAD_SHA="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefOid"])')"
 CROSS_REPO="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(str(json.load(sys.stdin)["isCrossRepository"]).lower())')"
@@ -69,7 +70,7 @@ if [[ "$LOCAL_SHA" != "$HEAD_SHA" ]]; then
   echo "ERROR: local HEAD does not match GitHub PR head SHA" >&2
   echo "  local:  $LOCAL_SHA" >&2
   echo "  github: $HEAD_SHA" >&2
-  echo "Update/synchronize the existing PR head branch first; do not create another branch." >&2
+  echo "Synchronize the existing PR head branch first; do not create another branch." >&2
   exit 1
 fi
 
