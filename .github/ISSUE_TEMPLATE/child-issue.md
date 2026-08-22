@@ -56,7 +56,8 @@ path/to/protected/**
 - [ ] 修正後は同じhead branchへcommit / pushし、新しいPRを作らず既存PRを再利用する
 - [ ] pushした修正コミットSHAとGitHub上のPR head SHAが一致することを確認する
 - [ ] GitHub上でhead SHAの更新を確認し、未確認・未更新・不一致なら再検証へ進まない
-- [ ] 更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証する
+- [ ] 修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象に更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証する
+- [ ] 各チェックの対象SHAを記録し、再検証完了時に修正コミットSHA・検証対象SHA・PR head SHAが一致することを確認する
 - [ ] 最終Mergeは人間が判断する
 
 # テスト
