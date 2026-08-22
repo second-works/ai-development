@@ -10,7 +10,7 @@
 
 - ChatGPT: 要件整理、設計、親Issue/子Issueの作成、Issue品質チェック
 - GitHub: Issue、PR、履歴、CI、セキュリティ、マージ制御
-- Codex: Issue単位の実装、ローカルテスト、PR作成、修正
+- Codex: Issue単位の実装、ローカルテスト、PR作成、既存PRのhead branchでの修正
 - GitHub Actions: Codexとは独立した機械的な再検証
 - 人間: 仕様確定、例外判断、最終レビュー、Merge
 
@@ -48,6 +48,7 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 - mainへ直接pushしない
 - 必要なテストを実行する
 - GitHub Actions CIの結果も確認する
+- Codexレビュー後の修正は既存PRのhead branchへ反映し、head SHA更新を確認する
 - 秘密情報をcommitしない
 - 仕様が不明確なら推測で拡張しない
 
@@ -159,6 +160,21 @@ Codexまたは人間がPRを作成するときの報告形式を統一します�
 - 残課題
 
 可能な場合は `Closes #Issue番号` を使い、Merge時にIssueと連動させます。
+
+### Codexレビュー後の修正
+
+PRテンプレートには、修正時の対象PR番号、head branch、修正前後のhead SHAを記録します。
+
+標準手順は次のとおりです。
+
+1. `@codex review` はレビュー専用として実行する。
+2. P0 / P1 / P2の修正は `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをCodex Desktop / Work等でチェックアウトして行う。
+3. 修正前にPR番号・head branch・head SHAを確認する。
+4. 同じhead branchへcommit / pushし、新しいPRを作らず既存PRを再利用する。
+5. GitHub上でhead SHAが更新されたことを確認する。SHAを確認できない、または更新されていない場合は再検証へ進まない。
+6. 更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証する。
+7. AIはMergeせず、人間が最終Mergeを判断する。
+
 
 ## 8. GitHub Actions CIテンプレート
 
@@ -343,7 +359,11 @@ GitHub Actions CI
     ↓
 CodeQL等のセキュリティチェック
     ↓
-AIレビュー
+Codex Code Review（レビュー専用）
+    ↓
+必要なら既存PRのhead branchで修正
+    ↓
+SHA更新確認 → ローカルテスト → CI → セキュリティチェック → 更新後headを再レビュー
     ↓
 人間レビュー
     ↓

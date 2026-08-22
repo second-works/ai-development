@@ -15,14 +15,17 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 5. テスト実行
 6. PR作成
 7. GitHub Actions CI
-8. Codex Code Review
-9. P0 / P1 / P2指摘があればIssue範囲内で修正
-10. 修正前後のPR head SHAが実際に更新されたことを確認
-11. 更新後のheadを対象に再テスト・CI・セキュリティチェック・再レビュー
-12. 人間が最終確認
-13. Merge
+8. Codex Code Review（レビュー専用）
+9. P0 / P1 / P2指摘があれば、既存PRのhead branchをチェックアウトして修正
+10. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
+11. GitHub上で修正後のhead SHAが更新されたことを確認
+12. SHA未確認・未更新の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
+13. 更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証
+14. 新しいPRを作らず既存PRを再利用
+15. 人間が最終確認
+16. 人間がMerge
 
-CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
+P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として使用せず、`@codex review` はレビュー専用とします。CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
 
 詳細は [`docs/nine-standard-ai-development-flow.md`](docs/nine-standard-ai-development-flow.md) を参照してください。
 
@@ -40,6 +43,7 @@ CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則�
 - GitHubは仕事を管理する
 - Codexは実装する
 - GitHub Actionsは機械的に検証する
-- Codex Code ReviewはPR差分をレビューする
+- Codex Code ReviewはPR差分をレビューする（レビュー専用）
+- PR修正は既存PRのhead branchへ反映する
 - PRを品質の関門にする
 - 人間が仕様とマージを決める

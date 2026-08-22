@@ -71,7 +71,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 標準指示：
 
-> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。CI成功後はCodex Code Reviewを実行し、P0 / P1 / P2指摘があればIssue範囲内で修正し、修正前のPR head SHAと修正後のPR head SHAが実際に異なることを確認してから、ローカルテスト（tests / lint / type check / build）、GitHub Actions CI、利用可能なセキュリティチェックを更新後のheadを対象に再実行してからCodex Code Reviewを再実行してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。最終Mergeは人間が判断します。
+> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。CI成功後は `@codex review` をレビュー専用で実行してください。P0 / P1 / P2指摘があれば `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして修正してください。修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / pushしてGitHub上のhead SHAが更新されたことを確認してください。SHAを確認できない、または更新されていない場合は再テスト・CI・セキュリティチェック・再レビューへ進まず人間に確認してください。更新後のheadに対してローカルテスト → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review` の順で再検証し、新しいPRを作らず既存PRを再利用してください。仕様だけでは判断できない重大な問題は推測で拡張せず、最終Mergeは人間が判断します。
 
 ## 6. 並列化
 
@@ -92,6 +92,18 @@ Codexには原則として子Issueを1件ずつ渡す。
 Codex実装終了後は以下の流れとする。
 
 **Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review**
+
+### レビュー修正時のPR / head branch固定
+
+レビュー後に修正する場合は、レビュー担当と修正担当を分離する。
+
+1. `@codex review` はレビュー専用とし、修正には使わない。
+2. P0 / P1 / P2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で既存PRのhead branchをチェックアウトして行う。
+3. 修正前に対象PR番号、head branch、head SHAをGitHub上で確認・記録する。
+4. 修正後は同じhead branchへcommit / pushし、新しいPRを作らず既存PRを再利用する。
+5. GitHub上で修正前後のhead SHAが実際に更新されたことを確認する。SHAを確認できない、または更新されていない場合は再検証へ進まず停止する。
+6. SHA更新確認後の順序は、ローカルテスト → GitHub Actions CI → セキュリティチェック → 更新後headへの `@codex review` とする。
+7. branchの取り違え、push失敗、Issue範囲外への拡大、同じ問題の3回以上の反復があれば人間へ戻す。
 
 PR本文には最低限以下を書く。
 
@@ -144,7 +156,7 @@ Codex Code Reviewを、CI成功後・人間の最終確認前の標準品質ゲ�
 ### 起動方法
 
 1. CodexのAutomatic reviewsが利用可能なリポジトリでは、自動レビューを原則有効化する。
-2. Automatic reviewsが無効または利用できない場合は、PR上で `@codex review` を依頼する。
+2. Automatic reviewsが無効または利用できない場合は、PR上で `@codex review` を依頼する。これはレビュー専用であり、修正は実行しない。
 3. 実装担当Codexの自己レビューだけで完了扱いにせず、PR単位のCode Review結果を確認する。
 
 ### レビュー観点
@@ -176,12 +188,14 @@ Codex Code Reviewを、CI成功後・人間の最終確認前の標準品質ゲ�
 CodexレビューでP0 / P1 / P2が出た場合：
 
 1. 指摘がIssue範囲内か確認する。
-2. Issue範囲内ならCodexへ修正を依頼する。PRコメントから実行可能な場合は `@codex` への修正指示を使ってよい。
-3. Codexの修正完了後、修正前のPR head SHAと修正後のPR head SHAを比較し、PR head SHAが実際に更新されたことを確認する。SHAを確認できない、または更新されていない場合は、再テストや再レビューへ進まず確認を止める。
-4. head SHAの更新確認後に、ローカルテスト、GitHub Actions CI、利用可能なセキュリティチェックを再実行する。
-5. CIと利用可能なセキュリティチェックが成功、または例外を人間が明示判断した後に、更新後のheadを対象としてCodex Code Reviewを再実行する。
-6. 前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
-7. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、Issue範囲外へ広がる場合は自律修正を停止し人間へ戻す。
+2. `@codex review` はレビュー専用であり、レビュー担当に修正を実行させない。P0 / P1 / P2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で行う。
+3. 修正前に対象PR番号、head branch、head SHAをGitHub上で確認・記録し、既存PRのhead branchをチェックアウトする。
+4. Issue範囲内で修正し、同じhead branchへcommit / pushする。新しいPRを作らず、既存PRを再利用する。
+5. GitHub上で修正前後のhead SHAを比較する。
+6. SHAを確認できない、または更新されていない場合は、ローカルテスト、CI、セキュリティチェック、再レビューへ進まず停止して人間に確認を求める。
+7. SHA更新確認後に、更新後のheadをローカルテスト → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review` の順で再検証する。
+8. 前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
+9. 同じ問題を3回以上繰り返す、仕様判断が必要、branchを取り違える、pushに失敗する、破壊的変更が必要、またはIssue範囲外へ広がる場合は自律修正を停止し人間へ戻す。
 
 AIレビューは補助であり、自動Mergeには使わない。最終Merge判断は人間が行う。
 
@@ -237,7 +251,7 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 1. 失敗したjob / step / alertを確認する。
 2. ログや検出内容から原因を特定する。
 3. Issue範囲内で修正する。
-4. PR branchへ追加commitする。
+4. 対象PRのhead branchへ追加commitする。
 5. 自動チェックの再実行結果を確認する。
 6. 成功するまで完了扱いにしない。
 

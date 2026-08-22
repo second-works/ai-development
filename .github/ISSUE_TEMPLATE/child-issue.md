@@ -47,6 +47,17 @@ path/to/protected/**
 - [ ] 秘密情報を含まない
 - [ ] PRが作成されている
 
+
+# Codexレビュー後の修正方針
+
+- [ ] `@codex review` はレビュー専用とし、修正を実行しない
+- [ ] P0 / P1 / P2の修正は `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして行う
+- [ ] 修正前に対象PR番号・head branch・head SHAを確認する
+- [ ] 修正後は同じhead branchへcommit / pushし、新しいPRを作らず既存PRを再利用する
+- [ ] GitHub上でhead SHAの更新を確認し、未確認・未更新なら再検証へ進まない
+- [ ] 更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証する
+- [ ] 最終Mergeは人間が判断する
+
 # テスト
 
 Issue作成時は、正常系だけでなく以下の観点を具体的なテスト条件として検討する。
