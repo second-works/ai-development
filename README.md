@@ -16,9 +16,11 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 6. PR作成
 7. GitHub Actions CI
 8. Codex Code Review
-9. P0 / P1 / P2指摘があれば修正 → CI再実行 → 再レビュー
-10. 人間が最終確認
-11. Merge
+9. P0 / P1 / P2指摘があればIssue範囲内で修正
+10. 修正前後のPR head SHAが実際に更新されたことを確認
+11. 更新後のheadを対象に再テスト・CI・セキュリティチェック・再レビュー
+12. 人間が最終確認
+13. Merge
 
 CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
 
