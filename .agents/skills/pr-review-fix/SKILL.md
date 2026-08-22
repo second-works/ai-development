@@ -66,8 +66,10 @@ prepare scriptは次を確認する。
 - cross-repository PRではない
 - head branchがdefault branchではない
 - Git作業ツリーがclean
-- `origin` をGitHub操作の対象repositoryとして明示的に固定
+- `origin` のfetch URLとpush URLが同じGitHub repositoryを指す
+- GitHub操作対象repositoryをその検証済み`origin`から固定
 - GitHub上のhead branch/head SHAを取得
+- remote-tracking refを明示的なrefspecで最新化
 - 既存remote head branchと同名のlocal branchをcheckout（local branchがなければtracking branchを作成）
 - local HEADとGitHub PR head SHAが一致
 
@@ -122,10 +124,10 @@ git diff --check
 git add <変更ファイル>
 git commit -m "review: Codex指摘を修正"
 EXPECTED_SHA="$(git rev-parse HEAD)"
-git push origin HEAD
+git push origin "HEAD:refs/heads/$HEAD_BRANCH"
 ```
 
-`git push origin HEAD:<別branch>` のように別branchへpushしてはいけない。
+prepare scriptで`origin`のfetch/push repository一致を確認済みであることを前提とする。`HEAD_BRANCH`以外へpushしてはいけない。
 
 ### 6. GitHub PR head SHAを照合する
 
@@ -174,24 +176,28 @@ test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
 ローカルテストがtracked fileを書き換えた、未commit差分が残った、またはHEADが変わった場合は、その結果を `EXPECTED_SHA` の検証結果として扱わず停止する。
 
-### 8. CI / セキュリティチェックを対象SHAで確認する
+### 8. CI / セキュリティチェックを対象SHAで待機・確認する
 
-GitHub Actionsやstatus checkはPR番号だけでなく、必ず `EXPECTED_SHA` に紐づく実行であることをAPIで確認する。
+push直後にcheck runがまだ登録されていないケースを考慮し、`EXPECTED_SHA`に対するcheck runs/statusesを一定時間pollする。
+
+```bash
+bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA"
+```
+
+このscriptは次を行う。
+
+- `EXPECTED_SHA` のcheck runs/statusesが出現するまでgrace期間待つ
+- queued / in_progress / pending中は待機する
+- failure / error / cancelled / timed_out等は失敗として停止する
+- すべて成功・neutral・skipped等の許容終了状態になった場合だけ成功扱いにする
+- grace期間後もcheck/statusが0件なら `NO_CHECKS_OBSERVED` として明示報告する
+
+必要に応じてAPI結果を追加確認する。
 
 ```bash
 gh api "repos/$REPO/commits/$EXPECTED_SHA/check-runs"
 gh api "repos/$REPO/commits/$EXPECTED_SHA/status"
 ```
-
-必要に応じてPR表示も補助的に利用できる。
-
-```bash
-gh pr checks <PR番号> --repo "$REPO"
-```
-
-ただし `gh pr checks` の結果だけで対象SHAを保証しない。API上で `EXPECTED_SHA` のcheck runs/statusesであることを確認する。
-
-CIやセキュリティチェックが存在しない場合は、その事実を報告する。
 
 CI / セキュリティ確認後、再レビュー依頼前にもう一度PR headを固定確認する。
 
@@ -201,10 +207,14 @@ bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
 
 ### 9. 更新後headへ再レビューを依頼する
 
-すべての前段確認後にだけ実行する。
+すべての前段確認後にだけ実行する。`@codex review` が確実に独立した行になるよう、文字列`\n`ではなく実際の改行を含む本文を`--body-file -`で投稿する。
 
 ```bash
-gh pr comment <PR番号> --repo "$REPO" --body "更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。\n\n@codex review"
+gh pr comment <PR番号> --repo "$REPO" --body-file - <<EOF
+更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。
+
+@codex review
+EOF
 ```
 
 再レビュー依頼後はMergeしない。
@@ -213,16 +223,17 @@ gh pr comment <PR番号> --repo "$REPO" --body "更新後head \`$EXPECTED_SHA\` 
 
 再レビューは非同期なので、comment投稿直後に完了報告してはいけない。
 
-一定間隔でPRのcomments / reviews / review threadsを確認し、**`EXPECTED_SHA` を対象にした最新Codex Reviewが完了したこと**を確認する。
+```bash
+bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" "$REPO" <PR番号> "$EXPECTED_SHA"
+```
 
-確認内容:
+このscriptは、Codexの`Reviewed commit`が`EXPECTED_SHA`と一致するレビューを待ち、そのcommitに対する新しいP0 / P1 / P2 inline指摘の有無を確認する。
 
-- reviewed commitが `EXPECTED_SHA` と一致する
-- 前回のP0 / P1 / P2指摘がoutdatedまたは解消済み
-- 新しいP0 / P1 / P2がない
-- 新しいP0 / P1 / P2がある場合は、同じ修正ループへ戻る
+- `STATUS=REVIEW_PASSED` → 次へ進む
+- `STATUS=REVIEW_CHANGES_REQUIRED` → 同じ修正ループへ戻る
+- timeout → 「再レビュー待ち」と報告して停止し、成功扱いにしない
 
-レビュー完了を合理的な待機時間内に確認できない場合は、「再レビュー待ち」と報告して停止し、成功扱いにしない。
+必要に応じてreview threadsも確認し、古いheadに対するoutdated指摘と現在headの有効指摘を区別する。
 
 ### 11. 最終SHAを再照合する
 
