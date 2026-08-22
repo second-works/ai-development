@@ -18,8 +18,8 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 8. Codex Code Review（レビュー専用）
 9. P0 / P1 / P2指摘があれば、既存PRのhead branchをチェックアウトして修正
 10. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
-11. GitHub上で修正後のhead SHAが更新されたことを確認
-12. SHA未確認・未更新の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
+11. GitHub上で修正後のhead SHAが、pushした修正コミットSHAと一致することを確認
+12. SHA未確認・未更新・不一致の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
 13. 更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証
 14. 新しいPRを作らず既存PRを再利用
 15. 人間が最終確認
