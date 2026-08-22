@@ -23,13 +23,6 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-# gh の default repository 設定に依存せず、push先の origin を明示的な対象repoにする。
-ORIGIN_URL="$(git remote get-url origin 2>/dev/null || true)"
-if [[ -z "$ORIGIN_URL" ]]; then
-  echo "ERROR: origin remote is not configured" >&2
-  exit 1
-fi
-
 repo_slug_from_url() {
   local url="$1"
   local slug
@@ -46,19 +39,37 @@ repo_slug_from_url() {
       slug="${slug#*/}"
       ;;
     *)
-      echo "ERROR: unsupported origin URL: $url" >&2
+      echo "ERROR: unsupported Git remote URL: $url" >&2
       return 1
       ;;
   esac
   slug="${slug%.git}"
   if [[ "$slug" != */* ]]; then
-    echo "ERROR: could not resolve owner/repo from origin URL: $url" >&2
+    echo "ERROR: could not resolve owner/repo from remote URL: $url" >&2
     return 1
   fi
   printf '%s\n' "$slug"
 }
 
-REPO="$(repo_slug_from_url "$ORIGIN_URL")"
+# fetch URLだけでなくpush URLも事前検証する。pushurlが別repositoryなら誤pushを防ぐため停止する。
+ORIGIN_FETCH_URL="$(git remote get-url origin 2>/dev/null || true)"
+ORIGIN_PUSH_URL="$(git remote get-url --push origin 2>/dev/null || true)"
+if [[ -z "$ORIGIN_FETCH_URL" || -z "$ORIGIN_PUSH_URL" ]]; then
+  echo "ERROR: origin fetch/push URL is not configured" >&2
+  exit 1
+fi
+
+FETCH_REPO="$(repo_slug_from_url "$ORIGIN_FETCH_URL")"
+PUSH_REPO="$(repo_slug_from_url "$ORIGIN_PUSH_URL")"
+if [[ "$FETCH_REPO" != "$PUSH_REPO" ]]; then
+  echo "ERROR: origin fetch repository and push repository differ" >&2
+  echo "  fetch: $FETCH_REPO" >&2
+  echo "  push:  $PUSH_REPO" >&2
+  echo "Do not push until origin targets the same repository for fetch and push." >&2
+  exit 1
+fi
+
+REPO="$FETCH_REPO"
 DEFAULT_BRANCH="$(gh repo view "$REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')"
 PR_JSON="$(gh pr view "$PR" --repo "$REPO" --json number,state,headRefName,headRefOid,baseRefName,isCrossRepository,url)"
 
@@ -96,10 +107,12 @@ cp -R "$SCRIPT_DIR" "$RUNTIME_DIR/scripts"
 # checkout前に取得したhead SHAを修正前SHAとして固定する。
 BEFORE_SHA="$HEAD_SHA"
 
-git fetch origin "$HEAD_BRANCH"
+# sourceだけのfetchではremote-tracking refが更新されない場合があるため、destinationを明示する。
+git fetch origin "+refs/heads/$HEAD_BRANCH:refs/remotes/origin/$HEAD_BRANCH"
 
 if git show-ref --verify --quiet "refs/heads/$HEAD_BRANCH"; then
   git checkout "$HEAD_BRANCH"
+  # 既存local branchが古い場合に勝手にresetせず、SHA不一致として安全に停止させる。
 else
   git checkout --track -b "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
 fi
@@ -127,6 +140,8 @@ HEAD_BRANCH=$HEAD_BRANCH
 BEFORE_SHA=$BEFORE_SHA
 HEAD_SHA=$HEAD_SHA
 DEFAULT_BRANCH=$DEFAULT_BRANCH
+ORIGIN_FETCH_URL=$ORIGIN_FETCH_URL
+ORIGIN_PUSH_URL=$ORIGIN_PUSH_URL
 RUNTIME_DIR=$RUNTIME_DIR
 VERIFY_SCRIPT=$RUNTIME_DIR/scripts/verify-pr-head.sh
 STATUS=READY
