@@ -23,53 +23,77 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-repo_slug_from_url() {
+repo_identity_from_url() {
   local url="$1"
-  local slug
+  local host path identity
+
   case "$url" in
     git@*:*/*)
-      slug="${url#*:}"
+      host="${url#git@}"
+      host="${host%%:*}"
+      path="${url#*:}"
       ;;
     ssh://git@*/*/*)
-      slug="${url#ssh://git@}"
-      slug="${slug#*/}"
+      local rest
+      rest="${url#ssh://git@}"
+      host="${rest%%/*}"
+      path="${rest#*/}"
+      # gh --repo does not encode a custom SSH port in repository identity.
+      if [[ "$host" == *:* ]]; then
+        echo "ERROR: SSH URL with explicit port is not supported safely: $url" >&2
+        return 1
+      fi
       ;;
     http://*/*/*|https://*/*/*)
-      slug="${url#*://}"
-      slug="${slug#*/}"
+      local rest
+      rest="${url#*://}"
+      host="${rest%%/*}"
+      path="${rest#*/}"
       ;;
     *)
       echo "ERROR: unsupported Git remote URL: $url" >&2
       return 1
       ;;
   esac
-  slug="${slug%.git}"
-  if [[ "$slug" != */* ]]; then
-    echo "ERROR: could not resolve owner/repo from remote URL: $url" >&2
+
+  path="${path%.git}"
+  if [[ -z "$host" || "$path" != */* || "$path" == */*/* ]]; then
+    echo "ERROR: could not resolve HOST/owner/repo from remote URL: $url" >&2
     return 1
   fi
-  printf '%s\n' "$slug"
+
+  identity="${host}/${path}"
+  # GitHub repository identity is case-insensitive; normalize before comparison.
+  printf '%s\n' "$identity" | tr '[:upper:]' '[:lower:]'
 }
 
-# fetch URLだけでなくpush URLも事前検証する。pushurlが別repositoryなら誤pushを防ぐため停止する。
+# origin のfetch先と、実際に push される全 pushurl を事前検証する。
 ORIGIN_FETCH_URL="$(git remote get-url origin 2>/dev/null || true)"
-ORIGIN_PUSH_URL="$(git remote get-url --push origin 2>/dev/null || true)"
-if [[ -z "$ORIGIN_FETCH_URL" || -z "$ORIGIN_PUSH_URL" ]]; then
-  echo "ERROR: origin fetch/push URL is not configured" >&2
+if [[ -z "$ORIGIN_FETCH_URL" ]]; then
+  echo "ERROR: origin fetch URL is not configured" >&2
   exit 1
 fi
 
-FETCH_REPO="$(repo_slug_from_url "$ORIGIN_FETCH_URL")"
-PUSH_REPO="$(repo_slug_from_url "$ORIGIN_PUSH_URL")"
-if [[ "$FETCH_REPO" != "$PUSH_REPO" ]]; then
-  echo "ERROR: origin fetch repository and push repository differ" >&2
-  echo "  fetch: $FETCH_REPO" >&2
-  echo "  push:  $PUSH_REPO" >&2
-  echo "Do not push until origin targets the same repository for fetch and push." >&2
+mapfile -t ORIGIN_PUSH_URLS < <(git remote get-url --push --all origin 2>/dev/null || true)
+if [[ ${#ORIGIN_PUSH_URLS[@]} -eq 0 ]]; then
+  echo "ERROR: origin push URL is not configured" >&2
   exit 1
 fi
 
-REPO="$FETCH_REPO"
+REPO="$(repo_identity_from_url "$ORIGIN_FETCH_URL")"
+for push_url in "${ORIGIN_PUSH_URLS[@]}"; do
+  PUSH_REPO="$(repo_identity_from_url "$push_url")"
+  if [[ "$PUSH_REPO" != "$REPO" ]]; then
+    echo "ERROR: origin push repository differs from fetch/GitHub repository" >&2
+    echo "  fetch identity: $REPO" >&2
+    echo "  push URL:       $push_url" >&2
+    echo "  push identity:  $PUSH_REPO" >&2
+    echo "Do not push until every origin push URL targets the same GitHub repository." >&2
+    exit 1
+  fi
+done
+
+# HOST/owner/repo を明示して gh の既定host/repository設定に依存しない。
 DEFAULT_BRANCH="$(gh repo view "$REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')"
 PR_JSON="$(gh pr view "$PR" --repo "$REPO" --json number,state,headRefName,headRefOid,baseRefName,isCrossRepository,url)"
 
@@ -141,7 +165,7 @@ BEFORE_SHA=$BEFORE_SHA
 HEAD_SHA=$HEAD_SHA
 DEFAULT_BRANCH=$DEFAULT_BRANCH
 ORIGIN_FETCH_URL=$ORIGIN_FETCH_URL
-ORIGIN_PUSH_URL=$ORIGIN_PUSH_URL
+ORIGIN_PUSH_URL_COUNT=${#ORIGIN_PUSH_URLS[@]}
 RUNTIME_DIR=$RUNTIME_DIR
 VERIFY_SCRIPT=$RUNTIME_DIR/scripts/verify-pr-head.sh
 STATUS=READY
