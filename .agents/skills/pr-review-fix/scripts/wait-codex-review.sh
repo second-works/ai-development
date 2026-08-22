@@ -47,6 +47,8 @@ while :; do
 
   RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" <<'PY'
 import json, re, sys
+from datetime import datetime
+
 issue_path, review_path, sha, short10, after_comment_id = sys.argv[1:]
 after_comment_id = int(after_comment_id)
 
@@ -61,14 +63,35 @@ def flatten_pages(path):
             out.append(page)
     return out
 
+def parse_time(value):
+    if not value:
+        return None
+    return datetime.fromisoformat(value.replace('Z', '+00:00'))
+
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
+
+request_comment = next(
+    (c for c in issue_comments if int(c.get('id') or 0) == after_comment_id),
+    None,
+)
+if request_comment is None:
+    print("ERROR=request comment id was not found")
+    sys.exit(4)
+
+request_created_at = parse_time(request_comment.get('created_at'))
+if request_created_at is None:
+    print("ERROR=request comment has no created_at")
+    sys.exit(4)
 
 review_seen = False
 review_comment_id = None
 for c in issue_comments:
     cid = int(c.get('id') or 0)
     if cid <= after_comment_id:
+        continue
+    created_at = parse_time(c.get('created_at'))
+    if created_at is None or created_at <= request_created_at:
         continue
     login = ((c.get('user') or {}).get('login') or '').lower()
     body = c.get('body') or ''
@@ -82,9 +105,12 @@ for c in review_comments:
     login = ((c.get('user') or {}).get('login') or '').lower()
     body = c.get('body') or ''
     commit_id = c.get('commit_id') or ''
+    created_at = parse_time(c.get('created_at'))
     if 'codex' not in login:
         continue
     if commit_id != sha:
+        continue
+    if created_at is None or created_at <= request_created_at:
         continue
     for sev in ('P0', 'P1', 'P2'):
         if re.search(rf'\b{sev}\b', body):
@@ -92,6 +118,8 @@ for c in review_comments:
 
 print(f"REVIEW_SEEN={1 if review_seen else 0}")
 print(f"REVIEW_COMMENT_ID={review_comment_id or ''}")
+print(f"REQUEST_COMMENT_ID={after_comment_id}")
+print(f"REQUEST_CREATED_AT={request_comment.get('created_at') or ''}")
 print(f"BLOCKING_COUNT={len(severities)}")
 if severities:
     print("BLOCKING_SEVERITIES=" + ','.join(sorted(set(severities))))
