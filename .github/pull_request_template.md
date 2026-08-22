@@ -36,12 +36,15 @@ Closes #
 - 修正前のhead SHA:
 - 修正後のhead branch:
 - 修正後のhead SHA:
+- 修正を行ったコミットSHA:
+- GitHub上のPR head SHAとの一致確認（日時 / 確認者）:
 - SHA更新確認（日時 / 確認者）:
 
 - [ ] `@codex review` はレビュー専用で、修正には使っていない
 - [ ] `@codex address that feedback` を標準手順として使っていない
 - [ ] 新しいPRを作らず、既存PRを再利用した
-- [ ] SHA未確認・未更新時は再検証へ進まず停止した
+- [ ] pushした修正コミットSHAとGitHub上のPR head SHAが一致している
+- [ ] SHA未確認・未更新・不一致時は再検証へ進まず停止した
 - [ ] AIにMerge権限を与えず、最終Mergeは人間が判断する
 
 - [ ] Codex Code Review実行済み
