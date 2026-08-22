@@ -1,6 +1,6 @@
 ---
 name: pr-review-fix
-description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead branchへ安全に修正・pushし、SHA一致確認と再検証後に再レビューを依頼する。ユーザーが「PR #XXのレビュー修正を進めて」「レビュー指摘を直して」などと依頼したときに使う。新規branch/PR作成やMergeには使わない。
+description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead branchへ安全に修正・pushし、SHA一致確認と再検証後に再レビューを依頼する。ユーザーが「PR #XXのレビュー修正を進めて」「レビュー指摘を直して」などと依頼したときに使う。新規remote branch/PR作成やMergeには使わない。
 ---
 
 # PR Review Fix
@@ -11,7 +11,7 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 
 - `@codex review` はレビュー専用とする。
 - `@codex address that feedback` は使わない。
-- 新しいbranchを作らない。
+- 新しいremote branchや別の作業branchを作らない。既存PR head branchをcheckoutするための同名local tracking branch作成だけは許可する。
 - 新しいPRを作らない。
 - `main` / default branchへ直接pushしない。
 - 対象PRのhead branch以外へpushしない。
@@ -22,7 +22,7 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 ## 前提
 
 - repo rootで実行する。
-- `git` と `gh` が利用できること。
+- `git`、`gh`、`python3` が利用できること。
 - `gh auth status` が成功すること。
 - 作業ツリーがcleanであること。
 - 対象PRがopenで、同一repository内のPRであること。
@@ -58,7 +58,7 @@ bash .agents/skills/pr-review-fix/scripts/prepare-pr.sh <PR番号>
 - head branchがdefault branchではない
 - Git作業ツリーがclean
 - GitHub上のhead branch/head SHAを取得
-- 既存head branchをcheckout
+- 既存remote head branchと同名のlocal branchをcheckout（local branchがなければtracking branchを作成）
 - local HEADとGitHub PR head SHAが一致
 
 1つでも失敗したら修正へ進まない。
@@ -184,8 +184,7 @@ gh pr comment <PR番号> --body "更新後headを対象に再レビューして�
 
 ## 禁止コマンド/操作
 
-- `git checkout -b ...`
-- `git switch -c ...`
+- PR head branchと異なる名前での `git checkout -b ...` / `git switch -c ...`
 - `gh pr create`
 - `gh pr merge`
 - `git push origin main`
