@@ -1,22 +1,49 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
-  echo "Usage: $0 <pr-number> [expected-sha]" >&2
+if [[ $# -lt 3 || $# -gt 4 ]]; then
+  echo "Usage: $0 <pr-number> <expected-sha> <before-sha> [owner/repo]" >&2
   exit 2
 fi
 
 PR="$1"
-EXPECTED_SHA="${2:-$(git rev-parse HEAD)}"
+EXPECTED_SHA="$2"
+BEFORE_SHA="$3"
+REPO="${4:-}"
 
 command -v git >/dev/null 2>&1 || { echo "ERROR: git not found" >&2; exit 1; }
 command -v gh >/dev/null 2>&1 || { echo "ERROR: gh not found" >&2; exit 1; }
+command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exit 1; }
 
 gh auth status >/dev/null 2>&1 || { echo "ERROR: gh authentication is not available" >&2; exit 1; }
 
 cd "$(git rev-parse --show-toplevel)"
 
-PR_JSON="$(gh pr view "$PR" --json number,state,headRefName,headRefOid,isCrossRepository,url)"
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "ERROR: working tree is not clean" >&2
+  exit 1
+fi
+
+if [[ "$EXPECTED_SHA" == "$BEFORE_SHA" ]]; then
+  echo "ERROR: expected SHA is unchanged from the pre-fix SHA" >&2
+  echo "  before:   $BEFORE_SHA" >&2
+  echo "  expected: $EXPECTED_SHA" >&2
+  echo "A review fix must create and push a new commit before re-validation." >&2
+  exit 1
+fi
+
+if [[ -z "$REPO" ]]; then
+  ORIGIN_URL="$(git remote get-url origin 2>/dev/null || true)"
+  case "$ORIGIN_URL" in
+    git@*:*/*) REPO="${ORIGIN_URL#*:}" ;;
+    ssh://git@*/*/*) REPO="${ORIGIN_URL#ssh://git@}"; REPO="${REPO#*/}" ;;
+    http://*/*/*|https://*/*/*) REPO="${ORIGIN_URL#*://}"; REPO="${REPO#*/}" ;;
+    *) echo "ERROR: could not resolve repository from origin" >&2; exit 1 ;;
+  esac
+  REPO="${REPO%.git}"
+fi
+
+PR_JSON="$(gh pr view "$PR" --repo "$REPO" --json number,state,headRefName,headRefOid,isCrossRepository,url)"
 STATE="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"])')"
 HEAD_BRANCH="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefName"])')"
 GITHUB_SHA="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["headRefOid"])')"
@@ -50,7 +77,7 @@ fi
 
 # GitHub側への反映に短い遅延がある場合だけ待つ。最大約15秒。
 for _ in 1 2 3 4 5; do
-  GITHUB_SHA="$(gh pr view "$PR" --json headRefOid --jq '.headRefOid')"
+  GITHUB_SHA="$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq '.headRefOid')"
   [[ "$GITHUB_SHA" == "$EXPECTED_SHA" ]] && break
   sleep 3
 done
@@ -65,7 +92,9 @@ fi
 
 cat <<EOF
 PR_NUMBER=$PR
+REPO=$REPO
 HEAD_BRANCH=$HEAD_BRANCH
+BEFORE_SHA=$BEFORE_SHA
 LOCAL_SHA=$LOCAL_SHA
 GITHUB_PR_HEAD_SHA=$GITHUB_SHA
 EXPECTED_SHA=$EXPECTED_SHA
