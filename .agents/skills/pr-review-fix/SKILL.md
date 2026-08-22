@@ -48,31 +48,43 @@ PR番号が不明な場合は勝手に推測せず確認する。
 最初にprepare scriptを実行する。
 
 ```bash
-bash .agents/skills/pr-review-fix/scripts/prepare-pr.sh <PR番号>
+PREPARE_OUTPUT="$(bash .agents/skills/pr-review-fix/scripts/prepare-pr.sh <PR番号>)"
+printf '%s\n' "$PREPARE_OUTPUT"
 ```
 
-このscriptは次を確認する。
+出力された以下を記録する。
+
+- `REPO`
+- `HEAD_BRANCH`
+- `BEFORE_SHA`
+- `RUNTIME_DIR`
+- `VERIFY_SCRIPT`
+
+prepare scriptは次を確認する。
 
 - PRがopen
 - cross-repository PRではない
 - head branchがdefault branchではない
 - Git作業ツリーがclean
+- `origin` をGitHub操作の対象repositoryとして明示的に固定
 - GitHub上のhead branch/head SHAを取得
 - 既存remote head branchと同名のlocal branchをcheckout（local branchがなければtracking branchを作成）
 - local HEADとGitHub PR head SHAが一致
+
+また、checkout前にSkillのscript一式を一時ディレクトリへ退避する。これにより、Skill追加前に作成された古いPR branchへcheckoutしてrepo-local Skillがworking treeから消えても、`RUNTIME_DIR/scripts/` 配下のscriptを継続利用できる。
 
 1つでも失敗したら修正へ進まない。
 
 ### 2. レビュー指摘を取得する
 
-対象PRの最新レビューとinline commentを確認する。
+対象PRの最新レビューとinline commentを確認する。GitHub操作では必ずprepare scriptで得た `REPO` を明示する。
 
 ```bash
-gh pr view <PR番号> --comments
+gh pr view <PR番号> --repo "$REPO" --comments
 
-gh api --paginate repos/{owner}/{repo}/pulls/<PR番号>/comments
+gh api --paginate "repos/$REPO/pulls/<PR番号>/comments"
 
-gh api --paginate repos/{owner}/{repo}/pulls/<PR番号>/reviews
+gh api --paginate "repos/$REPO/pulls/<PR番号>/reviews"
 ```
 
 古いhead SHAに対するoutdatedな指摘と、現在headへの有効な指摘を区別する。
@@ -91,16 +103,14 @@ PR本文の `Closes #XX` 等から対応Issueを確認し、Issue本文を仕様
 
 prepare scriptがcheckoutしたbranchから移動しない。
 
-修正後、repositoryで定義されたローカルチェックを実行する。
+修正前に再度確認する。
 
-優先順:
+```bash
+test "$(git branch --show-current)" = "$HEAD_BRANCH"
+test -z "$(git status --porcelain)"
+```
 
-1. tests
-2. lint
-3. type check
-4. build
-
-定義がないものは「対象外」と記録する。テストを無効化して成功扱いにしない。
+Issue範囲内の指摘だけを修正する。
 
 ### 5. commit / pushする
 
@@ -111,6 +121,7 @@ git status --short
 git diff --check
 git add <変更ファイル>
 git commit -m "review: Codex指摘を修正"
+EXPECTED_SHA="$(git rev-parse HEAD)"
 git push origin HEAD
 ```
 
@@ -118,67 +129,131 @@ git push origin HEAD
 
 ### 6. GitHub PR head SHAを照合する
 
-push直後のlocal commit SHAを固定し、verify scriptを実行する。
+push直後に、checkout前に退避されたverify scriptを使って照合する。
 
 ```bash
-EXPECTED_SHA="$(git rev-parse HEAD)"
-bash .agents/skills/pr-review-fix/scripts/verify-pr-head.sh <PR番号> "$EXPECTED_SHA"
+bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
 ```
 
-次の3つが一致しなければ停止する。
+次の条件をすべて満たさなければ停止する。
 
-- pushしたlocal commit SHA
-- GitHub上のPR head SHA
-- 現在checkout中のbranchのHEAD
+- `EXPECTED_SHA != BEFORE_SHA`
+- pushしたlocal commit SHA = `EXPECTED_SHA`
+- GitHub上のPR head SHA = `EXPECTED_SHA`
+- 現在checkout中のbranchのHEAD = `EXPECTED_SHA`
+- 作業ツリーがclean
 
-SHAが変わっただけでは成功扱いにしない。**同じ値であること**を確認する。
+SHAが単に変わっただけでは成功扱いにしない。**同じ値であること**を確認する。
 
-### 7. 更新後SHAで再検証する
+### 7. 更新後SHAでローカル再検証する
 
-一致確認したSHAを検証対象SHAとして固定する。
+一致確認した `EXPECTED_SHA` を検証対象SHAとして固定する。
 
-順序は必ず次とする。
-
-1. ローカルテスト
-2. GitHub Actions CI
-3. 利用可能なセキュリティチェック
-4. 更新後headへのCodex Code Review
-
-CI/status checkを確認するときは、検証対象SHAに対する結果であることを確認する。
-
-利用可能な例:
+ローカルチェック前に、作業ツリーとHEADを確認する。
 
 ```bash
-gh pr checks <PR番号>
+test -z "$(git status --porcelain)"
+test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 ```
+
+repositoryで定義されたローカルチェックを次の順で実行する。
+
+1. tests
+2. lint
+3. type check
+4. build
+
+定義がないものは「対象外」と記録する。テストを無効化して成功扱いにしない。
+
+**各ローカルチェック後**にも次を確認する。
+
+```bash
+test -z "$(git status --porcelain)"
+test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+```
+
+ローカルテストがtracked fileを書き換えた、未commit差分が残った、またはHEADが変わった場合は、その結果を `EXPECTED_SHA` の検証結果として扱わず停止する。
+
+### 8. CI / セキュリティチェックを対象SHAで確認する
+
+GitHub Actionsやstatus checkはPR番号だけでなく、必ず `EXPECTED_SHA` に紐づく実行であることをAPIで確認する。
+
+```bash
+gh api "repos/$REPO/commits/$EXPECTED_SHA/check-runs"
+gh api "repos/$REPO/commits/$EXPECTED_SHA/status"
+```
+
+必要に応じてPR表示も補助的に利用できる。
+
+```bash
+gh pr checks <PR番号> --repo "$REPO"
+```
+
+ただし `gh pr checks` の結果だけで対象SHAを保証しない。API上で `EXPECTED_SHA` のcheck runs/statusesであることを確認する。
 
 CIやセキュリティチェックが存在しない場合は、その事実を報告する。
 
-### 8. 再レビューを依頼する
+CI / セキュリティ確認後、再レビュー依頼前にもう一度PR headを固定確認する。
+
+```bash
+bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
+```
+
+### 9. 更新後headへ再レビューを依頼する
 
 すべての前段確認後にだけ実行する。
 
 ```bash
-gh pr comment <PR番号> --body "更新後headを対象に再レビューしてください。\n\n@codex review"
+gh pr comment <PR番号> --repo "$REPO" --body "更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。\n\n@codex review"
 ```
 
 再レビュー依頼後はMergeしない。
 
-### 9. 最終報告
+### 10. 再レビュー完了を待って結果を確認する
+
+再レビューは非同期なので、comment投稿直後に完了報告してはいけない。
+
+一定間隔でPRのcomments / reviews / review threadsを確認し、**`EXPECTED_SHA` を対象にした最新Codex Reviewが完了したこと**を確認する。
+
+確認内容:
+
+- reviewed commitが `EXPECTED_SHA` と一致する
+- 前回のP0 / P1 / P2指摘がoutdatedまたは解消済み
+- 新しいP0 / P1 / P2がない
+- 新しいP0 / P1 / P2がある場合は、同じ修正ループへ戻る
+
+レビュー完了を合理的な待機時間内に確認できない場合は、「再レビュー待ち」と報告して停止し、成功扱いにしない。
+
+### 11. 最終SHAを再照合する
+
+再レビュー結果を確認した**後**に、PR headが待機中に動いていないことを最終確認する。
+
+```bash
+bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
+test -z "$(git status --porcelain)"
+```
+
+さらに、CI / security / Codex Reviewの各結果が `EXPECTED_SHA` に対するものだったことを確認する。
+
+ここでPR head SHAが変わっていた場合、それまでの検証結果を現在headの結果として扱わず停止する。
+
+### 12. 最終報告
 
 最低限、次を報告する。
 
 - PR番号
+- repository
 - head branch
-- 修正前head SHA
-- 修正後head SHA
+- 修正前head SHA (`BEFORE_SHA`)
+- 修正後head SHA (`EXPECTED_SHA`)
 - push commit SHA
 - 変更した指摘（P0/P1/P2）
-- ローカルテスト結果
-- CI結果
-- セキュリティチェック結果
-- 再レビュー依頼済みか
+- ローカルテスト結果と対象SHA
+- CI結果と対象SHA
+- セキュリティチェック結果と対象SHA
+- 再レビュー結果とreviewed commit
 - 未解決指摘
+- 最終PR head SHA照合結果
 
 最後に「最終Mergeは人間判断」と明記して停止する。
 
