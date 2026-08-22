@@ -249,8 +249,8 @@ CodexレビューでP0 / P1 / P2が見つかった場合は、次の順で対応
 2. `@codex review` はレビュー専用とし、レビュー担当に修正を実行させない。P0 / P1 / P2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で実施する。
 3. 修正前に対象PR番号、head branch、head SHAをGitHub上で確認・記録し、既存PRのhead branchをチェックアウトする。PR番号とIssue番号、head branchと作業用の別branchを混同しない。
 4. 指摘がIssue範囲内なら既存PRのhead branch上で修正し、同じhead branchへcommit / pushする。新しいPRを作らず、既存PRを再利用する。
-5. GitHub上で修正前後のhead SHAを比較し、同じPRのhead SHAが実際に更新されたことを確認する。
-6. head SHAを確認できない、または更新されていない場合は、ローカルテスト、CI、セキュリティチェック、再レビューへ進まず停止して人間に確認を求める。
+5. pushした修正コミットのSHAを確認し、GitHub上の同じPRのhead branchとhead SHAが、そのpushしたコミットSHAと一致することを確認する。単に修正前後でSHAが異なるだけでは完了扱いにしない。
+6. head branchまたはSHAを確認できない、pushした修正コミットSHAとGitHub上のPR head SHAが一致しない、またはSHAが更新されていない場合は、ローカルテスト、CI、セキュリティチェック、再レビューへ進まず停止して人間に確認を求める。
 7. head SHAの更新確認後に、次の順で更新後のheadを再検証する: ローカルテスト（tests / lint / type check / build） → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review`。
 8. 更新後のheadに対する再レビューで前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
 9. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
@@ -372,4 +372,4 @@ PRには最低限以下を書く。
 
 Codexにリポジトリを指定して作業させる場合の基本指示は次のとおりとする。
 
-> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果を確認し、失敗している場合はIssue範囲内で修正してください。CI成功後は `@codex review` をレビュー専用で実行し、P0 / P1 / P2指摘があれば `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして修正してください。修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / pushした後、GitHub上でhead SHAが更新されたことを確認してください。SHAを確認できない、または更新されていない場合は再テスト・CI・セキュリティチェック・再レビューへ進まず人間に確認してください。更新後のheadに対してローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証し、新しいPRを作らず既存PRを再利用してください。最終Mergeは人間が判断します。
+> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果を確認し、失敗している場合はIssue範囲内で修正してください。CI成功後は `@codex review` をレビュー専用で実行し、P0 / P1 / P2指摘があれば `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして修正してください。修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / pushした後、pushした修正コミットSHAとGitHub上の同じPRのhead SHAが一致することを確認してください。head branchまたはSHAを確認できない、SHAが更新されていない、またはpushした修正コミットSHAとPR head SHAが一致しない場合は再テスト・CI・セキュリティチェック・再レビューへ進まず人間に確認してください。更新後のheadに対してローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証し、新しいPRを作らず既存PRを再利用してください。最終Mergeは人間が判断します。
