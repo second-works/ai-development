@@ -27,14 +27,27 @@ Closes #
 
 # Codex Code Review
 
-- [ ] Codex Code Review実行済み
+- [ ] `@codex review`実行済み（レビュー専用。修正は実行していない）
 - [ ] P0 / P1 指摘なし、またはすべて解消済み
 - [ ] P2 指摘なし、または人間が残置理由を確認済み
-- [ ] 修正を行った場合、修正前のPR head SHAと修正後のPR head SHAを比較し、実際に更新されたことを確認済み
+- [ ] 修正を行った場合、既存PRのhead branchを使用し、新しいPRを作成していない
+- [ ] 修正を行った場合、修正前後のPR番号・head branch・head SHAを記録済み
+- [ ] 修正を行った場合、修正前後のhead SHAを比較し、実際に更新されたことを確認済み
+- [ ] 修正を行った場合、同じhead branchへcommit/push済み
 - [ ] 修正を行った場合、head SHA更新確認後にローカルテスト（tests / lint / type check / build）を再実行済み
 - [ ] 修正を行った場合、更新後のheadを対象にCIを再実行済み
 - [ ] 修正を行った場合、セキュリティチェックを再実行済み、または人間が例外理由を確認済み
-- [ ] 修正を行った場合、CIとセキュリティチェックの成功または例外判断後、更新後のheadを対象にCodex Code Reviewを再実行済み
+- [ ] 修正を行った場合、CIとセキュリティチェックの成功または例外判断後、更新後のheadを対象に`@codex review`を再実行済み
+
+修正前のPR情報（修正時）:
+- PR番号: なし
+- head branch: なし
+- head SHA: なし
+
+修正後のPR情報（修正時）:
+- PR番号: なし
+- head branch: なし
+- head SHA: なし
 
 レビュー結果（P0 / P1 / P2 / P3 / 未解決指摘）:
 

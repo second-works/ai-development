@@ -71,7 +71,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 標準指示：
 
-> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。CI成功後はCodex Code Reviewを実行し、P0 / P1 / P2指摘があればIssue範囲内で修正し、修正前のPR head SHAと修正後のPR head SHAが実際に異なることを確認してから、ローカルテスト（tests / lint / type check / build）、GitHub Actions CI、利用可能なセキュリティチェックを更新後のheadを対象に再実行してからCodex Code Reviewを再実行してください。仕様だけでは判断できない重大な問題は推測で拡張しないでください。最終Mergeは人間が判断します。
+> GitHub Issue #XXを実装してください。Issue記載内容を仕様の基準とし、範囲外の実装や不要なリファクタリングを行わず、必要なテストを追加してください。lint / type check / test / buildのうちプロジェクトで定義されているものを実行し、完了したらPRを作成してください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果も確認してください。CI成功後は `@codex review` をレビュー専用で実行し、P0 / P1 / P2指摘があれば対象PRのhead branchをCodex Desktop/Work等でチェックアウトして修正してください。修正前後のPR番号・head branch・head SHAを記録し、同じhead branchへcommit/pushしてhead SHAの更新を確認してから、ローカルテスト（tests / lint / type check / build）、GitHub Actions CI、利用可能なセキュリティチェック、更新後のheadへの `@codex review` を順に再実行してください。SHAを確認できない、更新されていない、同じhead branchへpushできない場合は停止して人間に確認してください。新しいPRは作成せず、仕様だけでは判断できない重大な問題は推測で拡張しないでください。最終Mergeは人間が判断します。
 
 ## 6. 並列化
 
@@ -176,12 +176,14 @@ Codex Code Reviewを、CI成功後・人間の最終確認前の標準品質ゲ�
 CodexレビューでP0 / P1 / P2が出た場合：
 
 1. 指摘がIssue範囲内か確認する。
-2. Issue範囲内ならCodexへ修正を依頼する。PRコメントから実行可能な場合は `@codex` への修正指示を使ってよい。
-3. Codexの修正完了後、修正前のPR head SHAと修正後のPR head SHAを比較し、PR head SHAが実際に更新されたことを確認する。SHAを確認できない、または更新されていない場合は、再テストや再レビューへ進まず確認を止める。
-4. head SHAの更新確認後に、ローカルテスト、GitHub Actions CI、利用可能なセキュリティチェックを再実行する。
-5. CIと利用可能なセキュリティチェックが成功、または例外を人間が明示判断した後に、更新後のheadを対象としてCodex Code Reviewを再実行する。
-6. 前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
-7. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、Issue範囲外へ広がる場合は自律修正を停止し人間へ戻す。
+2. `@codex review` はレビュー専用として実行し、レビュー結果と対象PRを記録する。レビュー実行自体で修正・commit・push・PR作成は行わない。
+3. 修正前に対象PR番号、既存PRのhead branch、修正前のhead SHAを確認して記録する。
+4. Issue範囲内の修正は、Codex Desktop/Work等で既存PRのhead branchをチェックアウトして行う。PRコメントから修正を実行する標準手順にはせず、新しいPRも作成しない。
+5. 修正後は同じhead branchへcommit/pushし、修正前後のhead SHAが実際に更新されたことを確認する。SHAを確認できない、または更新されていない場合は、ローカルテスト・CI・セキュリティチェック・再レビューへ進まず確認を止める。
+6. head SHAの更新確認後に、ローカルテスト、GitHub Actions CI、利用可能なセキュリティチェックをこの順序で再実行する。
+7. CIと利用可能なセキュリティチェックが成功、または例外を人間が明示判断した後に、更新後のheadを対象として `@codex review` を再実行する。
+8. 前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
+9. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、Issue範囲外へ広がる、または同じhead branchへのpushができない場合は自律修正を停止し人間へ戻す。
 
 AIレビューは補助であり、自動Mergeには使わない。最終Merge判断は人間が行う。
 

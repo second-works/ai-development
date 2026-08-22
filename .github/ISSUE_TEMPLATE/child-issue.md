@@ -46,6 +46,12 @@ path/to/protected/**
 - [ ] lint / type check / buildのうち定義済みのチェックが成功する
 - [ ] 秘密情報を含まない
 - [ ] PRが作成されている
+- [ ] PR作成後も、`@codex review` はレビュー専用として実行されている
+- [ ] Codexレビュー修正時は、対象PR番号・既存PRのhead branch・修正前後のhead SHAを記録している
+- [ ] 修正は既存PRのhead branchへcommit/pushし、新しいPRを作成していない
+- [ ] head SHAが更新されたことを確認できない場合、ローカルテスト・CI・セキュリティチェック・再レビューへ進まず停止する
+- [ ] head SHA更新後、ローカルテスト → CI → セキュリティチェック → 更新後headへの`@codex review`の順で再検証している
+- [ ] 最終Mergeは人間が判断する
 
 # テスト
 
@@ -83,4 +89,4 @@ Issue作成時は、正常系だけでなく以下の観点を具体的なテス
 
 # Codexへの追加指示
 
-Issue記載内容を仕様の基準とする。仕様だけでは判断できない重大な問題がある場合、推測で範囲を拡張しないこと。
+Issue記載内容を仕様の基準とする。Codex Code Reviewの`@codex review`はレビュー専用とし、修正は既存PRのhead branchをCodex Desktop/Work等でチェックアウトして行うこと。修正前後のPR番号・head branch・head SHAを記録し、同じhead branchへcommit/pushしてhead SHAの更新を確認すること。SHAを確認できない、更新されていない、または同じhead branchへpushできない場合は、ローカルテスト・CI・セキュリティチェック・再レビューへ進まず人間に確認すること。新しいPRは作成せず、最終Mergeは人間が判断すること。仕様だけでは判断できない重大な問題がある場合、推測で範囲を拡張しないこと。

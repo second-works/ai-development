@@ -157,6 +157,9 @@ Codexまたは人間がPRを作成するときの報告形式を統一します�
 - GitHub Actions CI結果
 - 注意点
 - 残課題
+- Codex Code Review結果（P0 / P1 / P2 / P3 / 未解決指摘）
+- 修正時の修正前後PR番号・head branch・head SHA
+- 修正後のローカルテスト・CI・セキュリティチェック・更新後headへの再レビュー結果
 
 可能な場合は `Closes #Issue番号` を使い、Merge時にIssueと連動させます。
 
@@ -298,6 +301,10 @@ Nine標準AI開発フローでは、AIだけにもGitHubだけにも品質保証
 - テストを書く
 - ローカルで検証する
 - 自己レビューする
+- `@codex review`をレビュー専用で実行し、修正は行わない
+- 修正時は既存PRのhead branchを使い、新しいPRを作成しない
+- 修正前後のPR番号・head branch・head SHAを記録し、SHA更新を確認する
+- SHA更新後にローカルテスト → CI → セキュリティチェック → 更新後headへの再レビューを行う
 
 ### GitHub側
 
@@ -343,7 +350,13 @@ GitHub Actions CI
     ↓
 CodeQL等のセキュリティチェック
     ↓
-AIレビュー
+AIレビュー（`@codex review`はレビュー専用）
+    ↓
+P0 / P1 / P2があれば既存PRのhead branchで修正
+    ↓
+修正前後のPR head SHA更新確認
+    ↓
+更新後headでローカルテスト → CI → セキュリティチェック → 再レビュー
     ↓
 人間レビュー
     ↓
