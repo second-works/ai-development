@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 3 || $# -gt 4 ]]; then
-  echo "Usage: $0 <repo-identity> <pr-number> <expected-sha> [timeout-seconds]" >&2
+if [[ $# -lt 4 || $# -gt 5 ]]; then
+  echo "Usage: $0 <repo-identity> <pr-number> <expected-sha> <after-comment-id> [timeout-seconds]" >&2
   exit 2
 fi
 
 REPO_IDENTITY="$1"
 PR="$2"
 EXPECTED_SHA="$3"
-TIMEOUT="${4:-300}"
+AFTER_COMMENT_ID="$4"
+TIMEOUT="${5:-300}"
 INTERVAL=5
 START="$(date +%s)"
 SHORT10="${EXPECTED_SHA:0:10}"
@@ -22,6 +23,11 @@ if [[ "$REPO_IDENTITY" != */*/* ]]; then
   echo "ERROR: repository identity must be HOST/owner/repo" >&2
   exit 1
 fi
+if [[ ! "$AFTER_COMMENT_ID" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: after-comment-id must be a numeric GitHub issue comment id" >&2
+  exit 1
+fi
+
 HOST="${REPO_IDENTITY%%/*}"
 REPO_PATH="${REPO_IDENTITY#*/}"
 
@@ -39,9 +45,10 @@ while :; do
     "repos/$REPO_PATH/pulls/$PR/comments?per_page=100" \
     >"$TMPDIR_RUN/review-comments.json"
 
-  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$EXPECTED_SHA" "$SHORT10" <<'PY'
+  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" <<'PY'
 import json, re, sys
-issue_path, review_path, sha, short10 = sys.argv[1:]
+issue_path, review_path, sha, short10, after_comment_id = sys.argv[1:]
+after_comment_id = int(after_comment_id)
 
 def flatten_pages(path):
     with open(path, encoding='utf-8') as f:
@@ -58,11 +65,17 @@ issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
 
 review_seen = False
+review_comment_id = None
 for c in issue_comments:
+    cid = int(c.get('id') or 0)
+    if cid <= after_comment_id:
+        continue
     login = ((c.get('user') or {}).get('login') or '').lower()
     body = c.get('body') or ''
     if 'codex' in login and 'Reviewed commit:' in body and (short10 in body or sha in body):
         review_seen = True
+        review_comment_id = cid
+        break
 
 severities = []
 for c in review_comments:
@@ -78,6 +91,7 @@ for c in review_comments:
             severities.append(sev)
 
 print(f"REVIEW_SEEN={1 if review_seen else 0}")
+print(f"REVIEW_COMMENT_ID={review_comment_id or ''}")
 print(f"BLOCKING_COUNT={len(severities)}")
 if severities:
     print("BLOCKING_SEVERITIES=" + ','.join(sorted(set(severities))))
@@ -90,6 +104,7 @@ PY
   if [[ "$REVIEW_SEEN" -eq 1 ]]; then
     printf '%s\n' "$RESULT"
     echo "EXPECTED_SHA=$EXPECTED_SHA"
+    echo "AFTER_COMMENT_ID=$AFTER_COMMENT_ID"
     if [[ "$BLOCKING_COUNT" -gt 0 ]]; then
       echo "STATUS=REVIEW_CHANGES_REQUIRED"
       exit 3
@@ -99,7 +114,7 @@ PY
   fi
 
   if [[ "$ELAPSED" -ge "$TIMEOUT" ]]; then
-    echo "ERROR: timed out waiting for Codex review of $EXPECTED_SHA" >&2
+    echo "ERROR: timed out waiting for a new Codex review of $EXPECTED_SHA after comment id $AFTER_COMMENT_ID" >&2
     exit 1
   fi
 
