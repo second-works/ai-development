@@ -124,10 +124,11 @@ PY
   fi
 
   if [[ "$COUNT" -eq 0 && "$ELAPSED" -ge "$NO_CHECKS_GRACE" ]]; then
-    echo "EXPECTED_SHA=$EXPECTED_SHA"
-    echo "WAITED_SECONDS=$ELAPSED"
-    echo "STATUS=NO_CHECKS_OBSERVED"
-    exit 0
+    echo "EXPECTED_SHA=$EXPECTED_SHA" >&2
+    echo "WAITED_SECONDS=$ELAPSED" >&2
+    echo "STATUS=NO_CHECKS_OBSERVED" >&2
+    echo "ERROR: no CI/security checks were observed; explicit human decision is required before continuing" >&2
+    exit 4
   fi
 
   if [[ "$ELAPSED" -ge "$TIMEOUT" ]]; then
