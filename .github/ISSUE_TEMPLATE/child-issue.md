@@ -54,7 +54,8 @@ path/to/protected/**
 - [ ] P0 / P1 / P2の修正は `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして行う
 - [ ] 修正前に対象PR番号・head branch・head SHAを確認する
 - [ ] 修正後は同じhead branchへcommit / pushし、新しいPRを作らず既存PRを再利用する
-- [ ] GitHub上でhead SHAの更新を確認し、未確認・未更新なら再検証へ進まない
+- [ ] pushした修正コミットSHAとGitHub上のPR head SHAが一致することを確認する
+- [ ] GitHub上でhead SHAの更新を確認し、未確認・未更新・不一致なら再検証へ進まない
 - [ ] 更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証する
 - [ ] 最終Mergeは人間が判断する
 
