@@ -27,6 +27,30 @@ Closes #
 
 # Codex Code Review
 
+## 修正時のPR / head branch記録
+
+修正を行った場合は、既存PRのhead branchに対する作業だけを記録する。
+
+- 対象PR番号: #
+- 修正前のhead branch:
+- 修正前のhead SHA:
+- 修正後のhead branch:
+- 修正後のhead SHA:
+- 修正を行ったコミットSHA:
+- 各再検証の対象SHA:
+- GitHub上のPR head SHAとの一致確認（日時 / 確認者）:
+- 再検証完了時のPR head SHA一致確認（日時 / 確認者）:
+- SHA更新確認（日時 / 確認者）:
+
+- [ ] `@codex review` はレビュー専用で、修正には使っていない
+- [ ] `@codex address that feedback` を標準手順として使っていない
+- [ ] 新しいPRを作らず、既存PRを再利用した
+- [ ] pushした修正コミットSHAとGitHub上のPR head SHAが一致している
+- [ ] ローカルテスト・CI・セキュリティチェック・再レビューの対象SHAを記録した
+- [ ] 再検証完了時に、修正コミットSHA・検証対象SHA・PR head SHAが一致している
+- [ ] SHA未確認・未更新・不一致時は再検証または完了扱いにせず停止した
+- [ ] AIにMerge権限を与えず、最終Mergeは人間が判断する
+
 - [ ] Codex Code Review実行済み
 - [ ] P0 / P1 指摘なし、またはすべて解消済み
 - [ ] P2 指摘なし、または人間が残置理由を確認済み
@@ -44,7 +68,7 @@ Closes #
 - P3: なし
 - 未解決指摘・残置理由: なし
 
-<!-- Automatic reviewsが無効な場合はPR上で @codex review を依頼する -->
+<!-- Automatic reviewsが無効な場合はPR上で @codex review を依頼する。@codex reviewはレビュー専用とし、修正は既存PRのhead branchで行う。 -->
 
 # Issue範囲の確認
 
