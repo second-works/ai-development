@@ -149,7 +149,8 @@ wait scriptは次を保証する。
 - failure / error / cancelled / timed_out等は停止
 - check/status集合と結果が一定時間変化しない安定期間を待つ
 - 後発checkやpending復帰で安定判定をリセット
-- grace期間後も0件なら `NO_CHECKS_OBSERVED` を明示
+- grace期間後も0件なら `STATUS=NO_CHECKS_OBSERVED` を出して**非0終了し停止する**
+- check未観測をCI/security成功として扱わない。継続するには人間の明示判断が必要
 
 手動確認する場合もhostとpathを分離し、全ページ取得する。
 
