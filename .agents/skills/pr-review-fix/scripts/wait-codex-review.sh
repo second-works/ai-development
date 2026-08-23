@@ -50,6 +50,9 @@ while :; do
   gh api --hostname "$HOST" --paginate --slurp \
     "repos/$REPO_PATH/pulls/$PR/comments?per_page=100" \
     >"$TMPDIR_RUN/review-comments.json"
+  gh api --hostname "$HOST" --paginate --slurp \
+    "repos/$REPO_PATH/pulls/$PR/reviews?per_page=100" \
+    >"$TMPDIR_RUN/reviews.json"
   gh api graphql --hostname "$HOST" --paginate --slurp \
     -f query='query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
       repository(owner: $owner, name: $name) {
@@ -77,11 +80,11 @@ while :; do
     -F number="$PR" \
     >"$TMPDIR_RUN/review-threads.json"
 
-  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$TMPDIR_RUN/review-threads.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" <<'PY'
+  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$TMPDIR_RUN/reviews.json" "$TMPDIR_RUN/review-threads.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" <<'PY'
 import json, re, sys
 from datetime import datetime
 
-issue_path, review_path, threads_path, sha, short10, after_comment_id = sys.argv[1:]
+issue_path, review_path, reviews_path, threads_path, sha, short10, after_comment_id = sys.argv[1:]
 after_comment_id = int(after_comment_id)
 
 ALLOWED_CODEX_LOGINS = {
@@ -105,8 +108,8 @@ def parse_time(value):
         return None
     return datetime.fromisoformat(value.replace('Z', '+00:00'))
 
-def is_allowed_rest_actor(comment):
-    user = comment.get('user') or {}
+def is_allowed_rest_actor(item):
+    user = item.get('user') or {}
     login = (user.get('login') or '').lower()
     actor_type = user.get('type') or ''
     return login in ALLOWED_CODEX_LOGINS and actor_type == 'Bot'
@@ -122,6 +125,7 @@ def severities_in(body):
 
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
+reviews = flatten_pages(reviews_path)
 thread_pages = flatten_pages(threads_path)
 
 request_comment = next(
@@ -137,18 +141,41 @@ if request_created_at is None:
     print("ERROR=request comment has no created_at")
     sys.exit(4)
 
-review_seen = False
+# Identify Codex review submissions for the expected SHA that were submitted at
+# or after the review-request second. Inline comments are then associated by
+# pull_request_review_id instead of comparing their timestamp to the request.
+# This prevents same-second inline findings from being dropped.
+eligible_review_ids = set()
+for r in reviews:
+    if not is_allowed_rest_actor(r):
+        continue
+    if (r.get('commit_id') or '') != sha:
+        continue
+    submitted_at = parse_time(r.get('submitted_at'))
+    if submitted_at is None or submitted_at < request_created_at:
+        continue
+    body = r.get('body') or ''
+    if 'Reviewed commit:' not in body or (short10 not in body and sha not in body):
+        continue
+    rid = int(r.get('id') or 0)
+    if rid:
+        eligible_review_ids.add(rid)
+
+review_seen = bool(eligible_review_ids)
+review_ids_text = ','.join(str(v) for v in sorted(eligible_review_ids))
+
+# Keep the issue-comment summary as supplementary evidence when present, but
+# do not depend on it for associating inline findings with the requested review.
 review_comment_id = None
 for c in issue_comments:
     cid = int(c.get('id') or 0)
     if cid <= after_comment_id:
         continue
     created_at = parse_time(c.get('created_at'))
-    if created_at is None or created_at <= request_created_at:
+    if created_at is None or created_at < request_created_at:
         continue
     body = c.get('body') or ''
     if is_allowed_rest_actor(c) and 'Reviewed commit:' in body and (short10 in body or sha in body):
-        review_seen = True
         review_comment_id = cid
         break
 
@@ -158,14 +185,13 @@ for c in review_comments:
         continue
     if (c.get('commit_id') or '') != sha:
         continue
-    created_at = parse_time(c.get('created_at'))
-    if created_at is None or created_at <= request_created_at:
+    review_id = int(c.get('pull_request_review_id') or 0)
+    if review_id not in eligible_review_ids:
         continue
     new_severities.extend(severities_in(c.get('body') or ''))
 
 # A non-outdated, unresolved thread is relevant to the current PR head even if
-# its first comment was created against an older commit. Do not filter these
-# threads by the comment's creation-time commit SHA.
+# its first comment was created against an older commit.
 unresolved_severities = []
 unresolved_thread_ids = []
 for page in thread_pages:
@@ -189,6 +215,7 @@ for page in thread_pages:
 
 all_blocking = new_severities + unresolved_severities
 print(f"REVIEW_SEEN={1 if review_seen else 0}")
+print(f"REVIEW_IDS={review_ids_text}")
 print(f"REVIEW_COMMENT_ID={review_comment_id or ''}")
 print(f"REQUEST_COMMENT_ID={after_comment_id}")
 print(f"REQUEST_CREATED_AT={request_comment.get('created_at') or ''}")
