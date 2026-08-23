@@ -18,7 +18,6 @@ LAST_SIGNATURE=""
 
 command -v gh >/dev/null 2>&1 || { echo "ERROR: gh not found" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exit 1; }
-gh auth status >/dev/null 2>&1 || { echo "ERROR: gh authentication is not available" >&2; exit 1; }
 
 if [[ "$REPO_IDENTITY" != */*/* ]]; then
   echo "ERROR: repository identity must be HOST/owner/repo" >&2
@@ -26,6 +25,11 @@ if [[ "$REPO_IDENTITY" != */*/* ]]; then
 fi
 HOST="${REPO_IDENTITY%%/*}"
 REPO_PATH="${REPO_IDENTITY#*/}"
+
+gh auth status --hostname "$HOST" >/dev/null 2>&1 || {
+  echo "ERROR: gh authentication is not available for $HOST" >&2
+  exit 1
+}
 
 TMPDIR_RUN="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-checks.XXXXXX")"
 trap 'rm -rf "$TMPDIR_RUN"' EXIT
@@ -59,7 +63,6 @@ for page in status_pages:
     if isinstance(page, dict):
         statuses.extend(page.get('statuses', []))
 
-ok_conclusions = {'success', 'neutral', 'skipped'}
 failed = []
 pending = []
 items = []
@@ -70,7 +73,10 @@ for r in checks:
     items.append(('check', str(r.get('id') or ''), name, status or '', conclusion or ''))
     if status != 'completed':
         pending.append(name)
-    elif conclusion not in ok_conclusions:
+    elif conclusion != 'success':
+        # A skipped/neutral check did not successfully execute the CI/security
+        # validation. Treat every non-success conclusion as blocking unless a
+        # future policy explicitly distinguishes optional checks.
         failed.append(f"{name}:{conclusion}")
 for s in statuses:
     name = s.get('context') or '<unnamed-status>'
@@ -100,7 +106,7 @@ PY
 
   if [[ "$FAILED" -gt 0 ]]; then
     printf '%s\n' "$RESULT" >&2
-    echo "ERROR: CI/security check failed for $EXPECTED_SHA" >&2
+    echo "ERROR: CI/security check did not complete successfully for $EXPECTED_SHA" >&2
     exit 1
   fi
 
