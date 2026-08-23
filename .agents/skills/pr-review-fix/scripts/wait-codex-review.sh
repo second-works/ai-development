@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -lt 4 || $# -gt 5 ]]; then
-  echo "Usage: $0 <repo-identity> <pr-number> <expected-sha> <after-comment-id> [timeout-seconds]" >&2
+if [[ $# -lt 5 || $# -gt 6 ]]; then
+  echo "Usage: $0 <repo-identity> <pr-number> <expected-sha> <after-comment-id> <after-review-id> [timeout-seconds]" >&2
   exit 2
 fi
 
@@ -10,7 +10,8 @@ REPO_IDENTITY="$1"
 PR="$2"
 EXPECTED_SHA="$3"
 AFTER_COMMENT_ID="$4"
-TIMEOUT="${5:-300}"
+AFTER_REVIEW_ID="$5"
+TIMEOUT="${6:-300}"
 INTERVAL=5
 START="$(date +%s)"
 SHORT10="${EXPECTED_SHA:0:10}"
@@ -24,6 +25,10 @@ if [[ "$REPO_IDENTITY" != */*/* ]]; then
 fi
 if [[ ! "$AFTER_COMMENT_ID" =~ ^[0-9]+$ ]]; then
   echo "ERROR: after-comment-id must be a numeric GitHub issue comment id" >&2
+  exit 1
+fi
+if [[ ! "$AFTER_REVIEW_ID" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: after-review-id must be a numeric GitHub pull request review id" >&2
   exit 1
 fi
 
@@ -80,12 +85,12 @@ while :; do
     -F number="$PR" \
     >"$TMPDIR_RUN/review-threads.json"
 
-  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$TMPDIR_RUN/reviews.json" "$TMPDIR_RUN/review-threads.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" <<'PY'
+  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$TMPDIR_RUN/reviews.json" "$TMPDIR_RUN/review-threads.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" "$AFTER_REVIEW_ID" <<'PY'
 import json, re, sys
-from datetime import datetime
 
-issue_path, review_path, reviews_path, threads_path, sha, short10, after_comment_id = sys.argv[1:]
+issue_path, review_path, reviews_path, threads_path, sha, short10, after_comment_id, after_review_id = sys.argv[1:]
 after_comment_id = int(after_comment_id)
+after_review_id = int(after_review_id)
 
 ALLOWED_CODEX_LOGINS = {
     'chatgpt-codex-connector',
@@ -102,11 +107,6 @@ def flatten_pages(path):
         elif isinstance(page, dict):
             out.append(page)
     return out
-
-def parse_time(value):
-    if not value:
-        return None
-    return datetime.fromisoformat(value.replace('Z', '+00:00'))
 
 def is_allowed_rest_actor(item):
     user = item.get('user') or {}
@@ -136,43 +136,31 @@ if request_comment is None:
     print("ERROR=request comment id was not found")
     sys.exit(4)
 
-request_created_at = parse_time(request_comment.get('created_at'))
-if request_created_at is None:
-    print("ERROR=request comment has no created_at")
-    sys.exit(4)
-
-# Identify Codex review submissions for the expected SHA that were submitted at
-# or after the review-request second. Inline comments are then associated by
-# pull_request_review_id instead of comparing their timestamp to the request.
-# This prevents same-second inline findings from being dropped.
+# Review IDs are the authoritative freshness boundary. The caller records the
+# maximum PR review ID before posting @codex review, so a same-second automatic
+# review that already existed cannot be reused as the requested review.
 eligible_review_ids = set()
 for r in reviews:
     if not is_allowed_rest_actor(r):
         continue
-    if (r.get('commit_id') or '') != sha:
+    rid = int(r.get('id') or 0)
+    if rid <= after_review_id:
         continue
-    submitted_at = parse_time(r.get('submitted_at'))
-    if submitted_at is None or submitted_at < request_created_at:
+    if (r.get('commit_id') or '') != sha:
         continue
     body = r.get('body') or ''
     if 'Reviewed commit:' not in body or (short10 not in body and sha not in body):
         continue
-    rid = int(r.get('id') or 0)
-    if rid:
-        eligible_review_ids.add(rid)
+    eligible_review_ids.add(rid)
 
 review_seen = bool(eligible_review_ids)
 review_ids_text = ','.join(str(v) for v in sorted(eligible_review_ids))
 
-# Keep the issue-comment summary as supplementary evidence when present, but
-# do not depend on it for associating inline findings with the requested review.
+# Keep the issue-comment summary as supplementary evidence when present.
 review_comment_id = None
 for c in issue_comments:
     cid = int(c.get('id') or 0)
     if cid <= after_comment_id:
-        continue
-    created_at = parse_time(c.get('created_at'))
-    if created_at is None or created_at < request_created_at:
         continue
     body = c.get('body') or ''
     if is_allowed_rest_actor(c) and 'Reviewed commit:' in body and (short10 in body or sha in body):
@@ -219,6 +207,7 @@ print(f"REVIEW_IDS={review_ids_text}")
 print(f"REVIEW_COMMENT_ID={review_comment_id or ''}")
 print(f"REQUEST_COMMENT_ID={after_comment_id}")
 print(f"REQUEST_CREATED_AT={request_comment.get('created_at') or ''}")
+print(f"AFTER_REVIEW_ID={after_review_id}")
 print(f"NEW_BLOCKING_COUNT={len(new_severities)}")
 print(f"UNRESOLVED_BLOCKING_COUNT={len(unresolved_severities)}")
 print(f"BLOCKING_COUNT={len(all_blocking)}")
@@ -236,6 +225,7 @@ PY
     printf '%s\n' "$RESULT"
     echo "EXPECTED_SHA=$EXPECTED_SHA"
     echo "AFTER_COMMENT_ID=$AFTER_COMMENT_ID"
+    echo "AFTER_REVIEW_ID=$AFTER_REVIEW_ID"
     if [[ "$BLOCKING_COUNT" -gt 0 ]]; then
       echo "STATUS=REVIEW_CHANGES_REQUIRED"
       exit 3
@@ -245,7 +235,7 @@ PY
   fi
 
   if [[ "$ELAPSED" -ge "$TIMEOUT" ]]; then
-    echo "ERROR: timed out waiting for a new Codex review of $EXPECTED_SHA after comment id $AFTER_COMMENT_ID" >&2
+    echo "ERROR: timed out waiting for a new Codex review of $EXPECTED_SHA after review id $AFTER_REVIEW_ID" >&2
     exit 1
   fi
 
