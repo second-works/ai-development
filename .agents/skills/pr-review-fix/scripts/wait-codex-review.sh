@@ -30,6 +30,8 @@ fi
 
 HOST="${REPO_IDENTITY%%/*}"
 REPO_PATH="${REPO_IDENTITY#*/}"
+OWNER="${REPO_PATH%%/*}"
+REPO_NAME="${REPO_PATH#*/}"
 
 TMPDIR_RUN="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-codex.XXXXXX")"
 trap 'rm -rf "$TMPDIR_RUN"' EXIT
@@ -44,17 +46,41 @@ while :; do
   gh api --hostname "$HOST" --paginate --slurp \
     "repos/$REPO_PATH/pulls/$PR/comments?per_page=100" \
     >"$TMPDIR_RUN/review-comments.json"
+  gh api graphql --hostname "$HOST" --paginate --slurp \
+    -f query='query($owner: String!, $name: String!, $number: Int!, $endCursor: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          reviewThreads(first: 100, after: $endCursor) {
+            nodes {
+              id
+              isResolved
+              comments(first: 20) {
+                nodes {
+                  author { login __typename }
+                  body
+                  createdAt
+                  outdated
+                  commit { oid }
+                }
+              }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    }' \
+    -f owner="$OWNER" \
+    -f name="$REPO_NAME" \
+    -F number="$PR" \
+    >"$TMPDIR_RUN/review-threads.json"
 
-  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" <<'PY'
+  RESULT="$(python3 - "$TMPDIR_RUN/issue-comments.json" "$TMPDIR_RUN/review-comments.json" "$TMPDIR_RUN/review-threads.json" "$EXPECTED_SHA" "$SHORT10" "$AFTER_COMMENT_ID" <<'PY'
 import json, re, sys
 from datetime import datetime
 
-issue_path, review_path, sha, short10, after_comment_id = sys.argv[1:]
+issue_path, review_path, threads_path, sha, short10, after_comment_id = sys.argv[1:]
 after_comment_id = int(after_comment_id)
 
-# GitHub REST may expose the GitHub App bot login with or without the [bot]
-# suffix depending on the endpoint. Accept only these known identities and
-# require actor type Bot; substring matching such as "codex" is forbidden.
 ALLOWED_CODEX_LOGINS = {
     'chatgpt-codex-connector',
     'chatgpt-codex-connector[bot]',
@@ -76,14 +102,24 @@ def parse_time(value):
         return None
     return datetime.fromisoformat(value.replace('Z', '+00:00'))
 
-def is_allowed_codex_actor(comment):
+def is_allowed_rest_actor(comment):
     user = comment.get('user') or {}
     login = (user.get('login') or '').lower()
     actor_type = user.get('type') or ''
     return login in ALLOWED_CODEX_LOGINS and actor_type == 'Bot'
 
+def is_allowed_graphql_actor(comment):
+    author = comment.get('author') or {}
+    login = (author.get('login') or '').lower()
+    actor_type = author.get('__typename') or ''
+    return login in ALLOWED_CODEX_LOGINS and actor_type == 'Bot'
+
+def severities_in(body):
+    return [sev for sev in ('P0', 'P1', 'P2') if re.search(rf'\b{sev}\b', body or '')]
+
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
+thread_pages = flatten_pages(threads_path)
 
 request_comment = next(
     (c for c in issue_comments if int(c.get('id') or 0) == after_comment_id),
@@ -108,33 +144,58 @@ for c in issue_comments:
     if created_at is None or created_at <= request_created_at:
         continue
     body = c.get('body') or ''
-    if is_allowed_codex_actor(c) and 'Reviewed commit:' in body and (short10 in body or sha in body):
+    if is_allowed_rest_actor(c) and 'Reviewed commit:' in body and (short10 in body or sha in body):
         review_seen = True
         review_comment_id = cid
         break
 
-severities = []
+new_severities = []
 for c in review_comments:
-    body = c.get('body') or ''
-    commit_id = c.get('commit_id') or ''
+    if not is_allowed_rest_actor(c):
+        continue
+    if (c.get('commit_id') or '') != sha:
+        continue
     created_at = parse_time(c.get('created_at'))
-    if not is_allowed_codex_actor(c):
-        continue
-    if commit_id != sha:
-        continue
     if created_at is None or created_at <= request_created_at:
         continue
-    for sev in ('P0', 'P1', 'P2'):
-        if re.search(rf'\b{sev}\b', body):
-            severities.append(sev)
+    new_severities.extend(severities_in(c.get('body') or ''))
 
+unresolved_severities = []
+unresolved_thread_ids = []
+for page in thread_pages:
+    pr = (((page.get('data') or {}).get('repository') or {}).get('pullRequest') or {})
+    threads = ((pr.get('reviewThreads') or {}).get('nodes') or [])
+    for thread in threads:
+        if thread.get('isResolved'):
+            continue
+        matched = False
+        for c in ((thread.get('comments') or {}).get('nodes') or []):
+            if not is_allowed_graphql_actor(c):
+                continue
+            if c.get('outdated'):
+                continue
+            commit = c.get('commit') or {}
+            if (commit.get('oid') or '') != sha:
+                continue
+            found = severities_in(c.get('body') or '')
+            if found:
+                unresolved_severities.extend(found)
+                matched = True
+        if matched:
+            unresolved_thread_ids.append(thread.get('id') or '<unknown>')
+
+all_blocking = new_severities + unresolved_severities
 print(f"REVIEW_SEEN={1 if review_seen else 0}")
 print(f"REVIEW_COMMENT_ID={review_comment_id or ''}")
 print(f"REQUEST_COMMENT_ID={after_comment_id}")
 print(f"REQUEST_CREATED_AT={request_comment.get('created_at') or ''}")
-print(f"BLOCKING_COUNT={len(severities)}")
-if severities:
-    print("BLOCKING_SEVERITIES=" + ','.join(sorted(set(severities))))
+print(f"NEW_BLOCKING_COUNT={len(new_severities)}")
+print(f"UNRESOLVED_BLOCKING_COUNT={len(unresolved_severities)}")
+print(f"BLOCKING_COUNT={len(all_blocking)}")
+if all_blocking:
+    print("BLOCKING_SEVERITIES=" + ','.join(sorted(set(all_blocking))))
+if unresolved_thread_ids:
+    print("UNRESOLVED_THREAD_IDS=" + ','.join(unresolved_thread_ids))
 PY
 )"
 
