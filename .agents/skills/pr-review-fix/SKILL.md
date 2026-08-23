@@ -122,6 +122,8 @@ bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
 - current branch = `HEAD_BRANCH`
 - working tree clean
 
+`verify-pr-head.sh` は通常 `REPO=HOST/owner/repo` を明示して使う。repo引数を省略した場合も、`origin` のfetch URLと全push URLからhostを含むrepository identityを再構築し、一致しないremote構成では停止する。
+
 不一致なら再検証へ進まず停止する。
 
 ### 7. 更新後SHAでローカル再検証
@@ -205,17 +207,18 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 
 このscriptは次を保証する。
 
-- `REPO` をhostとpathへ分離し、`gh api --hostname` とpaginationを使う
+- `REPO` をhostとpathへ分離し、REST/GraphQLとも対象hostへ問い合わせる
 - `Reviewed commit` が `EXPECTED_SHA` と一致する
 - **`REVIEW_REQUEST_COMMENT_ID` より後に作成されたCodex結果だけを今回の再レビュー完了として受理する**
 - 同じSHAに対する古い自動レビュー/再レビュー結果は完了判定に使わない
 - Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
 - loginに単に `codex` を含む別ユーザー/別botのコメントはレビュー結果として受理しない
-- 新しいP0/P1/P2 inline指摘の有無を確認する
+- 再レビュー依頼後に新しく投稿されたP0/P1/P2 inline指摘を確認する
+- GraphQL reviewThreadsも全ページ確認し、**現在の `EXPECTED_SHA` に対する未解決・非outdatedの既存P0/P1/P2 threadが1件でも残れば成功扱いにしない**
 
 結果:
 
-- `STATUS=REVIEW_PASSED`: 次へ
+- `STATUS=REVIEW_PASSED`: 新規指摘も未解決の既存指摘もない場合だけ次へ
 - `STATUS=REVIEW_CHANGES_REQUIRED`: 同じ修正ループへ戻る
 - timeout: 再レビュー待ちとして停止
 
