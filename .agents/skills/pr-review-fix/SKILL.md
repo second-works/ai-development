@@ -209,6 +209,8 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 - `Reviewed commit` が `EXPECTED_SHA` と一致する
 - **`REVIEW_REQUEST_COMMENT_ID` より後に作成されたCodex結果だけを今回の再レビュー完了として受理する**
 - 同じSHAに対する古い自動レビュー/再レビュー結果は完了判定に使わない
+- Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
+- loginに単に `codex` を含む別ユーザー/別botのコメントはレビュー結果として受理しない
 - 新しいP0/P1/P2 inline指摘の有無を確認する
 
 結果:
