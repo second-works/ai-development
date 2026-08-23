@@ -23,7 +23,7 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 
 - repo rootで実行する。
 - `git` / `gh` / `python3` が利用可能。
-- `gh auth status` が成功する。
+- 対象repositoryのhostに対する `gh auth status --hostname <HOST>` が成功する。
 - working treeがclean。
 - 対象PRがopenかつ同一repository内。
 
@@ -52,6 +52,7 @@ prepare scriptは以下を検証する。
 - working tree clean
 - `origin` のfetch URLと全push URLが同じ `HOST/owner/repo` を指す
 - GitHub.com / GitHub Enterpriseを含めhostまでrepository identityに含める
+- **originから導出した対象hostだけ** `gh auth status --hostname` で認証確認する
 - GitHub操作対象を検証済みoriginから固定
 - remote-tracking refを明示refspecで更新
 - 既存head branchをcheckout
@@ -145,58 +146,20 @@ bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA"
 
 wait scriptは次を保証する。
 
-- `REPO=HOST/owner/repo` を `HOST` と `owner/repo` に分離し、`gh api --hostname` を使う
+- `REPO=HOST/owner/repo` を `HOST` と `owner/repo` に分離し、対象hostだけ認証確認する
 - check runs / statusを `--paginate --slurp` で全ページ取得する
 - queued / in_progress / pendingは待機
-- failure / error / cancelled / timed_out等は停止
+- **check runは `conclusion=success` だけ成功扱い**にする
+- `neutral` / `skipped` を含むsuccess以外のconclusionは停止し、人間判断なしに通過させない
+- status contextも `success` だけ成功扱いにする
 - check/status集合と結果が一定時間変化しない安定期間を待つ
 - 後発checkやpending復帰で安定判定をリセット
-- grace期間後も0件なら `STATUS=NO_CHECKS_OBSERVED` を出して**非0終了し停止する**
+- grace期間後も0件なら `STATUS=NO_CHECKS_OBSERVED` を出して非0終了し停止する
 - check未観測をCI/security成功として扱わない。継続するには人間の明示判断が必要
-
-手動確認する場合もhostとpathを分離し、全ページ取得する。
-
-```bash
-HOST="${REPO%%/*}"
-REPO_PATH="${REPO#*/}"
-
-gh api --hostname "$HOST" --paginate --slurp \
-  "repos/$REPO_PATH/commits/$EXPECTED_SHA/check-runs?per_page=100"
-
-gh api --hostname "$HOST" --paginate --slurp \
-  "repos/$REPO_PATH/commits/$EXPECTED_SHA/status?per_page=100"
-```
-
-CI/security確認後、再レビュー前にもう一度照合する。
-
-```bash
-bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
-```
 
 ### 9. 更新後headへ再レビュー依頼
 
-今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、**再レビュー依頼コメント自身のGitHub comment IDを取得して基準点にする**。
-
-```bash
-HOST="${REPO%%/*}"
-REPO_PATH="${REPO#*/}"
-REVIEW_REQUEST_BODY="$(cat <<EOF
-更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。
-
-@codex review
-EOF
-)"
-
-REVIEW_REQUEST_COMMENT_ID="$(
-  gh api --hostname "$HOST" \
-    --method POST \
-    "repos/$REPO_PATH/issues/<PR番号>/comments" \
-    -f body="$REVIEW_REQUEST_BODY" \
-    --jq '.id'
-)"
-
-test -n "$REVIEW_REQUEST_COMMENT_ID"
-```
+今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、再レビュー依頼コメント自身のGitHub comment IDを取得して基準点にする。
 
 ### 10. 再レビュー完了を待つ
 
@@ -208,13 +171,14 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 このscriptは次を保証する。
 
 - `REPO` をhostとpathへ分離し、REST/GraphQLとも対象hostへ問い合わせる
+- 対象hostだけ `gh auth status --hostname` で認証確認する
 - `Reviewed commit` が `EXPECTED_SHA` と一致する
-- **`REVIEW_REQUEST_COMMENT_ID` より後に作成されたCodex結果だけを今回の再レビュー完了として受理する**
-- 同じSHAに対する古い自動レビュー/再レビュー結果は完了判定に使わない
+- `REVIEW_REQUEST_COMMENT_ID` より後に作成されたCodex結果だけを今回の再レビュー完了として受理する
 - Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
-- loginに単に `codex` を含む別ユーザー/別botのコメントはレビュー結果として受理しない
 - 再レビュー依頼後に新しく投稿されたP0/P1/P2 inline指摘を確認する
-- GraphQL reviewThreadsも全ページ確認し、**現在の `EXPECTED_SHA` に対する未解決・非outdatedの既存P0/P1/P2 threadが1件でも残れば成功扱いにしない**
+- GraphQL reviewThreadsも全ページ確認する
+- **未解決かつ非outdatedのCodex P0/P1/P2 threadは、作成時commit SHAに関係なく現在headのblockerとして集計する**
+- つまり古いSHAで作られたthreadでも、GitHubが非outdatedと判定していて未解決なら `REVIEW_PASSED` にしない
 
 結果:
 
