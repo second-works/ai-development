@@ -13,8 +13,6 @@ command -v git >/dev/null 2>&1 || { echo "ERROR: git not found" >&2; exit 1; }
 command -v gh >/dev/null 2>&1 || { echo "ERROR: gh not found" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exit 1; }
 
-gh auth status >/dev/null 2>&1 || { echo "ERROR: gh authentication is not available" >&2; exit 1; }
-
 git rev-parse --show-toplevel >/dev/null 2>&1 || { echo "ERROR: not inside a git repository" >&2; exit 1; }
 cd "$(git rev-parse --show-toplevel)"
 
@@ -38,7 +36,6 @@ repo_identity_from_url() {
       rest="${url#ssh://git@}"
       host="${rest%%/*}"
       path="${rest#*/}"
-      # gh --repo does not encode a custom SSH port in repository identity.
       if [[ "$host" == *:* ]]; then
         echo "ERROR: SSH URL with explicit port is not supported safely: $url" >&2
         return 1
@@ -63,11 +60,9 @@ repo_identity_from_url() {
   fi
 
   identity="${host}/${path}"
-  # GitHub repository identity is case-insensitive; normalize before comparison.
   printf '%s\n' "$identity" | tr '[:upper:]' '[:lower:]'
 }
 
-# origin のfetch先と、実際に push される全 pushurl を事前検証する。
 ORIGIN_FETCH_URL="$(git remote get-url origin 2>/dev/null || true)"
 if [[ -z "$ORIGIN_FETCH_URL" ]]; then
   echo "ERROR: origin fetch URL is not configured" >&2
@@ -93,7 +88,12 @@ for push_url in "${ORIGIN_PUSH_URLS[@]}"; do
   fi
 done
 
-# HOST/owner/repo を明示して gh の既定host/repository設定に依存しない。
+HOST="${REPO%%/*}"
+gh auth status --hostname "$HOST" >/dev/null 2>&1 || {
+  echo "ERROR: gh authentication is not available for $HOST" >&2
+  exit 1
+}
+
 DEFAULT_BRANCH="$(gh repo view "$REPO" --json defaultBranchRef --jq '.defaultBranchRef.name')"
 PR_JSON="$(gh pr view "$PR" --repo "$REPO" --json number,state,headRefName,headRefOid,baseRefName,isCrossRepository,url)"
 
@@ -123,20 +123,15 @@ if [[ "$HEAD_BRANCH" == "$DEFAULT_BRANCH" ]]; then
   exit 1
 fi
 
-# 古いPRのbranchへcheckoutするとrepo-local Skill自体が消える場合があるため、
-# checkout前にscript一式をbranch非依存の一時ディレクトリへ退避する。
 RUNTIME_DIR="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-fix.${PR}.XXXXXX")"
 cp -R "$SCRIPT_DIR" "$RUNTIME_DIR/scripts"
 
-# checkout前に取得したhead SHAを修正前SHAとして固定する。
 BEFORE_SHA="$HEAD_SHA"
 
-# sourceだけのfetchではremote-tracking refが更新されない場合があるため、destinationを明示する。
 git fetch origin "+refs/heads/$HEAD_BRANCH:refs/remotes/origin/$HEAD_BRANCH"
 
 if git show-ref --verify --quiet "refs/heads/$HEAD_BRANCH"; then
   git checkout "$HEAD_BRANCH"
-  # 既存local branchが古い場合に勝手にresetせず、SHA不一致として安全に停止させる。
 else
   git checkout --track -b "$HEAD_BRANCH" "origin/$HEAD_BRANCH"
 fi
