@@ -23,7 +23,7 @@ fi
 
 repo_identity_from_url() {
   local url="$1"
-  local host path identity
+  local host path identity rest authority
 
   case "$url" in
     git@*:*/*)
@@ -32,30 +32,31 @@ repo_identity_from_url() {
       path="${url#*:}"
       ;;
     ssh://git@*/*/*)
-      local rest
       rest="${url#ssh://git@}"
       host="${rest%%/*}"
       path="${rest#*/}"
       if [[ "$host" == *:* ]]; then
-        echo "ERROR: SSH URL with explicit port is not supported safely: $url" >&2
+        echo "ERROR: SSH URL with explicit port is not supported safely" >&2
         return 1
       fi
       ;;
     http://*/*/*|https://*/*/*)
-      local rest
       rest="${url#*://}"
-      host="${rest%%/*}"
+      authority="${rest%%/*}"
       path="${rest#*/}"
+      # HTTPS remotes may embed userinfo (for example a token). Strip it
+      # before deriving or ever printing the repository identity.
+      host="${authority##*@}"
       ;;
     *)
-      echo "ERROR: unsupported Git remote URL: $url" >&2
+      echo "ERROR: unsupported Git remote URL format" >&2
       return 1
       ;;
   esac
 
   path="${path%.git}"
   if [[ -z "$host" || "$path" != */* || "$path" == */*/* ]]; then
-    echo "ERROR: could not resolve HOST/owner/repo from remote URL: $url" >&2
+    echo "ERROR: could not resolve HOST/owner/repo from Git remote URL" >&2
     return 1
   fi
 
@@ -81,7 +82,6 @@ for push_url in "${ORIGIN_PUSH_URLS[@]}"; do
   if [[ "$PUSH_REPO" != "$REPO" ]]; then
     echo "ERROR: origin push repository differs from fetch/GitHub repository" >&2
     echo "  fetch identity: $REPO" >&2
-    echo "  push URL:       $push_url" >&2
     echo "  push identity:  $PUSH_REPO" >&2
     echo "Do not push until every origin push URL targets the same GitHub repository." >&2
     exit 1
@@ -159,7 +159,7 @@ HEAD_BRANCH=$HEAD_BRANCH
 BEFORE_SHA=$BEFORE_SHA
 HEAD_SHA=$HEAD_SHA
 DEFAULT_BRANCH=$DEFAULT_BRANCH
-ORIGIN_FETCH_URL=$ORIGIN_FETCH_URL
+ORIGIN_FETCH_IDENTITY=$REPO
 ORIGIN_PUSH_URL_COUNT=${#ORIGIN_PUSH_URLS[@]}
 RUNTIME_DIR=$RUNTIME_DIR
 VERIFY_SCRIPT=$RUNTIME_DIR/scripts/verify-pr-head.sh
