@@ -31,7 +31,7 @@ fi
 
 repo_identity_from_url() {
   local url="$1"
-  local host slug rest
+  local host slug rest authority
   case "$url" in
     git@*:*/*)
       rest="${url#git@}"
@@ -42,23 +42,28 @@ repo_identity_from_url() {
       rest="${url#ssh://git@}"
       host="${rest%%/*}"
       slug="${rest#*/}"
+      if [[ "$host" == *:* ]]; then
+        echo "ERROR: SSH URL with explicit port is not supported safely" >&2
+        return 1
+      fi
       ;;
     http://*/*/*|https://*/*/*)
       rest="${url#*://}"
-      host="${rest%%/*}"
+      authority="${rest%%/*}"
+      host="${authority##*@}"
       slug="${rest#*/}"
       ;;
     *)
-      echo "ERROR: unsupported Git remote URL: $url" >&2
+      echo "ERROR: unsupported Git remote URL format" >&2
       return 1
       ;;
   esac
   slug="${slug%.git}"
   if [[ -z "$host" || "$slug" != */* || "$slug" == */*/* ]]; then
-    echo "ERROR: could not derive HOST/owner/repo from remote URL: $url" >&2
+    echo "ERROR: could not derive HOST/owner/repo from Git remote URL" >&2
     return 1
   fi
-  printf '%s/%s\n' "$host" "$slug"
+  printf '%s/%s\n' "$host" "$slug" | tr '[:upper:]' '[:lower:]'
 }
 
 if [[ -z "$REPO" ]]; then
@@ -89,8 +94,8 @@ if [[ -z "$REPO" ]]; then
   fi
   if [[ "$FETCH_REPO" != "$PUSH_REPO" ]]; then
     echo "ERROR: origin fetch/push repository mismatch" >&2
-    echo "  fetch: $FETCH_REPO" >&2
-    echo "  push:  $PUSH_REPO" >&2
+    echo "  fetch identity: $FETCH_REPO" >&2
+    echo "  push identity:  $PUSH_REPO" >&2
     exit 1
   fi
   REPO="$FETCH_REPO"
