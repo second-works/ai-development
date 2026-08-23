@@ -52,6 +52,14 @@ from datetime import datetime
 issue_path, review_path, sha, short10, after_comment_id = sys.argv[1:]
 after_comment_id = int(after_comment_id)
 
+# GitHub REST may expose the GitHub App bot login with or without the [bot]
+# suffix depending on the endpoint. Accept only these known identities and
+# require actor type Bot; substring matching such as "codex" is forbidden.
+ALLOWED_CODEX_LOGINS = {
+    'chatgpt-codex-connector',
+    'chatgpt-codex-connector[bot]',
+}
+
 def flatten_pages(path):
     with open(path, encoding='utf-8') as f:
         pages = json.load(f)
@@ -67,6 +75,12 @@ def parse_time(value):
     if not value:
         return None
     return datetime.fromisoformat(value.replace('Z', '+00:00'))
+
+def is_allowed_codex_actor(comment):
+    user = comment.get('user') or {}
+    login = (user.get('login') or '').lower()
+    actor_type = user.get('type') or ''
+    return login in ALLOWED_CODEX_LOGINS and actor_type == 'Bot'
 
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
@@ -93,20 +107,18 @@ for c in issue_comments:
     created_at = parse_time(c.get('created_at'))
     if created_at is None or created_at <= request_created_at:
         continue
-    login = ((c.get('user') or {}).get('login') or '').lower()
     body = c.get('body') or ''
-    if 'codex' in login and 'Reviewed commit:' in body and (short10 in body or sha in body):
+    if is_allowed_codex_actor(c) and 'Reviewed commit:' in body and (short10 in body or sha in body):
         review_seen = True
         review_comment_id = cid
         break
 
 severities = []
 for c in review_comments:
-    login = ((c.get('user') or {}).get('login') or '').lower()
     body = c.get('body') or ''
     commit_id = c.get('commit_id') or ''
     created_at = parse_time(c.get('created_at'))
-    if 'codex' not in login:
+    if not is_allowed_codex_actor(c):
         continue
     if commit_id != sha:
         continue
