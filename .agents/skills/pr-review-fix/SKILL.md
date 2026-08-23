@@ -123,7 +123,7 @@ bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
 - current branch = `HEAD_BRANCH`
 - working tree clean
 
-`verify-pr-head.sh` は通常 `REPO=HOST/owner/repo` を明示して使う。repo引数を省略した場合も、`origin` のfetch URLと全push URLからhostを含むrepository identityを再構築し、一致しないremote構成では停止する。
+`verify-pr-head.sh` は通常 `REPO=HOST/owner/repo` を明示して使う。repo引数を省略した場合も、`origin` のfetch URLと全push URLからhostを含むrepository identityを再構築し、一致しないremote構成では停止する。認証確認はrepository identity確定後、対象hostだけに対して行う。
 
 不一致なら再検証へ進まず停止する。
 
@@ -160,6 +160,27 @@ wait scriptは次を保証する。
 ### 9. 更新後headへ再レビュー依頼
 
 今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、再レビュー依頼コメント自身のGitHub comment IDを取得して基準点にする。
+
+```bash
+HOST="${REPO%%/*}"
+REPO_PATH="${REPO#*/}"
+REVIEW_REQUEST_BODY="$(cat <<EOF
+更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。
+
+@codex review
+EOF
+)"
+
+REVIEW_REQUEST_COMMENT_ID="$(
+  gh api --hostname "$HOST" \
+    --method POST \
+    "repos/$REPO_PATH/issues/<PR番号>/comments" \
+    -f body="$REVIEW_REQUEST_BODY" \
+    --jq '.id'
+)"
+
+test -n "$REVIEW_REQUEST_COMMENT_ID"
+```
 
 ### 10. 再レビュー完了を待つ
 
