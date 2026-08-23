@@ -30,33 +30,84 @@ if [[ "$EXPECTED_SHA" == "$BEFORE_SHA" ]]; then
   exit 1
 fi
 
+repo_identity_from_url() {
+  local url="$1"
+  local host slug rest
+  case "$url" in
+    git@*:*/*)
+      rest="${url#git@}"
+      host="${rest%%:*}"
+      slug="${url#*:}"
+      ;;
+    ssh://git@*/*/*)
+      rest="${url#ssh://git@}"
+      host="${rest%%/*}"
+      slug="${rest#*/}"
+      ;;
+    http://*/*/*|https://*/*/*)
+      rest="${url#*://}"
+      host="${rest%%/*}"
+      slug="${rest#*/}"
+      ;;
+    *)
+      echo "ERROR: unsupported Git remote URL: $url" >&2
+      return 1
+      ;;
+  esac
+  slug="${slug%.git}"
+  if [[ -z "$host" || "$slug" != */* || "$slug" == */*/* ]]; then
+    echo "ERROR: could not derive HOST/owner/repo from remote URL: $url" >&2
+    return 1
+  fi
+  printf '%s/%s\n' "$host" "$slug"
+}
+
 if [[ -z "$REPO" ]]; then
   ORIGIN_FETCH_URL="$(git remote get-url origin 2>/dev/null || true)"
-  ORIGIN_PUSH_URL="$(git remote get-url --push origin 2>/dev/null || true)"
-  if [[ -z "$ORIGIN_FETCH_URL" || -z "$ORIGIN_PUSH_URL" ]]; then
-    echo "ERROR: repo not supplied and origin fetch/push URL unavailable" >&2
+  if [[ -z "$ORIGIN_FETCH_URL" ]]; then
+    echo "ERROR: repo not supplied and origin fetch URL unavailable" >&2
     exit 1
   fi
-  repo_slug_from_url() {
-    local url="$1"
-    local slug
-    case "$url" in
-      git@*:*/*) slug="${url#*:}" ;;
-      ssh://git@*/*/*) slug="${url#ssh://git@}"; slug="${slug#*/}" ;;
-      http://*/*/*|https://*/*/*) slug="${url#*://}"; slug="${slug#*/}" ;;
-      *) echo "ERROR: unsupported Git remote URL: $url" >&2; return 1 ;;
-    esac
-    slug="${slug%.git}"
-    printf '%s\n' "$slug"
-  }
-  FETCH_REPO="$(repo_slug_from_url "$ORIGIN_FETCH_URL")"
-  PUSH_REPO="$(repo_slug_from_url "$ORIGIN_PUSH_URL")"
+
+  FETCH_REPO="$(repo_identity_from_url "$ORIGIN_FETCH_URL")"
+  PUSH_REPO=""
+  PUSH_URL_COUNT=0
+  while IFS= read -r push_url; do
+    [[ -n "$push_url" ]] || continue
+    PUSH_URL_COUNT=$((PUSH_URL_COUNT + 1))
+    push_repo="$(repo_identity_from_url "$push_url")"
+    if [[ -z "$PUSH_REPO" ]]; then
+      PUSH_REPO="$push_repo"
+    elif [[ "$PUSH_REPO" != "$push_repo" ]]; then
+      echo "ERROR: origin has multiple push repositories" >&2
+      exit 1
+    fi
+  done <<EOF
+git remote get-url --push --all origin 2>/dev/null || true
+EOF
+
+  if [[ "$PUSH_URL_COUNT" -eq 0 || -z "$PUSH_REPO" ]]; then
+    echo "ERROR: repo not supplied and origin push URL unavailable" >&2
+    exit 1
+  fi
   if [[ "$FETCH_REPO" != "$PUSH_REPO" ]]; then
     echo "ERROR: origin fetch/push repository mismatch" >&2
+    echo "  fetch: $FETCH_REPO" >&2
+    echo "  push:  $PUSH_REPO" >&2
     exit 1
   fi
   REPO="$FETCH_REPO"
 fi
+
+if [[ "$REPO" != */*/* ]]; then
+  echo "ERROR: repo must be HOST/owner/repo" >&2
+  exit 1
+fi
+HOST="${REPO%%/*}"
+gh auth status --hostname "$HOST" >/dev/null 2>&1 || {
+  echo "ERROR: gh authentication is not available for $HOST" >&2
+  exit 1
+}
 
 PR_JSON="$(gh pr view "$PR" --repo "$REPO" --json number,state,headRefName,headRefOid,isCrossRepository,url)"
 STATE="$(printf '%s' "$PR_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["state"])')"
@@ -90,7 +141,6 @@ if [[ "$LOCAL_SHA" != "$EXPECTED_SHA" ]]; then
   exit 1
 fi
 
-# GitHub側への反映に短い遅延がある場合だけ待つ。最大約15秒。
 for _ in 1 2 3 4 5; do
   GITHUB_SHA="$(gh pr view "$PR" --repo "$REPO" --json headRefOid --jq '.headRefOid')"
   [[ "$GITHUB_SHA" == "$EXPECTED_SHA" ]] && break
