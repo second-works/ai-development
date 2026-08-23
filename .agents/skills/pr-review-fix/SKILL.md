@@ -159,11 +159,19 @@ wait scriptは次を保証する。
 
 ### 9. 更新後headへ再レビュー依頼
 
-今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、再レビュー依頼コメント自身のGitHub comment IDを取得して基準点にする。
+今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、**依頼を投稿する直前の最大PR review ID** と、再レビュー依頼コメント自身のGitHub comment IDを基準点として記録する。timestampは秒精度なのでfreshness判定には使わない。
 
 ```bash
 HOST="${REPO%%/*}"
 REPO_PATH="${REPO#*/}"
+
+REVIEW_BASELINE_ID="$(
+  gh api --hostname "$HOST" --paginate --slurp \
+    "repos/$REPO_PATH/pulls/<PR番号>/reviews?per_page=100" \
+  | python3 -c 'import json,sys; pages=json.load(sys.stdin); ids=[int(r.get("id") or 0) for p in pages for r in (p if isinstance(p,list) else [p])]; print(max(ids, default=0))'
+)"
+test "$REVIEW_BASELINE_ID" -ge 0
+
 REVIEW_REQUEST_BODY="$(cat <<EOF
 更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。
 
@@ -186,7 +194,8 @@ test -n "$REVIEW_REQUEST_COMMENT_ID"
 
 ```bash
 bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
-  "$REPO" <PR番号> "$EXPECTED_SHA" "$REVIEW_REQUEST_COMMENT_ID"
+  "$REPO" <PR番号> "$EXPECTED_SHA" \
+  "$REVIEW_REQUEST_COMMENT_ID" "$REVIEW_BASELINE_ID"
 ```
 
 このscriptは次を保証する。
@@ -194,9 +203,11 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 - `REPO` をhostとpathへ分離し、REST/GraphQLとも対象hostへ問い合わせる
 - 対象hostだけ `gh auth status --hostname` で認証確認する
 - `Reviewed commit` が `EXPECTED_SHA` と一致する
-- `REVIEW_REQUEST_COMMENT_ID` より後に作成されたCodex結果だけを今回の再レビュー完了として受理する
+- **review IDが `REVIEW_BASELINE_ID` より大きいCodex reviewだけを今回の再レビューとして受理する**
+- 再レビュー依頼と同じ秒に完了していた依頼前reviewも再利用しない
+- issue comment側は `REVIEW_REQUEST_COMMENT_ID` より後のsummaryだけを補助情報として扱う
 - Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
-- 再レビュー依頼後に新しく投稿されたP0/P1/P2 inline指摘を確認する
+- inline指摘は受理したreviewの `pull_request_review_id` と関連付けてP0/P1/P2を確認する
 - GraphQL reviewThreadsも全ページ確認する
 - **未解決かつ非outdatedのCodex P0/P1/P2 threadは、作成時commit SHAに関係なく現在headのblockerとして集計する**
 - つまり古いSHAで作られたthreadでも、GitHubが非outdatedと判定していて未解決なら `REVIEW_PASSED` にしない
@@ -218,7 +229,7 @@ CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを
 
 ### 12. 最終報告
 
-最低限、PR番号、repository、head branch、修正前後SHA、push SHA、修正したP0/P1/P2、local test、CI/security、再レビュー依頼comment ID、reviewed commit、未解決指摘、最終SHA照合結果を報告する。
+最低限、PR番号、repository、head branch、修正前後SHA、push SHA、修正したP0/P1/P2、local test、CI/security、再レビュー依頼comment ID、review baseline ID、reviewed commit、未解決指摘、最終SHA照合結果を報告する。
 
 最後に「最終Mergeは人間判断」と明記して停止する。
 
