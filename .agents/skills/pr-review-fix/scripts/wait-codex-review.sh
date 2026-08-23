@@ -17,7 +17,6 @@ SHORT10="${EXPECTED_SHA:0:10}"
 
 command -v gh >/dev/null 2>&1 || { echo "ERROR: gh not found" >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exit 1; }
-gh auth status >/dev/null 2>&1 || { echo "ERROR: gh authentication is not available" >&2; exit 1; }
 
 if [[ "$REPO_IDENTITY" != */*/* ]]; then
   echo "ERROR: repository identity must be HOST/owner/repo" >&2
@@ -32,6 +31,11 @@ HOST="${REPO_IDENTITY%%/*}"
 REPO_PATH="${REPO_IDENTITY#*/}"
 OWNER="${REPO_PATH%%/*}"
 REPO_NAME="${REPO_PATH#*/}"
+
+gh auth status --hostname "$HOST" >/dev/null 2>&1 || {
+  echo "ERROR: gh authentication is not available for $HOST" >&2
+  exit 1
+}
 
 TMPDIR_RUN="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-codex.XXXXXX")"
 trap 'rm -rf "$TMPDIR_RUN"' EXIT
@@ -60,7 +64,6 @@ while :; do
                   body
                   createdAt
                   outdated
-                  commit { oid }
                 }
               }
             }
@@ -160,6 +163,9 @@ for c in review_comments:
         continue
     new_severities.extend(severities_in(c.get('body') or ''))
 
+# A non-outdated, unresolved thread is relevant to the current PR head even if
+# its first comment was created against an older commit. Do not filter these
+# threads by the comment's creation-time commit SHA.
 unresolved_severities = []
 unresolved_thread_ids = []
 for page in thread_pages:
@@ -173,9 +179,6 @@ for page in thread_pages:
             if not is_allowed_graphql_actor(c):
                 continue
             if c.get('outdated'):
-                continue
-            commit = c.get('commit') or {}
-            if (commit.get('oid') or '') != sha:
                 continue
             found = severities_in(c.get('body') or '')
             if found:
