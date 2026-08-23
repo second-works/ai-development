@@ -82,9 +82,7 @@ if [[ -z "$REPO" ]]; then
       echo "ERROR: origin has multiple push repositories" >&2
       exit 1
     fi
-  done <<EOF
-git remote get-url --push --all origin 2>/dev/null || true
-EOF
+  done < <(git remote get-url --push --all origin 2>/dev/null || true)
 
   if [[ "$PUSH_URL_COUNT" -eq 0 || -z "$PUSH_REPO" ]]; then
     echo "ERROR: repo not supplied and origin push URL unavailable" >&2
