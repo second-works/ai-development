@@ -12,7 +12,9 @@
 
 原則は **1子Issue = 1 PR**。
 
-品質保証は、Codex側の自己チェック、GitHub Actionsによる機械検証、Codex Code Review、人間の最終判断を組み合わせる。
+品質保証は、Codex側の自己チェック、共通の標準検証入口、GitHub Actionsによる機械検証、Codex Code Review、人間の最終判断を組み合わせる。
+
+テンプレート利用プロジェクトでは、ローカル・Agent・GitHub Actionsが同じ `./scripts/verify.sh` を呼び出す。標準検証は lint → type check → test → build の順に実行し、対象外工程は理由付きで明示する。標準検証を実行できない場合や失敗した場合は、commit・PR作成・レビュー依頼へ進まず停止する。
 
 ## 2. ChatGPTの役割
 
@@ -144,7 +146,7 @@ PRをMergeした後は、役目を終えたIssue用の短命head branchを原則
 - `templates/github-actions/python-ci.yml`
 - `templates/github-actions/generic-ci.yml`
 
-新規プロジェクト準備時は、技術スタックに合うテンプレートを `.github/workflows/ci.yml` として配置し、実際のコマンドやバージョンに合わせて調整する。
+新規プロジェクト準備時は、`templates/verification/verify.sh` を `scripts/verify.sh` として配置し、技術スタックに合うCIテンプレートを `.github/workflows/ci.yml` として配置する。CIテンプレートは個別のlint / type check / test / buildコマンドを再定義せず、同じ `./scripts/verify.sh` を呼び出す。Node.jsは `.nvmrc` と `package-lock.json`、Pythonは `.python-version` と依存lock/pinなど、技術スタックに適した方法で開発ツールと実行環境を固定する。
 
 CodexのローカルテストとGitHub Actions CIは二重チェックとして扱う。
 
