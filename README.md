@@ -32,6 +32,8 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 詳細は [`docs/nine-standard-ai-development-flow.md`](docs/nine-standard-ai-development-flow.md) を参照してください。
 
+テンプレートから生成したプロジェクトは、[`templates/verification/verify.sh`](templates/verification/verify.sh) を `scripts/verify.sh` として配置し、ローカル・Agent・GitHub Actionsで同じ標準検証入口を使用します。検証は lint → type check → test → build の順に進み、対象外工程は理由付きで明示され、失敗時は後続工程へ進みません。
+
 ## 主要ファイル
 
 - `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール
@@ -46,7 +48,7 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 - ChatGPTは考える
 - GitHubは仕事を管理する
 - Codexは実装する
-- GitHub Actionsは機械的に検証する
+- GitHub Actionsは同じ標準検証入口を機械的に実行する
 - Codex Code ReviewはPR差分をレビューする（レビュー専用）
 - PR修正は既存PRのhead branchへ反映する
 - PRを品質の関門にする

@@ -20,41 +20,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Verify Python version pin
+        run: test -s .python-version
+
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
+          python-version-file: .python-version
           cache: pip
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f pyproject.toml ]; then pip install .; fi
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt; fi
+          if [ -f pyproject.toml ]; then python -m pip install .; fi
 
-      - name: Import check
-        run: |
-          if [ -d app ]; then python -m compileall -q app; fi
-          if [ -d tests ]; then python -m compileall -q tests; fi
-
-      - name: Lint
-        run: |
-          if command -v ruff >/dev/null 2>&1; then ruff check .; else echo 'ruff not installed; skipping'; fi
-
-      - name: Type check
-        run: |
-          if command -v mypy >/dev/null 2>&1; then mypy .; else echo 'mypy not installed; skipping'; fi
-
-      - name: Test
-        run: |
-          if [ -d tests ] && find tests -type f \( -name 'test_*.py' -o -name '*_test.py' \) | grep -q .; then
-            if command -v pytest >/dev/null 2>&1; then
-              pytest -q
-            else
-              echo 'Test files exist but pytest is not installed.'
-              exit 1
-            fi
-          else
-            echo 'Bootstrap stage only: no test files yet; skipping pytest.'
-            echo 'Once the first test is added, pytest must run and pass.'
-          fi
+      - name: Standard verification
+        run: ./scripts/verify.sh

@@ -177,55 +177,72 @@ PRテンプレートには、修正時の対象PR番号、head branch、修正�
 8. AIはMergeせず、人間が最終Mergeを判断する。
 
 
-## 8. GitHub Actions CIテンプレート
+## 8. 標準検証入口とGitHub Actions CIテンプレート
 
 保存場所:
 
-`templates/github-actions/`
+- `templates/verification/verify.sh`
+- `templates/github-actions/`
+
+### 標準検証入口
+
+新規プロジェクトでは、まず `templates/verification/verify.sh` を `scripts/verify.sh` として配置し、実行権限を付与します。
+
+ローカル・Agent・GitHub Actionsの検証コマンドは、原則として次の1つに統一します。
+
+```bash
+./scripts/verify.sh
+```
+
+標準入口は次の順序で工程を実行します。
+
+1. lint
+2. type check
+3. test
+4. build
+
+対象外工程は `skipped` と理由をログへ出します。対象工程のツール未導入や失敗は工程名を示して非0終了し、後続工程へ進みません。
 
 ### Node.js
 
-`node-ci.yml`
+`node-ci.yml` はNode.js / TypeScript系プロジェクト向けです。
 
-Node.js / TypeScript系プロジェクト向けです。
-
-主に以下を自動実行します。
-
-- dependency install
-- lint
-- type check
-- test
-- build
+- `.nvmrc` にNode.jsの正確なバージョンを固定する
+- `package-lock.json` をcommitし、CIは `npm ci` を使う
+- `package.json` の `scripts.lint`、`scripts.typecheck`、`scripts.test`、`scripts.build` を標準入口から実行する
+- 存在しないscriptは対象外として明示する
 
 ### Python
 
-`python-ci.yml`
+`python-ci.yml` はPython系プロジェクト向けです。
 
-Python系プロジェクト向けです。
-
-プロジェクトで使用するpytest、ruff、mypy等に合わせて調整します。
-
-#### Bootstrap例外
-
-新規リポジトリでは最初の基盤Issueより前にテストファイルが0件の場合があります。この状態でpytestをそのまま実行するとCIが失敗することがあるため、標準Pythonテンプレートは**テストファイルが存在しない期間だけ**Bootstrapとしてpytestをskipします。
-
-テストファイルが1件でも作成された後は、pytest未導入やテスト失敗をCI失敗として扱います。これはテスト回避のための例外ではありません。
+- `.python-version` にPythonの正確なバージョンを固定する
+- `requirements-dev.txt`、`uv.lock`、`poetry.lock` 等でRuff / mypy / pytest / buildなどの開発ツールを固定する
+- Ruff、mypy、pytest、PEP 517 buildの設定がある工程を標準入口から実行する
+- 設定がない工程は対象外として明示する。テストファイルが存在する場合のpytest未導入は失敗とする
 
 ### Generic
 
-`generic-ci.yml`
+`generic-ci.yml` はNode.js / Python以外、または技術スタック未確定のプロジェクト向けです。
 
-Node.js/Python以外、または技術スタックがまだ確定していないプロジェクトの土台です。
+- `scripts/lint.sh`
+- `scripts/typecheck.sh`
+- `scripts/test.sh`
+- `scripts/build.sh`
 
-### 配置方法
+を必要な工程だけ実装し、標準入口から順番に呼び出します。工程スクリプトがない工程は対象外として明示します。既存の `scripts/ci.sh` は移行期間の互換入口として利用できますが、新規プロジェクトでは工程別スクリプトを推奨します。
 
-対象テンプレートを新規プロジェクトの
+### 生成直後のサンプル検証
 
-`.github/workflows/ci.yml`
+テンプレート正本には `tests/verification/run-samples.sh` を含めます。このスクリプトは生成相当の一時プロジェクトを作成し、次を検証します。
 
-として配置し、実際のpackage manager、言語バージョン、テストコマンドなどに合わせて変更します。
+- 正常系で4工程が順序どおり成功する
+- lint失敗時に非0終了し、失敗工程をログから特定できる
+- lint失敗後にtype check / test / buildが実行されない
 
-重要: テンプレートを無調整で利用せず、そのリポジトリで実際に実行できるコマンドか確認します。
+### 開発ツールの更新
+
+バージョン固定を変更する場合は、固定ファイル、依存lock、CIテンプレートを必要に応じて同じPRで更新します。更新後は `tests/verification/run-samples.sh` と対象プロジェクトの `./scripts/verify.sh` を再実行し、更新理由と結果をPR本文へ記録します。
 
 ## 9. Ruleset / Branch protection
 
