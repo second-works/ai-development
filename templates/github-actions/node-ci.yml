@@ -22,19 +22,7 @@ jobs:
 
       - name: Verify Node.js version pin
         run: |
-          test "$(grep -Ec '^(v)?[0-9]+\\.[0-9]+\\.[0-9]+
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Standard verification
-        run: ./scripts/verify.sh
- .nvmrc)" -eq 1
+          test "$(grep -Ec '^(v)?[0-9]+\.[0-9]+\.[0-9]+$' .nvmrc)" -eq 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
