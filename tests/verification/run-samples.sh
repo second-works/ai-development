@@ -60,4 +60,43 @@ set -e
   exit 1
 }
 
+empty_project="${WORK_DIR}/empty-project"
+mkdir -p "${empty_project}/scripts"
+cp "${VERIFY_SOURCE}" "${empty_project}/scripts/verify.sh"
+chmod +x "${empty_project}/scripts/verify.sh"
+set +e
+empty_output="$(cd "${empty_project}" && VERIFY_STACK=generic ./scripts/verify.sh 2>&1)"
+empty_status=$?
+set -e
+[[ "${empty_status}" -eq 2 ]] || {
+  printf 'an empty Generic project must not pass verification\n' >&2
+  exit 1
+}
+[[ "${empty_output}" == *'no applicable verification stages configured'* ]] || {
+  printf 'empty Generic project failure was not explained\n' >&2
+  exit 1
+}
+
+node_missing_project="${WORK_DIR}/node-missing-project"
+mkdir -p "${node_missing_project}/scripts"
+cp "${VERIFY_SOURCE}" "${node_missing_project}/scripts/verify.sh"
+chmod +x "${node_missing_project}/scripts/verify.sh"
+printf '%s\n' '{"name":"sample","scripts":{"lint":"true"}}' > "${node_missing_project}/package.json"
+bash_path="$(command -v bash)"
+empty_path="${WORK_DIR}/empty-path"
+mkdir -p "${empty_path}"
+ln -s "$(command -v dirname)" "${empty_path}/dirname"
+set +e
+node_missing_output="$(cd "${node_missing_project}" && PATH="${empty_path}" VERIFY_STACK=node "${bash_path}" ./scripts/verify.sh 2>&1)"
+node_missing_status=$?
+set -e
+[[ "${node_missing_status}" -eq 127 ]] || {
+  printf 'a Node project without Node.js must not pass verification\n' >&2
+  exit 1
+}
+[[ "${node_missing_output}" == *'required command node is not installed'* ]] || {
+  printf 'missing Node.js failure was not explained\n' >&2
+  exit 1
+}
+
 printf 'template verification samples passed\n'

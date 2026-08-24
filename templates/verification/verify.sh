@@ -28,13 +28,43 @@ run_stage() {
   fi
 }
 
-has_npm_script() {
+require_command() {
+  local command_name="$1"
+  local stage="$2"
+  if ! command -v "${command_name}" >/dev/null 2>&1; then
+    printf '[verify] stage=%s failed reason=required command %s is not installed\n' "${stage}" "${command_name}" >&2
+    exit 127
+  fi
+}
+
+npm_script_status() {
   node -e '
     const fs = require("fs");
-    const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
-    const scriptName = process.argv[1];
-    process.exit(typeof packageJson.scripts?.[scriptName] === "string" ? 0 : 1);
+    try {
+      const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+      const scriptName = process.argv[1];
+      process.exit(typeof packageJson.scripts?.[scriptName] === "string" ? 0 : 1);
+    } catch (error) {
+      console.error(error.message);
+      process.exit(2);
+    }
   ' "$1" >/dev/null 2>&1
+}
+
+run_optional_npm_stage() {
+  local stage="$1"
+  local script_name="$2"
+  if npm_script_status "${script_name}"; then
+    run_stage "${stage}" npm run "${script_name}"
+  else
+    local status=$?
+    if [[ "${status}" -eq 1 ]]; then
+      skip_stage "${stage}" "package.json has no scripts.${script_name}"
+    else
+      printf '[verify] stage=%s failed reason=package.json could not be inspected exit=%s\n' "${stage}" "${status}" >&2
+      exit "${status}"
+    fi
+  fi
 }
 
 has_python_tests() {
@@ -60,29 +90,11 @@ has_python_build_config() {
 }
 
 run_node_stages() {
-  if has_npm_script lint; then
-    run_stage lint npm run lint
-  else
-    skip_stage lint 'package.json has no scripts.lint'
-  fi
-
-  if has_npm_script typecheck; then
-    run_stage 'type check' npm run typecheck
-  else
-    skip_stage 'type check' 'package.json has no scripts.typecheck'
-  fi
-
-  if has_npm_script test; then
-    run_stage test npm test
-  else
-    skip_stage test 'package.json has no scripts.test'
-  fi
-
-  if has_npm_script build; then
-    run_stage build npm run build
-  else
-    skip_stage build 'package.json has no scripts.build'
-  fi
+  require_command node node
+  run_optional_npm_stage lint lint
+  run_optional_npm_stage 'type check' typecheck
+  run_optional_npm_stage test test
+  run_optional_npm_stage build build
 }
 
 run_python_stages() {
@@ -114,20 +126,14 @@ run_python_stages() {
 run_generic_stages() {
   local stage
   local script
-  local ran_stage=0
   for stage in lint typecheck test build; do
     script="${ROOT_DIR}/scripts/${stage}.sh"
     if [[ -x "${script}" ]]; then
       run_stage "${stage}" "${script}"
-      ran_stage=1
     else
       skip_stage "${stage}" "${script} is not executable"
     fi
   done
-
-  if ((ran_stage == 0)) && [[ -x "${ROOT_DIR}/scripts/ci.sh" ]]; then
-    run_stage generic-ci "${ROOT_DIR}/scripts/ci.sh"
-  fi
 }
 
 stack="${VERIFY_STACK:-auto}"
@@ -161,5 +167,10 @@ case "${stack}" in
     exit 2
     ;;
 esac
+
+if ((stage_count == 0)); then
+  printf '[verify] failed reason=no applicable verification stages configured\n' >&2
+  exit 2
+fi
 
 printf '[verify] completed stack=%s applicable_stages=%s\n' "${stack}" "${stage_count}"
