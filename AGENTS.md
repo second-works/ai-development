@@ -267,11 +267,12 @@ CodexレビューでP0 / P1 / P2が見つかった場合は、次の順で対応
 4. 指摘がIssue範囲内なら既存PRのhead branch上で修正し、同じhead branchへcommit / pushする。新しいPRを作らず、既存PRを再利用する。
 5. pushした修正コミットのSHAを確認し、GitHub上の同じPRのhead branchとhead SHAが、そのpushしたコミットSHAと一致することを確認する。単に修正前後でSHAが異なるだけでは完了扱いにしない。
 6. head branchまたはSHAを確認できない、pushした修正コミットSHAとGitHub上のPR head SHAが一致しない、またはSHAが更新されていない場合は、ローカルテスト、CI、セキュリティチェック、再レビューへ進まず停止して人間に確認を求める。
-7. head SHAの更新確認後、修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象に次の順で再検証する: ローカルテスト（tests / lint / type check / build） → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review`。
+7. head SHAの更新確認後、修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象に次の順で再検証する: 標準検証入口 `./scripts/verify.sh`（lint → type check → test → build） → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review`。
 8. ローカルテスト、CI、セキュリティチェック、再レビューの各結果が、記録した同じ検証対象SHAに対するものか確認する。
 9. 再検証完了時に、GitHub上のPR head SHAが、pushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認する。不一致の場合は完了扱いにせず停止して人間に確認を求める。
 10. 更新後のheadに対する再レビューで前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
-11. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
+11. 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならず、P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の明示判断を要する。
+12. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
 
 AIレビューは品質判断を補助するものであり、AI自身にMerge権限を委譲しない。最終Mergeは必ず人間が判断する。
 
@@ -328,12 +329,11 @@ Dependabot PRも通常のCIとレビューを通してからmergeする。古い
 
 ## Before PR
 
-プロジェクトで定義されている場合、PR作成前に以下を実行する。
+プロジェクトで定義されている場合、PR作成前に標準検証入口を実行する。
 
-- tests
-- lint
-- type check
-- build
+- `./scripts/verify.sh`（lint → type check → test → build）
+
+標準検証入口を実行できない場合は、理由をPR本文に記録して成功扱いにせず停止する。
 
 失敗した場合は原因を確認し、Issue範囲内で修正する。
 
@@ -351,6 +351,8 @@ PRには最低限以下を書く。
 - GitHub Actions CI結果
 - セキュリティチェック結果（有効な場合）
 - Codex Code Review結果（P0 / P1 / P2 / P3と未解決指摘）
+- レビュー修正ラウンド数と収束判断（3ラウンド停止、P2残置、人間の継続・受容判断を含む）
+- 標準検証 `./scripts/verify.sh` の結果
 - warning / deprecationの有無
 - 注意点・残課題
 
