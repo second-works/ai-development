@@ -15,7 +15,7 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 - 既存PR head branchと同名のlocal tracking branch作成だけ許可する。
 - default branchへ直接pushしない。
 - 対象PRのhead branch以外へpushしない。
-- P0 / P1 / P2をIssue範囲内で扱う。P0 / P1は必ず修正し、P2を残す場合は人間の理由確認と明示判断を要する。P3は原則必須にしない。
+- P0 / P1 / P2をIssue範囲内で扱う。P0 / P1は必ず修正し、P2のみ残る場合は人間の理由確認と明示判断が必要である。P3は原則Merge阻害条件にしない。
 - 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は自動修正を停止し、人間へ戻す。3ラウンドで強制Mergeしてはならない。
 - 同じ問題が3回以上繰り返す、仕様判断が必要、Issue範囲外、branch/SHA不一致なら停止して人間へ戻す。人間が明示的に継続を指示した場合だけ再開する。
 - Mergeは実行しない。最終Mergeは人間判断。
