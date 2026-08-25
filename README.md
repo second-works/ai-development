@@ -12,11 +12,11 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 2. 親Issueを作成
 3. 1 PR単位の子Issueへ分解
 4. Codexで実装
-5. テスト実行
+5. 標準検証 `./scripts/verify.sh` 実行
 6. PR作成
 7. GitHub Actions CI
 8. Codex Code Review（レビュー専用）
-9. P0 / P1 / P2指摘があれば、既存PRのhead branchをチェックアウトして修正
+9. P0 / P1指摘は必ず修正し、P2は原則修正する。残す場合は人間が理由を確認して明示判断し、既存PRのhead branchをチェックアウトして修正
 10. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
 11. GitHub上で修正後のhead SHAが、pushした修正コミットSHAと一致することを確認
 12. SHA未確認・未更新・不一致の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
@@ -27,6 +27,8 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 17. 人間がMerge
 
 P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として使用せず、`@codex review` はレビュー専用とします。CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
+
+レビュー修正ラウンドは、Codex Code Review → 修正 → 再検証・再レビューを1単位とし、初回レビューはラウンド0として記録します。第3ラウンド完了後に新しいP1 / P2が発生した場合は自動修正を停止して人間へ戻し、3ラウンドで強制Mergeしません。P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の明示判断が必要です。P3は原則Merge阻害条件にしません。
 
 レビュー指摘の修正ではrepo-local Skill `.agents/skills/pr-review-fix/` を利用できます。Codexへ `PR #XXのレビュー修正を進めて` と依頼すると、既存PRのhead branch固定、同一branchへの修正/push、SHA一致確認、CI/セキュリティチェック待機、更新後headへの再レビュー確認までを行い、Merge前で停止します。
 

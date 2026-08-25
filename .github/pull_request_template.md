@@ -8,13 +8,9 @@ Closes #
 
 # テスト結果
 
-- [ ] Tests
-- [ ] Lint
-- [ ] Type check
-- [ ] Build
+- [ ] 標準検証入口 `./scripts/verify.sh` 成功（lint → type check → test → build）
+- 標準検証を実行できない場合の理由:
 - [ ] 手動動作確認
-
-<!-- 対象プロジェクトに存在しない項目は理由を記載 -->
 
 # GitHubチェック
 
@@ -26,6 +22,17 @@ Closes #
 - なし
 
 # Codex Code Review
+
+## レビュー修正ラウンド / 収束判断
+
+- 現在のレビュー修正ラウンド数（初回レビューは0）:
+- 新規P0:
+- 新規P1:
+- 新規P2:
+- 3ラウンド到達時の停止判断:
+- P2残置理由（該当時）:
+- 人間による継続指示または受容判断:
+- 標準検証 `./scripts/verify.sh` の結果:
 
 ## 修正時のPR / head branch記録
 

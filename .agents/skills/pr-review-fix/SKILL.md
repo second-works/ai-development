@@ -15,7 +15,8 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 - 既存PR head branchと同名のlocal tracking branch作成だけ許可する。
 - default branchへ直接pushしない。
 - 対象PRのhead branch以外へpushしない。
-- P0 / P1 / P2をIssue範囲内で修正する。P3は原則必須にしない。
+- P0 / P1 / P2をIssue範囲内で扱う。P0 / P1は必ず修正し、P2のみ残る場合は人間の理由確認と明示判断が必要である。P3は原則Merge阻害条件にしない。
+- 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は自動修正を停止し、人間へ戻す。3ラウンドで強制Mergeしてはならない。
 - 同じ問題が3回以上繰り返す、仕様判断が必要、Issue範囲外、branch/SHA不一致なら停止して人間へ戻す。人間が明示的に継続を指示した場合だけ再開する。
 - Mergeは実行しない。最終Mergeは人間判断。
 
@@ -136,7 +137,7 @@ test -z "$(git status --porcelain)"
 test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 ```
 
-repository定義に従い tests → lint → type check → build の順で実行する。存在しないものは対象外と記録する。テストでtracked fileが変化した場合、その結果を対象SHAの検証結果として扱わない。
+標準検証入口 `./scripts/verify.sh` を実行する。内部順序は lint → type check → test → build とし、存在しない工程は対象外理由を記録する。標準入口を実行できない場合は成功扱いにせず停止する。テストでtracked fileが変化した場合、その結果を対象SHAの検証結果として扱わない。
 
 ### 8. CI / securityを対象SHAで待機・確認
 
@@ -158,6 +159,8 @@ wait scriptは次を保証する。
 - check未観測をCI/security成功として扱わない。継続するには人間の明示判断が必要
 
 ### 9. 更新後headへ再レビュー依頼
+
+修正ラウンド数を更新し、PR本文へ現在のラウンド数、新規P0 / P1 / P2、3ラウンド到達時の停止判断、P2残置理由、人間の継続指示または受容判断を記録してから再レビューを依頼する。
 
 今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、**依頼を投稿する直前の最大PR review ID** と、再レビュー依頼コメント自身のGitHub comment IDを基準点として記録する。timestampは秒精度なのでfreshness判定には使わない。
 
@@ -229,7 +232,7 @@ CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを
 
 ### 12. 最終報告
 
-最低限、PR番号、repository、head branch、修正前後SHA、push SHA、修正したP0/P1/P2、local test、CI/security、再レビュー依頼comment ID、review baseline ID、reviewed commit、未解決指摘、最終SHA照合結果を報告する。
+最低限、PR番号、repository、head branch、修正前後SHA、push SHA、修正したP0/P1/P2/P3、レビュー修正ラウンド数、3ラウンド到達時の停止判断、P2残置理由、人間の継続指示または受容判断、標準検証 `./scripts/verify.sh` の結果、CI/security、再レビュー依頼comment ID、review baseline ID、reviewed commit、未解決指摘、最終SHA照合結果を報告する。
 
 最後に「最終Mergeは人間判断」と明記して停止する。
 
