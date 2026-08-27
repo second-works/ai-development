@@ -48,7 +48,10 @@ secret_pattern='ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9-
 
 scan_file() {
   local file="$1"
-  [[ -L "$file" ]] && return 1
+  if [[ -L "$file" ]]; then
+    readlink "$file" | grep -Eiq -- "$secret_pattern"
+    return $?
+  fi
   [[ -f "$file" ]] && grep -Eiq -- "$secret_pattern" "$file"
 }
 
@@ -77,6 +80,13 @@ trap 'rm -rf "$fixture_dir"' EXIT
 printf '%s%s\n' 'sk-proj-' 'abcdefghijklmnopqrstuvwxyz' > "$fixture_dir/secret-fixture.txt"
 if ! scan_file "$fixture_dir/secret-fixture.txt"; then
   printf 'secret scanner did not detect sk-proj fixture\n' >&2
+  exit 1
+fi
+
+link_target="$(printf '%s%s' 'github_pat_' 'abcdefghijklmnopqrstuvwxyz')"
+ln -s "$link_target" "$fixture_dir/secret-link"
+if ! scan_file "$fixture_dir/secret-link"; then
+  printf 'secret scanner did not detect token-like symlink content\n' >&2
   exit 1
 fi
 
