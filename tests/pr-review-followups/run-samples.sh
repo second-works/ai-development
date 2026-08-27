@@ -17,7 +17,7 @@ required_skill_markers=(
   '推奨扱い: `ISSUE` または `NOTE`'
   "../../../docs/review-followups.md"
   '`ISSUE` として台帳へ登録'
-  'FOLLOW-UPかつ `ISSUE` の台帳登録後'
+  'P2を `FOLLOW-UP` かつ `ISSUE` と判定した場合'
   "台帳登録commit"
   "EXPECTED_SHA"
   "台帳登録後の新しいSHA"
