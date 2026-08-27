@@ -19,6 +19,7 @@ required_skill_markers=(
   '`ISSUE` として台帳へ登録'
   'P2を `FOLLOW-UP` かつ `ISSUE` と判定した場合'
   "台帳登録commit"
+  'git push origin "HEAD:refs/heads/$HEAD_BRANCH"'
   "EXPECTED_SHA"
   "台帳登録後の新しいSHA"
   "標準検証入口"

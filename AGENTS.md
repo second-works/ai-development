@@ -292,6 +292,7 @@ CodexレビューでP0 / P1 / P2が見つかった場合は、次の順で対応
 台帳登録後の検証対象SHAの扱い:
 
 - 更新後のheadに対する再レビューで新しいP2を `FOLLOW-UP` かつ `ISSUE` と判定した場合、同じhead branch上で中央台帳へ登録するcommitを作成する。
+- 台帳登録commitを作成したら、SHA照合前に `git push origin "HEAD:refs/heads/$HEAD_BRANCH"` を実行する。pushが成功しない場合はSHA照合・再検証へ進まない。
 - 台帳登録commitでhead SHAが変わるため、登録前の `EXPECTED_SHA` とローカル検証・CI・セキュリティチェック・再レビュー結果は新しいheadの検証には使わない。
 - 台帳登録commitのSHAを新しい `EXPECTED_SHA` / 検証対象SHAとして記録し、GitHub上の同じPRのhead SHAと一致することを確認する。
 - 台帳登録後の新しいSHAに対して、標準検証入口 → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review` を同じ順で再実行する。各結果と最終head確認が新しいSHAに対するものになるまで完了扱いにしない。

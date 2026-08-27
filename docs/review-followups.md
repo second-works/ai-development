@@ -28,7 +28,7 @@
 
 台帳登録commitは新しい検証対象を作るため、次の遷移を必ず行う。
 
-1. 同じPRのhead branchへ台帳登録commitを作成する。
+1. 同じPRのhead branchへ台帳登録commitを作成し、SHA照合前に `git push origin "HEAD:refs/heads/$HEAD_BRANCH"` を実行する。pushが成功しない場合はSHA照合・再検証へ進まない。
 2. 登録commitのSHAを新しい `EXPECTED_SHA` / 検証対象SHAとして記録し、GitHub上のPR head SHAと一致することを確認する。
 3. 登録前の `EXPECTED_SHA` に対するローカル検証、CI、security、再レビュー結果を新しいSHAの結果として再利用しない。
 4. 台帳登録後の新しいSHAに対して、標準検証入口 → GitHub Actions CI → 利用可能なsecurity check → `@codex review` を再実行する。

@@ -381,6 +381,7 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 4. 非BLOCKING threadはresolveする。
 5. 非BLOCKING P2だけが残っても、人間の技術判断を要求せず、再修正・再レビューを繰り返さない。
 6. 更新後headの再レビューで新しいP2を `FOLLOW-UP` かつ `ISSUE` と判定した場合、同じhead branch上で中央台帳へ登録するcommitを作成する。台帳登録は既存PRの修正として扱い、新しいPRを作らない。
+台帳登録commitを作成したら、SHA照合前に `git push origin "HEAD:refs/heads/$HEAD_BRANCH"` を実行する。pushが成功しない場合はSHA照合・再検証へ進まない。
 7. 台帳登録commitでhead SHAが変わるため、登録前の `EXPECTED_SHA`、ローカル検証、CI、security、再レビュー結果は新しいheadの検証対象にならない。台帳登録commitのSHAを新しい `EXPECTED_SHA` / 検証対象SHAとして記録し、GitHub PR head SHAとの一致を確認する。
 8. 台帳登録後の新しいSHAに対して、標準検証入口 `./scripts/verify.sh` → GitHub Actions CI → 利用可能なsecurity check → `@codex review` を同じ順で再実行する。各結果が新しいSHAのものか確認し、最終head SHAが一致するまで完了扱いにしない。
 9. 台帳登録後の再レビュー結果をこの手順で再度分類する。`NOTE` / `DISMISS` と分類して台帳登録を行わない場合は、この台帳登録後の再検証遷移を開始しない。
