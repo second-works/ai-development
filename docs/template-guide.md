@@ -78,6 +78,16 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 - 今回やらないこと
 - 全体完了条件
 
+## 4.1 デプロイ設計とRelease / Production計画
+
+Issue計画時に、実装完了と本番投入可能を分けて記録します。
+Deployment as Codeの正本は [docs/deployment-release-design.md](deployment-release-design.md) です。
+親Issueテンプレートには、Production runtime、Container、Persistent data、Deployment method、Secrets、backup / migration、Smoke Test、Health Check、Monitoring、Rollbackを記録する欄を設けています。
+
+プロジェクトごとにCloudflare、Home PC / VPS、self-hosted runner、Docker / Compose、Staging、自動Deploy、人間承認の要否を判断し、不要なものは理由を記録します。
+MergeはProduction Deployを意味しません。CI、Security Check、Release判定、必要なbackupとmigration確認を経てProductionへ進み、Deploy後のHealth CheckとRollbackまで確認可能にします。
+詳細な手順・データ互換性・Secretsの安全条件は正本文書へ集約し、親Issueや標準フローへ重複記載しません。
+
 ## 5. 子Issueテンプレート
 
 ファイル:

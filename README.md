@@ -40,6 +40,7 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 - `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール
 - `docs/nine-standard-ai-development-flow.md` — 標準開発フロー
+- `docs/deployment-release-design.md` — Deployment as Code・Release / Production設計標準
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート
 - `.github/pull_request_template.md` — PRテンプレート

@@ -16,6 +16,8 @@
 
 テンプレート利用プロジェクトでは、ローカル・Agent・GitHub Actionsが同じ `./scripts/verify.sh` を呼び出す。標準検証は lint → type check → test → build の順に実行し、対象外工程は理由付きで明示する。標準検証を実行できない場合や失敗した場合は、commit・PR作成・レビュー依頼へ進まず停止する。
 
+GitHub上の実装完了と本番投入可能な状態は分けて扱う。Release Candidate以降のDeployment as Code設計、判断項目、安全条件は [docs/deployment-release-design.md](deployment-release-design.md) を参照する。
+
 ## 2. ChatGPTの役割
 
 ChatGPTは開発マネージャー兼設計担当として使う。
@@ -119,6 +121,26 @@ PRをMergeした後は、役目を終えたIssue用の短命head branchを原則
 `main` などの保護対象branchは削除禁止を維持する。自動削除の対象はMerge済みPRのIssue用head branchであり、保護対象branchとは区別して扱う。
 
 次のIssueに着手するときは、最新の `main` から新しいIssue用branchを作成する。
+
+## 7.1 Release / Production工程
+
+Merge後のProduction工程は、対象環境とリスクに応じて次の順で計画する。
+
+```text
+Merge
+  ↓ Release Candidate
+  ↓ Staging Deploy（必要な場合）
+  ↓ E2E / Smoke Test
+  ↓ Release判定
+  ↓ Production Deploy
+  ↓ Post-deploy Health Check
+  ↓ Monitoring / Rollback
+```
+
+Stagingを省略する場合は、親IssueまたはDesign Decisionに理由と代替確認方法を記録する。
+CloudflareでDockerが不要な構成、Home PC / VPSのself-hosted runnerとDocker Compose、macOS固有アプリのDockerなし運用は、それぞれ候補として比較するが一律に強制しない。
+永続データ、Secrets、backup、migration、Rollbackとデータ互換性をProduction計画に含める。
+詳細な記録項目は [docs/deployment-release-design.md](deployment-release-design.md) を参照する。
 
 ## 8. GitHub Actions CI
 
