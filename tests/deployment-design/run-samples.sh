@@ -44,7 +44,7 @@ assert_contains "$parent" "MergeからProduction Deployまでの承認境界:"
 assert_contains "$flow" "docs/deployment-release-design.md"
 assert_contains "$guide" "docs/deployment-release-design.md"
 
-if grep -RIEq --exclude-dir=.git 'ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' "$repo_root"; then
+if grep -RIEq --exclude-dir=.git 'ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' "$repo_root"; then
   printf 'possible secret-like value found in repository\n' >&2
   exit 1
 fi
