@@ -120,8 +120,10 @@ def is_allowed_graphql_actor(comment):
     actor_type = author.get('__typename') or ''
     return login in ALLOWED_CODEX_LOGINS and actor_type == 'Bot'
 
-def severities_in(body):
-    return [sev for sev in ('P0', 'P1', 'P2') if re.search(rf'\b{sev}\b', body or '')]
+def findings_in(body):
+    severities = [sev for sev in ('P0', 'P1', 'P2') if re.search(rf'\b{sev}\b', body or '')]
+    explicit_blocking = bool(re.search(r'\bBLOCKING\b', body or '', re.IGNORECASE))
+    return [(sev, sev in ('P0', 'P1') or explicit_blocking) for sev in severities]
 
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
@@ -163,7 +165,7 @@ for c in issue_comments:
         review_comment_id = cid
         break
 
-new_severities = []
+new_findings = []
 for c in review_comments:
     if not is_allowed_rest_actor(c):
         continue
@@ -172,9 +174,9 @@ for c in review_comments:
     review_id = int(c.get('pull_request_review_id') or 0)
     if review_id not in eligible_review_ids:
         continue
-    new_severities.extend(severities_in(c.get('body') or ''))
+    new_findings.extend(findings_in(c.get('body') or ''))
 
-unresolved_severities = []
+unresolved_findings = []
 unresolved_thread_ids = []
 for page in thread_pages:
     pr = (((page.get('data') or {}).get('repository') or {}).get('pullRequest') or {})
@@ -188,28 +190,31 @@ for page in thread_pages:
                 continue
             if c.get('outdated'):
                 continue
-            found = severities_in(c.get('body') or '')
+            found = findings_in(c.get('body') or '')
             if found:
-                unresolved_severities.extend(found)
+                unresolved_findings.extend(found)
                 matched = True
         if matched:
             unresolved_thread_ids.append(thread.get('id') or '<unknown>')
 
-all_findings = new_severities + unresolved_severities
-auto_blocking = [sev for sev in all_findings if sev in ('P0', 'P1')]
-p2_findings = [sev for sev in all_findings if sev == 'P2']
+all_findings = new_findings + unresolved_findings
+all_severities = [sev for sev, _ in all_findings]
+auto_blocking = [sev for sev, is_blocking in all_findings if is_blocking]
+p2_findings = [sev for sev in all_severities if sev == 'P2']
+p2_nonblocking = [sev for sev, is_blocking in all_findings if sev == 'P2' and not is_blocking]
 print(f"REVIEW_SEEN={1 if review_seen else 0}")
 print(f"REVIEW_IDS={review_ids_text}")
 print(f"REVIEW_COMMENT_ID={review_comment_id or ''}")
 print(f"REQUEST_COMMENT_ID={after_comment_id}")
 print(f"REQUEST_CREATED_AT={request_comment.get('created_at') or ''}")
 print(f"AFTER_REVIEW_ID={after_review_id}")
-print(f"NEW_FINDING_COUNT={len(new_severities)}")
-print(f"UNRESOLVED_FINDING_COUNT={len(unresolved_severities)}")
+print(f"NEW_FINDING_COUNT={len(new_findings)}")
+print(f"UNRESOLVED_FINDING_COUNT={len(unresolved_findings)}")
 print(f"AUTO_BLOCKING_COUNT={len(auto_blocking)}")
 print(f"P2_CLASSIFICATION_COUNT={len(p2_findings)}")
-if all_findings:
-    print("FINDING_SEVERITIES=" + ','.join(sorted(set(all_findings))))
+print(f"P2_NONBLOCKING_COUNT={len(p2_nonblocking)}")
+if all_severities:
+    print("FINDING_SEVERITIES=" + ','.join(sorted(set(all_severities))))
 if unresolved_thread_ids:
     print("UNRESOLVED_THREAD_IDS=" + ','.join(unresolved_thread_ids))
 PY
@@ -218,6 +223,7 @@ PY
   REVIEW_SEEN="$(printf '%s\n' "$RESULT" | awk -F= '$1=="REVIEW_SEEN"{print $2}')"
   AUTO_BLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="AUTO_BLOCKING_COUNT"{print $2}')"
   P2_CLASSIFICATION_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="P2_CLASSIFICATION_COUNT"{print $2}')"
+  P2_NONBLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="P2_NONBLOCKING_COUNT"{print $2}')"
 
   if [[ "$REVIEW_SEEN" -eq 1 ]]; then
     printf '%s\n' "$RESULT"
@@ -228,11 +234,8 @@ PY
       echo "STATUS=REVIEW_CHANGES_REQUIRED"
       exit 3
     fi
-    if [[ "$P2_CLASSIFICATION_COUNT" -gt 0 ]]; then
-      echo "STATUS=REVIEW_P2_CLASSIFICATION_REQUIRED"
-      exit 4
-    fi
     echo "STATUS=REVIEW_PASSED"
+    # P2 is reported for classification, but non-BLOCKING P2 never changes the status.
     exit 0
   fi
 
