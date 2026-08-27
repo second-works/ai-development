@@ -64,6 +64,7 @@ assignees: []
 - Containerの要否と理由:
 - Persistent dataの保存先・再作成後の生存方法:
 - Deployment method・実行主体・権限:
+- Release Candidate / artifact identity（commit SHA・artifact ID・image digest）:
 - Secrets / 環境変数 / 外部サービス（値は記録しない）:
 - backup・DB/schema/vector migration・失敗時の復旧:
 - Stagingの要否と理由:

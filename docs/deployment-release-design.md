@@ -20,6 +20,7 @@
 | Container | Docker / Docker Compose等が必要か。不要なら、再現性・運用・対象環境を踏まえた理由 |
 | Persistent data | DB、ファイル、vector store、外部ストレージ、backup、logの保存先と、アプリ／コンテナ再作成後も残る仕組み |
 | Deployment method | GitHub Actions、self-hosted runner、Cloudflare連携、VPS等の方式、実行主体、権限、承認方法 |
+| Release Candidate / artifact identity | commit SHA、artifact ID、image digest等で候補を識別し、Stagingで検証した同一成果物をProductionへ昇格させる方法 |
 | Secrets / external services | Secrets、環境変数、外部API／サービス、GitHub Environmentの利用。値そのものは記録しない |
 | Backup / migration | 永続データ変更前のbackup、DB / schema / vector migration、失敗時の停止・復旧手順 |
 | Post-deploy check | Health Check、Smoke Test、必要なE2E、確認対象、合格条件、失敗時の扱い |

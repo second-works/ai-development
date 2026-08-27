@@ -20,6 +20,8 @@ assert_contains "$doc" "GitHub上の実装完了と、本番投入可能な状�
 assert_contains "$doc" "Production runtime"
 assert_contains "$doc" "Persistent data"
 assert_contains "$doc" "Deployment method"
+assert_contains "$doc" "Release Candidate / artifact identity"
+assert_contains "$doc" "image digest"
 assert_contains "$doc" "Backup / migration"
 assert_contains "$doc" "Post-deploy Health Check"
 assert_contains "$doc" "Monitoring / Rollback"
@@ -27,11 +29,23 @@ assert_contains "$doc" "GitHub Environments"
 assert_contains "$doc" "macOS固有アプリ"
 assert_contains "$doc" "一律に強制しない"
 assert_contains "$parent" "## デプロイ設計 / Release・Production計画"
+assert_contains "$parent" "Production runtime:"
+assert_contains "$parent" "Containerの要否と理由:"
+assert_contains "$parent" "Persistent dataの保存先・再作成後の生存方法:"
+assert_contains "$parent" "Deployment method・実行主体・権限:"
+assert_contains "$parent" "Release Candidate / artifact identity（commit SHA・artifact ID・image digest）:"
+assert_contains "$parent" "Secrets / 環境変数 / 外部サービス（値は記録しない）:"
+assert_contains "$parent" "backup・DB/schema/vector migration・失敗時の復旧:"
+assert_contains "$parent" "Stagingの要否と理由:"
+assert_contains "$parent" "E2E / Smoke Test・Release判定:"
+assert_contains "$parent" "Production Deploy後のHealth Check・Monitoring:"
+assert_contains "$parent" "Rollback単位・永続データ互換性:"
+assert_contains "$parent" "MergeからProduction Deployまでの承認境界:"
 assert_contains "$flow" "docs/deployment-release-design.md"
 assert_contains "$guide" "docs/deployment-release-design.md"
 
-if grep -Eiq 'ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}' "$doc" "$parent" "$flow" "$guide"; then
-  printf 'possible secret-like value found in deployment documentation\n' >&2
+if grep -RIEq --exclude-dir=.git 'ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' "$repo_root"; then
+  printf 'possible secret-like value found in repository\n' >&2
   exit 1
 fi
 
