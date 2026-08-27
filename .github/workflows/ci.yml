@@ -23,3 +23,6 @@ jobs:
 
       - name: Verification samples
         run: tests/verification/run-samples.sh
+
+      - name: FOLLOW-UP documentation contract
+        run: bash tests/pr-review-followups/run-samples.sh
