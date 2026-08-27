@@ -90,7 +90,7 @@ FOLLOW-UPの記録追加によって、非BLOCKING P2を当該PRの必須修正�
 
 ### 中央台帳への登録
 
-リポジトリ横断で参照できる中央台帳は [`docs/review-followups.md`](../../docs/review-followups.md) とする。
+リポジトリ横断で参照できる中央台帳は [`docs/review-followups.md`](../../../docs/review-followups.md) とする。
 
 次のいずれかに該当するFOLLOW-UPだけを `ISSUE` として台帳へ登録する。
 
@@ -106,7 +106,7 @@ FOLLOW-UPの記録追加によって、非BLOCKING P2を当該PRの必須修正�
 
 ### 障害調査での検索手順
 
-障害や不具合の初動では、症状、エラー文、機能名、モジュール名、関連ファイルの語を [`docs/review-followups.md`](../../docs/review-followups.md) で検索する。
+障害や不具合の初動では、症状、エラー文、機能名、モジュール名、関連ファイルの語を [`docs/review-followups.md`](../../../docs/review-followups.md) で検索する。
 一致したFollow-up IDから発生元Issue / PR、レビュー指摘、後回しにした根拠へ遡り、候補の状態が `open` かを確認する。
 解決または設計変更で不要になった場合は、対応する解決Issue / PRまたは置換理由とともに状態を更新する。
 
