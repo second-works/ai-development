@@ -20,7 +20,7 @@ assert_contains "$doc" "GitHub上の実装完了と、本番投入可能な状�
 assert_contains "$doc" "Production runtime"
 assert_contains "$doc" "Persistent data"
 assert_contains "$doc" "Deployment method"
-assert_contains "$doc" "backup / migration"
+assert_contains "$doc" "Backup / migration"
 assert_contains "$doc" "Post-deploy Health Check"
 assert_contains "$doc" "Monitoring / Rollback"
 assert_contains "$doc" "GitHub Environments"
