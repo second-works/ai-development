@@ -20,6 +20,7 @@
 - `superseded`: 設計変更等で不要になった。置換理由を記録する。
 
 `resolved` または `superseded` へ更新するときは、解決Issue / PRまたは置換理由を必ず追記する。
+状態値は `open / resolved / superseded` のいずれかとする。
 
 ## 障害調査での検索手順
 
