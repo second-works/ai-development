@@ -293,13 +293,13 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 `wait-codex-review.sh` はP0/P1とP2を分離する。
 
 - `STATUS=REVIEW_CHANGES_REQUIRED`: P0/P1あり。修正ループへ戻る。
-- `STATUS=REVIEW_P2_CLASSIFICATION_REQUIRED`: 互換用の状態。P2が見つかった場合も人間判断へ戻さず、このSkillのP2分類ルールで分類する。
-- `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。非BLOCKING P2は完了条件を阻害しない。
+- `STATUS=REVIEW_CHANGES_REQUIRED`: BLOCKINGあり。P0/P1またはBLOCKINGと分類したP2だけを修正する。
+- `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。P2のみの指摘は完了条件を阻害しない。
 - timeout: 再レビュー待ちとして停止。
 
-`REVIEW_P2_CLASSIFICATION_REQUIRED` の場合:
+`REVIEW_PASSED` でもP2が報告された場合:
 
-1. 各P2を `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類する。
+1. 各P2を `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類する。P2のみでは停止せず、分類結果を記録する。
 2. BLOCKINGだけ修正する。
 3. 非BLOCKINGは理由をPRコメントまたはthread replyへ記録する。
 4. 非BLOCKING threadはresolveする。
