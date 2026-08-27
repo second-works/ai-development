@@ -1,11 +1,14 @@
 ---
 name: pr-review-fix
-description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead branchへ安全に修正・pushし、SHA一致確認と再検証後に再レビューする。ユーザーが「PR #XXのレビュー修正を進めて」などと依頼したときに使う。新規remote branch/PR作成やMergeには使わない。
+description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead branchへ安全に修正・pushし、SHA一致確認と再検証後にレビューを収束させる。ユーザーが「PR #XXのレビュー修正を進めて」などと依頼したときに使う。新規remote branch/PR作成やMergeには使わない。
 ---
 
 # PR Review Fix
 
-既存PRのレビュー指摘を、そのPRのhead branchだけで修正するSkill。
+既存PRのレビュー指摘を、そのPRのhead branchだけで修正し、安全に収束させるSkill。
+
+レビューの目的は「指摘を0件にすること」ではない。
+完了条件は、**Issueの受入条件を満たし、CI/securityが成功し、今回のPRに起因するBLOCKINGが残っていないこと**。
 
 ## 絶対ルール
 
@@ -15,10 +18,93 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 - 既存PR head branchと同名のlocal tracking branch作成だけ許可する。
 - default branchへ直接pushしない。
 - 対象PRのhead branch以外へpushしない。
-- P0 / P1 / P2をIssue範囲内で扱う。P0 / P1は必ず修正し、P2のみ残る場合は人間の理由確認と明示判断が必要である。P3は原則Merge阻害条件にしない。
-- 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は自動修正を停止し、人間へ戻す。3ラウンドで強制Mergeしてはならない。
-- 同じ問題が3回以上繰り返す、仕様判断が必要、Issue範囲外、branch/SHA不一致なら停止して人間へ戻す。人間が明示的に継続を指示した場合だけ再開する。
+- P0 / P1は原則BLOCKINGとして必ず修正する。
+- P2は自動的な必須修正にしない。必ず `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類する。
+- P3は原則Merge阻害条件にしない。
+- 修正後レビューで新しいP2が出ても、それだけで追加修正ループへ戻らない。
+- 既存コード、未変更領域、設計改善、追加堅牢化、将来懸念、ベストプラクティス上の改善は原則FOLLOW-UPとし、当該PRの修正要求に含めない。
+- BLOCKING修正が3ラウンド以上継続した場合のみ、異常状態として自動修正を停止し、設計判断の誤り・修正による回帰・Issueスコープ過大などの原因分析へ切り替える。3ラウンド到達だけを理由にMerge可否を決めない。
 - Mergeは実行しない。最終Mergeは人間判断。
+
+## P2分類ルール
+
+CodexのP2は、そのまま「必須修正」と解釈しない。
+各P2を次の4分類にする。
+非BLOCKING P2の残置に、人間の理由確認・明示承認・技術判断を要求しない。分類結果に従ってFOLLOW-UPまたはDISMISSとして記録し、追加修正ループへ戻さない。
+
+### BLOCKING
+
+このままマージすると、今回のPR差分が原因で以下のいずれかが具体的に発生するもの。
+
+- Issue受入条件違反
+- 明確な機能不具合
+- 回帰
+- データ破損
+- セキュリティ問題
+- 本番運用上の明確な破綻
+
+BLOCKINGにするには、最低限以下を説明できること。
+
+- 何が壊れるか
+- どの入力・状態・実行経路で起きるか
+- 今回のPR差分が原因であること
+- Issue受入条件との関係
+
+「将来的に問題になる可能性」「より堅牢になる」「ベストプラクティス」「念のため」だけではBLOCKINGにしない。
+
+### IN-SCOPE FIX
+
+Issue範囲内で、修正が小さく、副作用が限定的で、今回直す合理性が高いもの。
+ただしMerge阻害ではない。
+
+### FOLLOW-UP
+
+指摘自体は妥当だが、今回のIssue目的達成には不要なもの。
+既存コード、未変更領域、設計改善、追加堅牢化、将来拡張、別責務の改善は原則ここに分類する。
+
+### DISMISS
+
+誤検知、根拠不足、スタイル差、重複指摘、すでに解消済みのもの。
+
+## レビュー収束ルール
+
+初回レビューと修正後レビューを区別する。
+
+### 初回レビュー
+
+PR全体を対象にしてよい。
+P0 / P1 / P2を収集し、P2を上記4分類へ整理する。
+
+### 修正後レビュー
+
+品質改善の新規探索を目的にしない。
+確認対象は以下に限定する。
+
+- 前回BLOCKINGが解消したか
+- 今回の修正差分が新たな重大回帰を発生させていないか
+- Issue受入条件を満たしているか
+- CI / securityが成功しているか
+
+修正後に新たなP2が出た場合は、まず「今回の修正が直接原因か」を確認する。
+
+- 直接原因で、具体的な重大不具合になる: BLOCKING候補
+- 修正をきっかけに見つかっただけ: FOLLOW-UP
+- 改善・堅牢化・将来懸念: FOLLOW-UP
+- 既存問題: FOLLOW-UP
+- 根拠不足: DISMISS
+
+非BLOCKINGのP2は、理由をコメントしてthreadをresolveし、追加修正ループへ戻さない。
+
+## 修正範囲が膨らんだ場合
+
+レビュー修正を重ねて当初Issueから大きく逸脱した場合、さらに修正を積み増さない。
+次を整理する。
+
+- 残すべき変更
+- 戻すべき変更
+- FOLLOW-UP Issueへ分離すべき変更
+
+必要なら追加修正よりrevertを優先する。
 
 ## 前提
 
@@ -53,17 +139,15 @@ prepare scriptは以下を検証する。
 - working tree clean
 - `origin` のfetch URLと全push URLが同じ `HOST/owner/repo` を指す
 - GitHub.com / GitHub Enterpriseを含めhostまでrepository identityに含める
-- **originから導出した対象hostだけ** `gh auth status --hostname` で認証確認する
+- originから導出した対象hostだけ `gh auth status --hostname` で認証確認する
 - GitHub操作対象を検証済みoriginから固定
 - remote-tracking refを明示refspecで更新
 - 既存head branchをcheckout
 - local HEAD = GitHub PR head SHA
 
-またcheckout前にscriptsを一時ディレクトリへ退避し、Skill追加前の古いPR branchでも後続scriptを利用可能にする。
+checkout前にscriptsを一時ディレクトリへ退避し、Skill追加前の古いPR branchでも後続scriptを利用可能にする。
 
 ### 2. 最新レビュー指摘を取得
-
-`REPO` は `HOST/owner/repo` 形式なので、`gh pr` にはそのまま渡し、`gh api` ではhostとAPI pathを分離する。
 
 ```bash
 HOST="${REPO%%/*}"
@@ -78,26 +162,43 @@ gh api --hostname "$HOST" --paginate --slurp \
   "repos/$REPO_PATH/pulls/<PR番号>/reviews?per_page=100"
 ```
 
-古いheadのoutdated指摘と現在headの有効指摘を区別し、現在有効なP0/P1/P2だけを対象にする。
+古いheadのoutdated指摘と現在headの有効指摘を区別する。
+現在有効なP0/P1はBLOCKINGとして扱い、P2は自動修正せず分類へ回す。
 
-### 3. Issue範囲を確認
+### 3. Issue範囲と受入条件を確認
 
 PR本文の `Closes #XX` 等からIssueを確認し、Issue本文を仕様基準にする。
 
-- Issue範囲内: 修正
-- Issue範囲外: 停止して報告
+- Issue範囲内: 分類後に必要なものだけ修正
+- Issue範囲外: FOLLOW-UPまたは停止して報告
 - 仕様曖昧: 推測せず人間へ確認
 
-### 4. 同じhead branch上で修正
+### 4. 指摘を分類
+
+現在有効な指摘を以下へ整理する。
+
+- P0 / P1: BLOCKING
+- P2: `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`
+- P3: 原則FOLLOW-UPまたはDISMISS
+
+P2をBLOCKINGと判定する場合は、具体的な失敗条件・再現経路・PR差分との因果・Issue受入条件との関係を記録する。
+
+### 5. 同じhead branch上で修正
+
+修正対象は次だけに限定する。
+
+- P0 / P1
+- BLOCKINGと判定したP2
+- 必要なら副作用が限定的なIN-SCOPE FIX
+
+FOLLOW-UP / DISMISSはコード修正しない。
 
 ```bash
 test "$(git branch --show-current)" = "$HEAD_BRANCH"
 test -z "$(git status --porcelain)"
 ```
 
-branchを移動せずIssue範囲内だけ修正する。
-
-### 5. commit / push
+### 6. commit / push
 
 ```bash
 git status --short
@@ -110,7 +211,7 @@ git push origin "HEAD:refs/heads/$HEAD_BRANCH"
 
 prepare scriptでoriginのfetch URLと全push URLが同じrepository identityであることを確認済みでなければpushしない。
 
-### 6. push後SHA照合
+### 7. push後SHA照合
 
 ```bash
 bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
@@ -124,45 +225,45 @@ bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
 - current branch = `HEAD_BRANCH`
 - working tree clean
 
-`verify-pr-head.sh` は通常 `REPO=HOST/owner/repo` を明示して使う。repo引数を省略した場合も、`origin` のfetch URLと全push URLからhostを含むrepository identityを再構築し、一致しないremote構成では停止する。認証確認はrepository identity確定後、対象hostだけに対して行う。
-
 不一致なら再検証へ進まず停止する。
 
-### 7. 更新後SHAでローカル再検証
-
-前後で必ず確認する。
+### 8. 更新後SHAでローカル再検証
 
 ```bash
 test -z "$(git status --porcelain)"
 test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 ```
 
-標準検証入口 `./scripts/verify.sh` を実行する。内部順序は lint → type check → test → build とし、存在しない工程は対象外理由を記録する。標準入口を実行できない場合は成功扱いにせず停止する。テストでtracked fileが変化した場合、その結果を対象SHAの検証結果として扱わない。
+標準検証入口 `./scripts/verify.sh` を実行する。
+内部順序は lint → type check → test → build とし、存在しない工程は対象外理由を記録する。
+標準入口を実行できない場合は成功扱いにせず停止する。
 
-### 8. CI / securityを対象SHAで待機・確認
+### 9. CI / securityを対象SHAで待機・確認
 
 ```bash
 bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA"
 ```
 
-wait scriptは次を保証する。
+check未観測やsuccess以外の結果を成功扱いにしない。
 
-- `REPO=HOST/owner/repo` を `HOST` と `owner/repo` に分離し、対象hostだけ認証確認する
+wait-checks.shは次を保証する。
+
+- REPOをhostとrepository pathへ分離し、対象hostだけ認証確認する
 - check runs / statusを `--paginate --slurp` で全ページ取得する
-- queued / in_progress / pendingは待機
-- **check runは `conclusion=success` だけ成功扱い**にする
+- queued / in_progress / pendingは待機する
+- check runは `conclusion=success` だけ成功扱いにする
 - `neutral` / `skipped` を含むsuccess以外のconclusionは停止し、人間判断なしに通過させない
 - status contextも `success` だけ成功扱いにする
 - check/status集合と結果が一定時間変化しない安定期間を待つ
-- 後発checkやpending復帰で安定判定をリセット
+- 後発checkやpending復帰で安定判定をリセットする
 - grace期間後も0件なら `STATUS=NO_CHECKS_OBSERVED` を出して非0終了し停止する
-- check未観測をCI/security成功として扱わない。継続するには人間の明示判断が必要
+- check未観測をCI/security成功として扱わない。継続には人間の明示判断が必要
 
-### 9. 更新後headへ再レビュー依頼
 
-修正ラウンド数を更新し、PR本文へ現在のラウンド数、新規P0 / P1 / P2、3ラウンド到達時の停止判断、P2残置理由、人間の継続指示または受容判断を記録してから再レビューを依頼する。
 
-今回の再レビュー依頼より前に存在した同一SHAのCodex結果を誤って再利用しないよう、**依頼を投稿する直前の最大PR review ID** と、再レビュー依頼コメント自身のGitHub comment IDを基準点として記録する。timestampは秒精度なのでfreshness判定には使わない。
+### 10. 更新後headへ再レビュー依頼
+
+修正後レビューでは、新規の品質改善探索ではなく、BLOCKING解消と修正差分による重大回帰確認に限定する旨を明示する。
 
 ```bash
 HOST="${REPO%%/*}"
@@ -173,10 +274,13 @@ REVIEW_BASELINE_ID="$(
     "repos/$REPO_PATH/pulls/<PR番号>/reviews?per_page=100" \
   | python3 -c 'import json,sys; pages=json.load(sys.stdin); ids=[int(r.get("id") or 0) for p in pages for r in (p if isinstance(p,list) else [p])]; print(max(ids, default=0))'
 )"
-test "$REVIEW_BASELINE_ID" -ge 0
 
 REVIEW_REQUEST_BODY="$(cat <<EOF
 更新後head \`$EXPECTED_SHA\` を対象に再レビューしてください。
+
+確認対象は、前回BLOCKINGの解消、今回の修正差分による重大回帰、Issue受入条件違反、セキュリティ問題に限定してください。
+既存コード、未変更領域、設計改善、追加堅牢化、将来懸念は今回の修正要求対象外です。
+新しいP2相当を発見した場合も、自動的に必須修正とはせず、具体的なBLOCKING根拠がある場合だけ指摘してください。
 
 @codex review
 EOF
@@ -189,11 +293,29 @@ REVIEW_REQUEST_COMMENT_ID="$(
     -f body="$REVIEW_REQUEST_BODY" \
     --jq '.id'
 )"
-
-test -n "$REVIEW_REQUEST_COMMENT_ID"
 ```
 
-### 10. 再レビュー完了を待つ
+test -n "$REVIEW_REQUEST_COMMENT_ID"
+
+依頼直前の最大PR review IDと依頼comment IDをfreshness基準として記録する。timestampは秒精度なのでfreshness判定に使わない。
+
+wait-codex-review.shは次も保証する。
+
+- `REPO` をhostとpathへ分離し、REST/GraphQLとも対象hostへ問い合わせる
+- 対象hostだけ `gh auth status --hostname` で認証確認する
+- `Reviewed commit` が `EXPECTED_SHA` と一致する
+- review IDが `REVIEW_BASELINE_ID` より大きいCodex reviewだけを今回の再レビューとして受理する
+- 再レビュー依頼と同じ秒に完了していた依頼前reviewを再利用しない
+- issue comment側は `REVIEW_REQUEST_COMMENT_ID` より後のsummaryだけを補助情報として扱う
+- Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
+- inline指摘は受理したreviewの `pull_request_review_id` と関連付けてP0/P1/P2を確認する
+- GraphQL reviewThreadsも全ページ確認する
+- 未解決かつ非outdatedのCodex P0/P1 thread、および明示的にBLOCKING分類されたP2 threadだけを、作成時commit SHAに関係なく現在headのblockerとして集計する
+- 古いSHAのthreadでも、GitHubが非outdatedと判定していて未解決なら、P0/P1または明示的にBLOCKING分類されたP2だけは `REVIEW_PASSED` にしない。非BLOCKING P2は完了条件を阻害しない
+
+
+
+### 11. 再レビュー結果を判定
 
 ```bash
 bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
@@ -201,40 +323,66 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
   "$REVIEW_REQUEST_COMMENT_ID" "$REVIEW_BASELINE_ID"
 ```
 
-このscriptは次を保証する。
+`wait-codex-review.sh` はP0/P1とP2を分離する。
 
-- `REPO` をhostとpathへ分離し、REST/GraphQLとも対象hostへ問い合わせる
-- 対象hostだけ `gh auth status --hostname` で認証確認する
-- `Reviewed commit` が `EXPECTED_SHA` と一致する
-- **review IDが `REVIEW_BASELINE_ID` より大きいCodex reviewだけを今回の再レビューとして受理する**
-- 再レビュー依頼と同じ秒に完了していた依頼前reviewも再利用しない
-- issue comment側は `REVIEW_REQUEST_COMMENT_ID` より後のsummaryだけを補助情報として扱う
-- Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
-- inline指摘は受理したreviewの `pull_request_review_id` と関連付けてP0/P1/P2を確認する
-- GraphQL reviewThreadsも全ページ確認する
-- **未解決かつ非outdatedのCodex P0/P1/P2 threadは、作成時commit SHAに関係なく現在headのblockerとして集計する**
-- つまり古いSHAで作られたthreadでも、GitHubが非outdatedと判定していて未解決なら `REVIEW_PASSED` にしない
+- `STATUS=REVIEW_CHANGES_REQUIRED`: BLOCKINGあり。P0/P1またはBLOCKINGと分類したP2があるため修正ループへ戻る。
+- `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。P2のみの指摘は完了条件を阻害しない。
+- timeout: 再レビュー待ちとして停止。
 
-結果:
+`REVIEW_PASSED` でもP2が報告された場合:
 
-- `STATUS=REVIEW_PASSED`: 新規指摘も未解決の既存指摘もない場合だけ次へ
-- `STATUS=REVIEW_CHANGES_REQUIRED`: 同じ修正ループへ戻る
-- timeout: 再レビュー待ちとして停止
+1. 各P2を `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類する。P2のみでは停止せず、分類結果を記録する。
+2. BLOCKINGだけ修正する。
+3. 非BLOCKINGは理由をPRコメントまたはthread replyへ記録する。
+4. 非BLOCKING threadはresolveする。
+5. 非BLOCKING P2だけが残っても、人間の技術判断を要求せず、再修正・再レビューを繰り返さない。
 
-### 11. 最終SHA再照合
+### 12. 最終SHA再照合
 
 ```bash
 bash "$VERIFY_SCRIPT" <PR番号> "$EXPECTED_SHA" "$BEFORE_SHA" "$REPO"
 test -z "$(git status --porcelain)"
 ```
 
-CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを確認する。待機中にPR headが動いた場合は成功扱いにしない。
+CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを確認する。
 
-### 12. 最終報告
+### 13. 最終収束判定
 
-最低限、PR番号、repository、head branch、修正前後SHA、push SHA、修正したP0/P1/P2/P3、レビュー修正ラウンド数、3ラウンド到達時の停止判断、P2残置理由、人間の継続指示または受容判断、標準検証 `./scripts/verify.sh` の結果、CI/security、再レビュー依頼comment ID、review baseline ID、reviewed commit、未解決指摘、最終SHA照合結果を報告する。
+以下をすべて満たしたらレビュー修正を終了する。
+
+- Issue受入条件を満たす
+- 標準検証成功
+- CI / security成功
+- P0 / P1なし
+- BLOCKING判定されたP2なし
+- 今回PR起因の明確な不具合・回帰・セキュリティ問題なし
+
+**P2が0件であることは完了条件ではない。**
+
+### 14. 最終報告
+
+最低限、以下を報告する。
+
+- PR番号 / repository / head branch
+- 修正前後SHA / push SHA
+- P0 / P1 / P2の件数と分類
+- BLOCKING残件
+- FOLLOW-UP / DISMISS項目
+- Issue受入条件の充足状況
+- 標準検証 `./scripts/verify.sh`
+- CI / security
+- 再レビュー対象SHA
+- 不要に拡大した変更の有無
+- `マージ可能` または `まだマージ不可` の結論
 
 最後に「最終Mergeは人間判断」と明記して停止する。
+
+## 参考事例
+
+AI-Memory-RAG PR #39では、P2修正後に新たなP2が発生し続け、レビュー修正が長期化した。
+最終的に、Issue受入条件・今回PR起因の明確な不具合/回帰/セキュリティ問題・CI成功に確認範囲を限定し、既存コード・未変更領域・設計改善・追加堅牢化・将来懸念を修正要求から除外したことで `BLOCKINGなし` に収束した。
+
+このSkillでは同じ失敗を防ぐため、レビューコメント0件ではなくBLOCKING 0件を完了条件とする。
 
 ## 禁止操作
 
