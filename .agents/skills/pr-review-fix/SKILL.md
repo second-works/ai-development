@@ -310,8 +310,8 @@ wait-codex-review.shは次も保証する。
 - Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
 - inline指摘は受理したreviewの `pull_request_review_id` と関連付けてP0/P1/P2を確認する
 - GraphQL reviewThreadsも全ページ確認する
-- 未解決かつ非outdatedのCodex P0/P1/P2 threadは、作成時commit SHAに関係なく現在headのblockerとして集計する
-- 古いSHAのthreadでも、GitHubが非outdatedと判定していて未解決なら `REVIEW_PASSED` にしない
+- 未解決かつ非outdatedのCodex P0/P1 thread、および明示的にBLOCKING分類されたP2 threadだけを、作成時commit SHAに関係なく現在headのblockerとして集計する
+- 古いSHAのthreadでも、GitHubが非outdatedと判定していて未解決なら、P0/P1または明示的にBLOCKING分類されたP2だけは `REVIEW_PASSED` にしない。非BLOCKING P2は完了条件を阻害しない
 
 
 
