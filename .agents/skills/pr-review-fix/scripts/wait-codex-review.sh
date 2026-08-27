@@ -136,9 +136,6 @@ if request_comment is None:
     print("ERROR=request comment id was not found")
     sys.exit(4)
 
-# Review IDs are the authoritative freshness boundary. The caller records the
-# maximum PR review ID before posting @codex review, so a same-second automatic
-# review that already existed cannot be reused as the requested review.
 eligible_review_ids = set()
 for r in reviews:
     if not is_allowed_rest_actor(r):
@@ -156,7 +153,6 @@ for r in reviews:
 review_seen = bool(eligible_review_ids)
 review_ids_text = ','.join(str(v) for v in sorted(eligible_review_ids))
 
-# Keep the issue-comment summary as supplementary evidence when present.
 review_comment_id = None
 for c in issue_comments:
     cid = int(c.get('id') or 0)
@@ -178,8 +174,6 @@ for c in review_comments:
         continue
     new_severities.extend(severities_in(c.get('body') or ''))
 
-# A non-outdated, unresolved thread is relevant to the current PR head even if
-# its first comment was created against an older commit.
 unresolved_severities = []
 unresolved_thread_ids = []
 for page in thread_pages:
@@ -201,34 +195,42 @@ for page in thread_pages:
         if matched:
             unresolved_thread_ids.append(thread.get('id') or '<unknown>')
 
-all_blocking = new_severities + unresolved_severities
+all_findings = new_severities + unresolved_severities
+auto_blocking = [sev for sev in all_findings if sev in ('P0', 'P1')]
+p2_findings = [sev for sev in all_findings if sev == 'P2']
 print(f"REVIEW_SEEN={1 if review_seen else 0}")
 print(f"REVIEW_IDS={review_ids_text}")
 print(f"REVIEW_COMMENT_ID={review_comment_id or ''}")
 print(f"REQUEST_COMMENT_ID={after_comment_id}")
 print(f"REQUEST_CREATED_AT={request_comment.get('created_at') or ''}")
 print(f"AFTER_REVIEW_ID={after_review_id}")
-print(f"NEW_BLOCKING_COUNT={len(new_severities)}")
-print(f"UNRESOLVED_BLOCKING_COUNT={len(unresolved_severities)}")
-print(f"BLOCKING_COUNT={len(all_blocking)}")
-if all_blocking:
-    print("BLOCKING_SEVERITIES=" + ','.join(sorted(set(all_blocking))))
+print(f"NEW_FINDING_COUNT={len(new_severities)}")
+print(f"UNRESOLVED_FINDING_COUNT={len(unresolved_severities)}")
+print(f"AUTO_BLOCKING_COUNT={len(auto_blocking)}")
+print(f"P2_CLASSIFICATION_COUNT={len(p2_findings)}")
+if all_findings:
+    print("FINDING_SEVERITIES=" + ','.join(sorted(set(all_findings))))
 if unresolved_thread_ids:
     print("UNRESOLVED_THREAD_IDS=" + ','.join(unresolved_thread_ids))
 PY
 )"
 
   REVIEW_SEEN="$(printf '%s\n' "$RESULT" | awk -F= '$1=="REVIEW_SEEN"{print $2}')"
-  BLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="BLOCKING_COUNT"{print $2}')"
+  AUTO_BLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="AUTO_BLOCKING_COUNT"{print $2}')"
+  P2_CLASSIFICATION_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="P2_CLASSIFICATION_COUNT"{print $2}')"
 
   if [[ "$REVIEW_SEEN" -eq 1 ]]; then
     printf '%s\n' "$RESULT"
     echo "EXPECTED_SHA=$EXPECTED_SHA"
     echo "AFTER_COMMENT_ID=$AFTER_COMMENT_ID"
     echo "AFTER_REVIEW_ID=$AFTER_REVIEW_ID"
-    if [[ "$BLOCKING_COUNT" -gt 0 ]]; then
+    if [[ "$AUTO_BLOCKING_COUNT" -gt 0 ]]; then
       echo "STATUS=REVIEW_CHANGES_REQUIRED"
       exit 3
+    fi
+    if [[ "$P2_CLASSIFICATION_COUNT" -gt 0 ]]; then
+      echo "STATUS=REVIEW_P2_CLASSIFICATION_REQUIRED"
+      exit 4
     fi
     echo "STATUS=REVIEW_PASSED"
     exit 0
