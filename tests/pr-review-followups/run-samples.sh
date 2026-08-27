@@ -14,9 +14,9 @@ required_skill_markers=(
   "今回後回しにしてもマージ可能と判断した根拠"
   "想定される将来の症状 / 不具合"
   "関連ファイル・モジュール等の調査入口"
-  "推奨扱い: `ISSUE` または `NOTE`"
+  '推奨扱い: `ISSUE` または `NOTE`'
   "docs/review-followups.md"
-  "`ISSUE` として台帳へ登録"
+  '`ISSUE` として台帳へ登録'
   "open"
   "resolved"
   "superseded"
