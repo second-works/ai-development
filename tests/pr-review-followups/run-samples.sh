@@ -16,7 +16,7 @@ required_skill_markers=(
   "関連ファイル・モジュール等の調査入口"
   "推奨扱い: `ISSUE` または `NOTE`"
   "docs/review-followups.md"
-  "ISSUEとして台帳へ登録"
+  "`ISSUE` として台帳へ登録"
   "open"
   "resolved"
   "superseded"
