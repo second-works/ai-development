@@ -56,6 +56,12 @@ assignees: []
   - 決定タイミング:
   - 関連Issue: #
 
+## 子Issue実装中のDesign Decision Escalation
+
+子Issueの実装中に、Issue本文またはこの親Issueの `Design Decision` に明記・事前承認されていない重要な設計判断が必要になった場合、Codexは独自判断で実装を継続せず停止する。Codexは停止理由、設計境界、選択肢、影響範囲、推奨案、親Issue更新・追加Issueの要否、元Issue再開に必要な決定事項を提示する。
+
+人間の決定後、必要な内容をこの `Design Decision` または関連Issueへ記録してから、元の子Issueを再開する。これはPRレビューに代わるものではなく、既存の `1 Issue / 1 PR` とCI・AIレビュー・修正・マージの流れを維持する。
+
 # 今回実装する範囲
 
 - [ ] 
