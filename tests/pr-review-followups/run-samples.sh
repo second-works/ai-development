@@ -17,13 +17,13 @@ required_skill_markers=(
   '推奨扱い: `ISSUE` または `NOTE`'
   "../../../docs/review-followups.md"
   '`ISSUE` として台帳へ登録'
-  "FOLLOW-UPかつ `ISSUE` の台帳登録後"
+  'FOLLOW-UPかつ `ISSUE` の台帳登録後'
   "台帳登録commit"
   "EXPECTED_SHA"
   "台帳登録後の新しいSHA"
   "標準検証入口"
   "security"
-  "`@codex review`"
+  '`@codex review`'
   "open"
   "resolved"
   "superseded"
