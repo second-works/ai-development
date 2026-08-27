@@ -246,6 +246,21 @@ bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA"
 
 check未観測やsuccess以外の結果を成功扱いにしない。
 
+wait-checks.shは次を保証する。
+
+- REPOをhostとrepository pathへ分離し、対象hostだけ認証確認する
+- check runs / statusを `--paginate --slurp` で全ページ取得する
+- queued / in_progress / pendingは待機する
+- check runは `conclusion=success` だけ成功扱いにする
+- `neutral` / `skipped` を含むsuccess以外のconclusionは停止し、人間判断なしに通過させない
+- status contextも `success` だけ成功扱いにする
+- check/status集合と結果が一定時間変化しない安定期間を待つ
+- 後発checkやpending復帰で安定判定をリセットする
+- grace期間後も0件なら `STATUS=NO_CHECKS_OBSERVED` を出して非0終了し停止する
+- check未観測をCI/security成功として扱わない。継続には人間の明示判断が必要
+
+
+
 ### 10. 更新後headへ再レビュー依頼
 
 修正後レビューでは、新規の品質改善探索ではなく、BLOCKING解消と修正差分による重大回帰確認に限定する旨を明示する。
@@ -280,7 +295,25 @@ REVIEW_REQUEST_COMMENT_ID="$(
 )"
 ```
 
-依頼直前の最大PR review IDと依頼comment IDをfreshness基準として記録する。
+test -n "$REVIEW_REQUEST_COMMENT_ID"
+
+依頼直前の最大PR review IDと依頼comment IDをfreshness基準として記録する。timestampは秒精度なのでfreshness判定に使わない。
+
+wait-codex-review.shは次も保証する。
+
+- `REPO` をhostとpathへ分離し、REST/GraphQLとも対象hostへ問い合わせる
+- 対象hostだけ `gh auth status --hostname` で認証確認する
+- `Reviewed commit` が `EXPECTED_SHA` と一致する
+- review IDが `REVIEW_BASELINE_ID` より大きいCodex reviewだけを今回の再レビューとして受理する
+- 再レビュー依頼と同じ秒に完了していた依頼前reviewを再利用しない
+- issue comment側は `REVIEW_REQUEST_COMMENT_ID` より後のsummaryだけを補助情報として扱う
+- Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
+- inline指摘は受理したreviewの `pull_request_review_id` と関連付けてP0/P1/P2を確認する
+- GraphQL reviewThreadsも全ページ確認する
+- 未解決かつ非outdatedのCodex P0/P1/P2 threadは、作成時commit SHAに関係なく現在headのblockerとして集計する
+- 古いSHAのthreadでも、GitHubが非outdatedと判定していて未解決なら `REVIEW_PASSED` にしない
+
+
 
 ### 11. 再レビュー結果を判定
 
@@ -292,8 +325,7 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 
 `wait-codex-review.sh` はP0/P1とP2を分離する。
 
-- `STATUS=REVIEW_CHANGES_REQUIRED`: P0/P1あり。修正ループへ戻る。
-- `STATUS=REVIEW_CHANGES_REQUIRED`: BLOCKINGあり。P0/P1またはBLOCKINGと分類したP2だけを修正する。
+- `STATUS=REVIEW_CHANGES_REQUIRED`: BLOCKINGあり。P0/P1またはBLOCKINGと分類したP2があるため修正ループへ戻る。
 - `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。P2のみの指摘は完了条件を阻害しない。
 - timeout: 再レビュー待ちとして停止。
 
