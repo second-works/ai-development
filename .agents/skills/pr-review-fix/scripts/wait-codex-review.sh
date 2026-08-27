@@ -122,7 +122,7 @@ def is_allowed_graphql_actor(comment):
 
 def findings_in(body):
     severities = [sev for sev in ('P0', 'P1', 'P2') if re.search(rf'\b{sev}\b', body or '')]
-    explicit_blocking = bool(re.search(r'(?im)^\\s*(?:classification|分類)\\s*[:：=]\\s*BLOCKING\\b', body or ''))
+    explicit_blocking = bool(re.search(r'(?im)^\s*(?:classification|分類)\s*[:：=]\s*BLOCKING\b', body or ''))
     return [(sev, sev in ('P0', 'P1') or explicit_blocking) for sev in severities]
 
 issue_comments = flatten_pages(issue_path)
