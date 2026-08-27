@@ -23,13 +23,14 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 - P3は原則Merge阻害条件にしない。
 - 修正後レビューで新しいP2が出ても、それだけで追加修正ループへ戻らない。
 - 既存コード、未変更領域、設計改善、追加堅牢化、将来懸念、ベストプラクティス上の改善は原則FOLLOW-UPとし、当該PRの修正要求に含めない。
-- 同じ問題が3回以上繰り返す、仕様判断が必要、Issue範囲外、branch/SHA不一致、または修正範囲が当初Issueから大きく逸脱した場合は停止して人間へ戻す。
+- BLOCKING修正が3ラウンド以上継続した場合のみ、異常状態として自動修正を停止し、設計判断の誤り・修正による回帰・Issueスコープ過大などの原因分析へ切り替える。3ラウンド到達だけを理由にMerge可否を決めない。
 - Mergeは実行しない。最終Mergeは人間判断。
 
 ## P2分類ルール
 
 CodexのP2は、そのまま「必須修正」と解釈しない。
 各P2を次の4分類にする。
+非BLOCKING P2の残置に、人間の理由確認・明示承認・技術判断を要求しない。分類結果に従ってFOLLOW-UPまたはDISMISSとして記録し、追加修正ループへ戻さない。
 
 ### BLOCKING
 
@@ -292,8 +293,8 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 `wait-codex-review.sh` はP0/P1とP2を分離する。
 
 - `STATUS=REVIEW_CHANGES_REQUIRED`: P0/P1あり。修正ループへ戻る。
-- `STATUS=REVIEW_P2_CLASSIFICATION_REQUIRED`: P2あり。自動修正せず、このSkillのP2分類ルールで判定する。
-- `STATUS=REVIEW_PASSED`: P0/P1/P2の未処理指摘なし。
+- `STATUS=REVIEW_P2_CLASSIFICATION_REQUIRED`: 互換用の状態。P2が見つかった場合も人間判断へ戻さず、このSkillのP2分類ルールで分類する。
+- `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。非BLOCKING P2は完了条件を阻害しない。
 - timeout: 再レビュー待ちとして停止。
 
 `REVIEW_P2_CLASSIFICATION_REQUIRED` の場合:
@@ -302,7 +303,7 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 2. BLOCKINGだけ修正する。
 3. 非BLOCKINGは理由をPRコメントまたはthread replyへ記録する。
 4. 非BLOCKING threadはresolveする。
-5. 非BLOCKING P2だけが残ったことを理由に再修正・再レビューを繰り返さない。
+5. 非BLOCKING P2だけが残っても、人間の技術判断を要求せず、再修正・再レビューを繰り返さない。
 
 ### 12. 最終SHA再照合
 
