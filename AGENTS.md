@@ -289,6 +289,15 @@ CodexレビューでP0 / P1 / P2が見つかった場合は、次の順で対応
 7. head SHAの更新確認後、修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象に次の順で再検証する: 標準検証入口 `./scripts/verify.sh`（lint → type check → test → build） → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review`。
 8. ローカルテスト、CI、セキュリティチェック、再レビューの各結果が、記録した同じ検証対象SHAに対するものか確認する。
 9. 再検証完了時に、GitHub上のPR head SHAが、pushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認する。不一致の場合は完了扱いにせず停止して人間に確認を求める。
+台帳登録後の検証対象SHAの扱い:
+
+- 更新後のheadに対する再レビューで新しいP2を `FOLLOW-UP` かつ `ISSUE` と判定した場合、同じhead branch上で中央台帳へ登録するcommitを作成する。
+- 台帳登録commitを作成したら、SHA照合前に `git push origin "HEAD:refs/heads/$HEAD_BRANCH"` を実行する。pushが成功しない場合はSHA照合・再検証へ進まない。
+- 台帳登録commitでhead SHAが変わるため、登録前の `EXPECTED_SHA` とローカル検証・CI・セキュリティチェック・再レビュー結果は新しいheadの検証には使わない。
+- 台帳登録commitのSHAを新しい `EXPECTED_SHA` / 検証対象SHAとして記録し、GitHub上の同じPRのhead SHAと一致することを確認する。
+- 台帳登録後の新しいSHAに対して、標準検証入口 → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review` を同じ順で再実行する。各結果と最終head確認が新しいSHAに対するものになるまで完了扱いにしない。
+- 台帳登録を行わない `NOTE` / `DISMISS` の分類では、この台帳登録後の再検証遷移を開始しない。
+
 10. 更新後のheadに対する再レビューで前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
 11. 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならず、P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の明示判断を要する。
 12. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
