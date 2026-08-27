@@ -16,9 +16,9 @@ required_skill_markers=(
   "関連ファイル・モジュール等の調査入口"
   '推奨扱い: `ISSUE` または `NOTE`'
   "../../../docs/review-followups.md"
-  "原因候補から外れただけなら `open` を維持する"
-  "リスクを解消した場合だけ解決Issue / PRを追記して `resolved` へ"
-  "設計変更で不要になった場合だけ置換理由を追記して `superseded` へ"
+  '原因候補から外れただけなら `open` を維持する'
+  'リスクを解消した場合だけ解決Issue / PRを追記して `resolved` へ'
+  '設計変更で不要になった場合だけ置換理由を追記して `superseded` へ'
   '`ISSUE` として台帳へ登録'
   "open"
   "resolved"
