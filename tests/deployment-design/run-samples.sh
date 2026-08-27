@@ -44,8 +44,39 @@ assert_contains "$parent" "MergeからProduction Deployまでの承認境界:"
 assert_contains "$flow" "docs/deployment-release-design.md"
 assert_contains "$guide" "docs/deployment-release-design.md"
 
-if grep -RIEq --exclude-dir=.git 'ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----' "$repo_root"; then
+secret_pattern='ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
+
+scan_file() {
+  local file="$1"
+  [[ -L "$file" ]] && return 1
+  [[ -f "$file" ]] && grep -Eiq -- "$secret_pattern" "$file"
+}
+
+scan_tracked_files() {
+  local path
+  while IFS= read -r -d '' path; do
+    if scan_file "$repo_root/$path"; then
+      return 0
+    fi
+  done < <(git -C "$repo_root" ls-files -z)
+  return 1
+}
+
+if ! git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  printf 'repository is not a git worktree\n' >&2
+  exit 1
+fi
+
+if scan_tracked_files; then
   printf 'possible secret-like value found in repository\n' >&2
+  exit 1
+fi
+
+fixture_dir="$(mktemp -d)"
+trap 'rm -rf "$fixture_dir"' EXIT
+printf '%s%s\n' 'sk-proj-' 'abcdefghijklmnopqrstuvwxyz' > "$fixture_dir/secret-fixture.txt"
+if ! scan_file "$fixture_dir/secret-fixture.txt"; then
+  printf 'secret scanner did not detect sk-proj fixture\n' >&2
   exit 1
 fi
 
