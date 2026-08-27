@@ -17,6 +17,13 @@ required_skill_markers=(
   '推奨扱い: `ISSUE` または `NOTE`'
   "../../../docs/review-followups.md"
   '`ISSUE` として台帳へ登録'
+  "FOLLOW-UPかつ `ISSUE` の台帳登録後"
+  "台帳登録commit"
+  "EXPECTED_SHA"
+  "台帳登録後の新しいSHA"
+  "標準検証入口"
+  "security"
+  "`@codex review`"
   "open"
   "resolved"
   "superseded"
@@ -49,6 +56,11 @@ required_ledger_markers=(
   "機能名"
   "モジュール名"
   "NOTE"
+  "台帳登録後の検証対象SHA"
+  "登録commit"
+  "同じPRのhead branch"
+  "検証結果が同じ新しいSHA"
+  "人間へ戻す"
 )
 
 for marker in "${required_ledger_markers[@]}"; do

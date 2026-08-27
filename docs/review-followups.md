@@ -22,6 +22,21 @@
 `resolved` または `superseded` へ更新するときは、解決Issue / PRまたは置換理由を必ず追記する。
 状態値は `open / resolved / superseded` のいずれかとする。
 
+## 台帳登録後の検証対象SHA
+
+更新後headの再レビューで新しいP2を `FOLLOW-UP` かつ `ISSUE` と判定した場合は、CI・security・review完了後であっても、中央台帳への登録commitを作成する。
+
+台帳登録commitは新しい検証対象を作るため、次の遷移を必ず行う。
+
+1. 同じPRのhead branchへ台帳登録commitを作成する。
+2. 登録commitのSHAを新しい `EXPECTED_SHA` / 検証対象SHAとして記録し、GitHub上のPR head SHAと一致することを確認する。
+3. 登録前の `EXPECTED_SHA` に対するローカル検証、CI、security、再レビュー結果を新しいSHAの結果として再利用しない。
+4. 台帳登録後の新しいSHAに対して、標準検証入口 → GitHub Actions CI → 利用可能なsecurity check → `@codex review` を再実行する。
+5. 各検証結果が同じ新しいSHAを対象としていること、最終的なPR head SHAがそのSHAと一致することを確認する。
+
+登録commit後にSHAを確認できない、検証結果の対象SHAが一致しない、または新しい検証を完了できない場合は、完了扱いにせず人間へ戻す。
+`NOTE` / `DISMISS` と分類して台帳登録を行わない場合は、この遷移を開始しない。
+
 ## 障害調査での検索手順
 
 1. 障害の症状、エラー文、機能名、モジュール名、関連ファイルから検索語を選ぶ。
