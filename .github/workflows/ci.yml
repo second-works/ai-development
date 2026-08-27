@@ -26,3 +26,6 @@ jobs:
 
       - name: FOLLOW-UP documentation contract
         run: bash tests/pr-review-followups/run-samples.sh
+
+      - name: Deployment design documentation contract
+        run: bash tests/deployment-design/run-samples.sh

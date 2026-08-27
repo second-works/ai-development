@@ -56,6 +56,22 @@ assignees: []
   - 決定タイミング:
   - 関連Issue: #
 
+## デプロイ設計 / Release・Production計画
+
+<!-- 詳細な項目と安全条件は docs/deployment-release-design.md を参照する。不要な項目も理由を記録する。 -->
+
+- Production runtime:
+- Containerの要否と理由:
+- Persistent dataの保存先・再作成後の生存方法:
+- Deployment method・実行主体・権限:
+- Secrets / 環境変数 / 外部サービス（値は記録しない）:
+- backup・DB/schema/vector migration・失敗時の復旧:
+- Stagingの要否と理由:
+- E2E / Smoke Test・Release判定:
+- Production Deploy後のHealth Check・Monitoring:
+- Rollback単位・永続データ互換性:
+- MergeからProduction Deployまでの承認境界:
+
 ## 子Issue実装中のDesign Decision Escalation
 
 子Issueの実装中に、Issue本文またはこの親Issueの `Design Decision` に明記・事前承認されていない重要な設計判断が必要になった場合、Codexは独自判断で実装を継続せず停止する。Codexは停止理由、設計境界、選択肢、影響範囲、推奨案、親Issue更新・追加Issueの要否、元Issue再開に必要な決定事項を提示する。
