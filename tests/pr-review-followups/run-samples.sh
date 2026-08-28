@@ -17,8 +17,8 @@ required_agents_markers=(
   "共通部品変更による波及先"
   "既存コード全体の改善探索へ無制限に広げない"
   "severityだけでMerge可否を決定せず"
-  "`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`"
-  "`IN-SCOPE FIX`、`FOLLOW-UP`、`DISMISS` に分類された非BLOCKING P2は"
+  '`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`'
+  '`IN-SCOPE FIX`、`FOLLOW-UP`、`DISMISS` に分類された非BLOCKING P2は'
   "最終Merge判断は人間が行う"
 )
 
