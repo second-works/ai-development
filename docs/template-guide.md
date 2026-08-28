@@ -408,17 +408,15 @@ SHA更新確認 → ローカルテスト → CI → セキュリティチェッ
 Merge
     ↓
 Merge済みIssue用branchを自動削除
-    ↓
-Production Deploy後の実利用シナリオ検証
-    ↓
-計画時の成功条件との照合 → Accepted / Not Accepted / Conditional
-    ↓
-発見事項の分類 → 修正Issue / 改善Issue / 次サイクル
-    ↓
-最新mainから次のIssue用branchを作成
-    ↓
-次の子Issue
+    ├─→ 最新mainから次のIssue用branchを作成 → 次の子Issue
+    └─→ Production Deploy後の実利用シナリオ検証
+         ↓
+       計画時の成功条件との照合 → Accepted / Not Accepted / Conditional
+         ↓
+       発見事項の分類 → 修正Issue / 改善Issue / 次サイクル
 ```
+
+Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立した工程として扱う。依存関係のない次Issueは、検収完了を待たずに優先順位と依存関係に従って開始できる。検収で見つかった事項は、元PRの修正ループへ戻さず、必要な修正Issue / 改善Issueとして追跡する。
 
 ## 15. 新規リポジトリ初期化チェックリスト
 

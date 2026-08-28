@@ -103,6 +103,7 @@ MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判�
 - [ ] 実利用シナリオを実行し、計画時の成功条件と照合した
 - [ ] Health Check / Smoke Testと実利用検証を分けて記録した
 - [ ] `Accepted` / `Not Accepted` / `Conditional` のいずれかで判定した
+- [ ] 親Issueを完了扱いにする場合、`Accepted` または受入条件・期限を明記した許容済み `Conditional` である（`Not Accepted` や未解決の `ACCEPTANCE BLOCKER` を残していない）
 - [ ] 発見事項を `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類した
 - [ ] 改善・新要求を元PRの無限修正ループへ戻していない
 - [ ] 必要な修正Issue / 改善Issueを関連付けた

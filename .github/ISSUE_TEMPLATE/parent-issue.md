@@ -128,6 +128,7 @@ assignees: []
 - [ ] 実環境または想定環境で基本動作を確認している
 - [ ] `Implementation Done`、`Deployed`、`Product Accepted` を別状態として記録した
 - [ ] 実利用シナリオを実行し、計画時の成功条件と照合して検収判定を記録した
+- [ ] `Product Accepted` が `Accepted`、または受入条件・期限を明記した許容済み `Conditional` である（`Not Accepted` や未解決の `ACCEPTANCE BLOCKER` を残したまま完了扱いにしていない）
 - [ ] 発見事項を `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類した
 - [ ] `IMPROVEMENT / FUTURE` を元PRの修正ループへ戻さず、必要な別Issue候補を記録した
 - [ ] 残っているwarning / deprecationを確認し、必要なら後続メンテナンスIssueを作成した

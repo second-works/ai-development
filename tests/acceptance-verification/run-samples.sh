@@ -47,8 +47,11 @@ assert_contains "$deployment" 'Monitoring / Rollbackを妨げない'
 assert_contains "$guide" 'acceptance-verification.md'
 assert_contains "$parent" '## 実利用検証 / 検収計画'
 assert_contains "$parent" 'Product Accepted'
+assert_contains "$parent" '受入条件・期限を明記した許容済み `Conditional`'
+assert_contains "$parent" '未解決の `ACCEPTANCE BLOCKER` を残したまま完了扱いにしていない'
 assert_contains "$pr" '# 実利用検証 / Product Acceptance'
 assert_contains "$pr" 'ACCEPTANCE BLOCKER'
+assert_contains "$guide" '次Issue着手と、Deploy後の実利用検証・検収は独立した工程'
 
 flow_line="$(grep -nF 'Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオ' "$flow" | cut -d: -f1)"
 doc_line="$(grep -nF '## 4. 標準フロー' "$doc" | cut -d: -f1)"
@@ -56,7 +59,8 @@ monitor_line="$(grep -nF 'Monitoring開始 / Rollback判断' "$deployment" | cut
 usage_line="$(grep -nF '↓ 実利用シナリオ検証' "$deployment" | cut -d: -f1)"
 branch_line="$(grep -nF 'Merge済みIssue用branchを自動削除' "$guide" | cut -d: -f1)"
 guide_usage_line="$(grep -nF 'Production Deploy後の実利用シナリオ検証' "$guide" | cut -d: -f1)"
-[[ -n "$flow_line" && -n "$doc_line" && -n "$monitor_line" && -n "$usage_line" && -n "$branch_line" && -n "$guide_usage_line" ]] || {
+parallel_line="$(grep -nF '次Issue着手と、Deploy後の実利用検証・検収は独立した工程' "$guide" | cut -d: -f1)"
+[[ -n "$flow_line" && -n "$doc_line" && -n "$monitor_line" && -n "$usage_line" && -n "$branch_line" && -n "$guide_usage_line" && -n "$parallel_line" ]] || {
   printf 'acceptance flow anchors are missing\n' >&2
   exit 1
 }
