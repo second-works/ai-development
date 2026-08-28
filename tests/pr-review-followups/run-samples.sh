@@ -3,8 +3,31 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+AGENTS_FILE="${ROOT_DIR}/AGENTS.md"
 SKILL_FILE="${ROOT_DIR}/.agents/skills/pr-review-fix/SKILL.md"
 LEDGER_FILE="${ROOT_DIR}/docs/review-followups.md"
+
+required_agents_markers=(
+  "### 初回レビューの標準探索観点"
+  "変更箇所の呼び出し元・利用箇所への影響"
+  "類似実装・対称実装との一貫性"
+  "API、データモデル、状態遷移等の既存契約との整合性"
+  "エラー握りつぶし等によるsilent failureがないか"
+  "外部API / SDK / DB / filesystem等のシステム境界仕様との整合性"
+  "共通部品変更による波及先"
+  "既存コード全体の改善探索へ無制限に広げない"
+  "P2: severityだけでMerge可否を決定せず"
+  "`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`"
+  "`IN-SCOPE FIX`、`FOLLOW-UP`、`DISMISS` に分類された非BLOCKING P2は"
+  "最終Merge判断は人間が行う"
+)
+
+for marker in "${required_agents_markers[@]}"; do
+  grep -Fq -- "${marker}" "${AGENTS_FILE}" || {
+    printf 'missing AGENTS review contract marker: %s\n' "${marker}" >&2
+    exit 1
+  }
+done
 
 required_skill_markers=(
   "## FOLLOW-UPの記録・参照"
