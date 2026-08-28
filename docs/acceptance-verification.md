@@ -49,6 +49,7 @@ Merge
   ↓ Release判定
   ↓ Production Deploy
   ↓ Post-deploy Health Check
+  ↓ Monitoring開始 / Rollback判断
   ↓ 実利用シナリオ検証
   ↓ 計画時の目的・成功条件との照合
   ↓ 検収判定
@@ -57,6 +58,8 @@ Merge
 ```
 
 Stagingを省略する場合は、既存のDeployment設計に従って理由と代替確認方法を記録する。E2Eで自動化できる項目は自動化してよいが、UX、操作感、出力の有用性、実データの妥当性などは人間確認の対象として残す。
+
+MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判断・実行を検収完了まで遅らせない。実利用検証は監視・復旧を妨げない形で行う。
 
 ## 5. 検収記録
 

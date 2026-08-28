@@ -405,15 +405,15 @@ SHA更新確認 → ローカルテスト → CI → セキュリティチェッ
     ↓
 人間レビュー
     ↓
-    Merge
+Merge
     ↓
-    Production Deploy後の実利用シナリオ検証
+Merge済みIssue用branchを自動削除
     ↓
-    計画時の成功条件との照合 → Accepted / Not Accepted / Conditional
+Production Deploy後の実利用シナリオ検証
     ↓
-    発見事項の分類 → 修正Issue / 改善Issue / 次サイクル
+計画時の成功条件との照合 → Accepted / Not Accepted / Conditional
     ↓
-    Merge済みIssue用branchを自動削除
+発見事項の分類 → 修正Issue / 改善Issue / 次サイクル
     ↓
 最新mainから次のIssue用branchを作成
     ↓

@@ -38,6 +38,7 @@ Merge
   ↓ Release判定
   ↓ Production Deploy
   ↓ Post-deploy Health Check
+  ↓ Monitoring開始 / Rollback判断
   ↓ 実利用シナリオ検証
   ↓ 計画時の目的・成功条件との照合
   ↓ 検収判定
@@ -90,6 +91,8 @@ migration失敗時は、後続のDeployやHealth Checkを成功扱いにせず�
 - Health Check / Smoke Testの失敗時はRelease失敗として扱い、MonitoringとRollbackへ接続する
 
 Health Check / Smoke Testの成功だけでは、利用者が当初の目的を達成したことを意味しない。Post-deploy後に実利用シナリオを実行し、検収判定と発見事項の分類を行う。具体的な状態、記録項目、`Accepted` / `Not Accepted` / `Conditional` の扱いは [docs/acceptance-verification.md](acceptance-verification.md) に従う。
+
+MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判断・実行を検収完了まで遅らせない。実利用検証はMonitoring / Rollbackを妨げない形で行う。
 
 ## 7. Design Decisionとエスカレーション
 

@@ -42,6 +42,8 @@ assert_contains "$doc" 'Design Decision Escalation'
 assert_contains "$flow" 'acceptance-verification.md'
 assert_contains "$flow" 'Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオ'
 assert_contains "$deployment" 'acceptance-verification.md'
+assert_contains "$deployment" 'Monitoring開始 / Rollback判断'
+assert_contains "$deployment" 'Monitoring / Rollbackを妨げない'
 assert_contains "$guide" 'acceptance-verification.md'
 assert_contains "$parent" '## 実利用検証 / 検収計画'
 assert_contains "$parent" 'Product Accepted'
@@ -50,8 +52,20 @@ assert_contains "$pr" 'ACCEPTANCE BLOCKER'
 
 flow_line="$(grep -nF 'Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオ' "$flow" | cut -d: -f1)"
 doc_line="$(grep -nF '## 4. 標準フロー' "$doc" | cut -d: -f1)"
-[[ -n "$flow_line" && -n "$doc_line" ]] || {
+monitor_line="$(grep -nF 'Monitoring開始 / Rollback判断' "$deployment" | cut -d: -f1)"
+usage_line="$(grep -nF '↓ 実利用シナリオ検証' "$deployment" | cut -d: -f1)"
+branch_line="$(grep -nF 'Merge済みIssue用branchを自動削除' "$guide" | cut -d: -f1)"
+guide_usage_line="$(grep -nF 'Production Deploy後の実利用シナリオ検証' "$guide" | cut -d: -f1)"
+[[ -n "$flow_line" && -n "$doc_line" && -n "$monitor_line" && -n "$usage_line" && -n "$branch_line" && -n "$guide_usage_line" ]] || {
   printf 'acceptance flow anchors are missing\n' >&2
+  exit 1
+}
+(( monitor_line < usage_line )) || {
+  printf 'monitoring / rollback must precede real-use verification\n' >&2
+  exit 1
+}
+(( branch_line < guide_usage_line )) || {
+  printf 'merged branch cleanup must precede real-use verification\n' >&2
   exit 1
 }
 
