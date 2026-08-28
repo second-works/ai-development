@@ -15,7 +15,7 @@ required_agents_markers=(
   "エラー握りつぶし等によるsilent failureがないか"
   "外部API / SDK / DB / filesystem等のシステム境界仕様との整合性"
   "共通部品変更による波及先"
-  "既存コード全体の改善探索へ無制限に広げない"
+  "既存コード全体の改善探索へ無制限に広げず"
   "severityだけでMerge可否を決定せず"
   '`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`'
   '`IN-SCOPE FIX`、`FOLLOW-UP`、`DISMISS` に分類された非BLOCKING P2は'
