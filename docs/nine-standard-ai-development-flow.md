@@ -6,7 +6,7 @@
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 必要なら修正・再CI・再レビュー → 人間確認 → Merge**
+**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 必要なら修正・再CI・再レビュー → 人間確認 → Merge → Deploy → 実利用検証 → 検収判定**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
@@ -17,6 +17,8 @@
 テンプレート利用プロジェクトでは、ローカル・Agent・GitHub Actionsが同じ `./scripts/verify.sh` を呼び出す。標準検証は lint → type check → test → build の順に実行し、対象外工程は理由付きで明示する。標準検証を実行できない場合や失敗した場合は、commit・PR作成・レビュー依頼へ進まず停止する。
 
 GitHub上の実装完了と本番投入可能な状態は分けて扱う。Release Candidate以降のDeployment as Code設計、判断項目、安全条件は [docs/deployment-release-design.md](deployment-release-design.md) を参照する。
+
+実装・Deployの完了と、利用者が当初の目的を達成したことも分けて扱う。実利用検証、検収計画、判定、発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) を正本とする。
 
 ## 2. ChatGPTの役割
 
@@ -51,6 +53,7 @@ ChatGPTは開発マネージャー兼設計担当として使う。
 - 後続候補
 - 今回やらないこと
 - 全体完了条件
+- 検収計画（課題、利用者、実利用シナリオ、成功条件、失敗条件、検証環境、人間確認項目）
 
 ## 4. 子Issue
 
@@ -141,6 +144,8 @@ Stagingを省略する場合は、親IssueまたはDesign Decisionに理由と�
 CloudflareでDockerが不要な構成、Home PC / VPSのself-hosted runnerとDocker Compose、macOS固有アプリのDockerなし運用は、それぞれ候補として比較するが一律に強制しない。
 永続データ、Secrets、backup、migration、Rollbackとデータ互換性をProduction計画に含める。
 詳細な記録項目は [docs/deployment-release-design.md](deployment-release-design.md) を参照する。
+
+Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオを実行し、計画時の目的・成功条件と照合して検収判定を行う。`Implementation Done`、`Deployed`、`Product Accepted` は別状態として記録する。詳細な検収計画・結果・発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) に従う。
 
 ## 8. GitHub Actions CI
 
@@ -291,6 +296,7 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 - Codex Code ReviewのP0 / P1が解消され、P2は解消または人間が残置理由を確認済みか
 - 不要な依存追加がないか
 - 既存機能への影響がないか
+- CI / Code Reviewの成功と、実利用で当初の目的を満たしたことを別々に確認する
 
 最終mergeは人間が判断する。
 

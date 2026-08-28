@@ -8,7 +8,7 @@
 本番投入可能とは、対象環境、データ、Secrets、Release判定、Deploy、確認、監視、Rollbackまでの運用経路を決定し、必要な検証を終えた状態を指す。
 本番投入を今回行わない場合も、理由と次に判断するタイミングを記録する。
 
-この文書は設計項目と安全条件の正本であり、標準フローは工程順、親Issueテンプレートはプロジェクトごとの決定記録を担当する。
+この文書は設計項目と安全条件の正本であり、標準フローは工程順、親Issueテンプレートはプロジェクトごとの決定記録を担当する。Deploy後の実利用検証と検収は [docs/acceptance-verification.md](acceptance-verification.md) を正本とし、Health Check / Smoke Testとは別に扱う。
 
 ## 2. 計画時に記録する設計項目
 
@@ -38,6 +38,9 @@ Merge
   ↓ Release判定
   ↓ Production Deploy
   ↓ Post-deploy Health Check
+  ↓ 実利用シナリオ検証
+  ↓ 計画時の目的・成功条件との照合
+  ↓ 検収判定
   ↓ Monitoring / Rollback
 ```
 
@@ -85,6 +88,8 @@ migration失敗時は、後続のDeployやHealth Checkを成功扱いにせず�
 - Production Deploy前にCIと必要なSecurity Checkを成功させる
 - backupが必要な変更では、backup成功をDeployの前提条件にする
 - Health Check / Smoke Testの失敗時はRelease失敗として扱い、MonitoringとRollbackへ接続する
+
+Health Check / Smoke Testの成功だけでは、利用者が当初の目的を達成したことを意味しない。Post-deploy後に実利用シナリオを実行し、検収判定と発見事項の分類を行う。具体的な状態、記録項目、`Accepted` / `Not Accepted` / `Conditional` の扱いは [docs/acceptance-verification.md](acceptance-verification.md) に従う。
 
 ## 7. Design Decisionとエスカレーション
 
