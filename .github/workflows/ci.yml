@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Shell syntax
-        run: bash -n templates/verification/verify.sh tests/verification/run-samples.sh
+        run: bash -n templates/verification/verify.sh tests/verification/run-samples.sh tests/acceptance-verification/run-samples.sh
 
       - name: Verification samples
         run: tests/verification/run-samples.sh
@@ -29,3 +29,6 @@ jobs:
 
       - name: Deployment design documentation contract
         run: bash tests/deployment-design/run-samples.sh
+
+      - name: Acceptance verification documentation contract
+        run: bash tests/acceptance-verification/run-samples.sh

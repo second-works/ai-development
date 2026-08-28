@@ -12,6 +12,21 @@ Closes #
 - 標準検証を実行できない場合の理由:
 - [ ] 手動動作確認
 
+# 実利用検証 / Product Acceptance
+
+実利用検証は、Health Check / Smoke TestおよびCI / Code Reviewとは別の検収工程として、原則Deploy後に実施する。実装段階で未実施の場合は、理由と引き継ぎ先を記録する。詳細は [docs/acceptance-verification.md](../docs/acceptance-verification.md) を参照する。
+
+- Implementation Done: `未完了 / 完了`
+- Deployed: `未実施 / 完了`
+- Product Accepted: `Not run / Accepted / Not Accepted / Conditional`
+- 判定対象のRelease / commit / tag / SHA:
+- 検証環境:
+- 実利用シナリオ:
+- 計画時の成功条件との照合結果:
+- 発見事項と分類（`ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE`）:
+- 未解決事項・関連Issue:
+- 未実施または対象外の理由・実施タイミング:
+
 # GitHubチェック
 
 - [ ] GitHub Actions CI成功

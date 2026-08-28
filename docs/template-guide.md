@@ -88,6 +88,16 @@ Deployment as Codeの正本は [docs/deployment-release-design.md](deployment-re
 MergeはProduction Deployを意味しません。CI、Security Check、Release判定、必要なbackupとmigration確認を経てProductionへ進み、Deploy後のHealth CheckとRollbackまで確認可能にします。
 詳細な手順・データ互換性・Secretsの安全条件は正本文書へ集約し、親Issueや標準フローへ重複記載しません。
 
+## 4.2 実利用検証と検収
+
+実装・Deployの完了と、作る目的を満たしたことの検収を分けて記録します。検収の正本は [docs/acceptance-verification.md](acceptance-verification.md) です。
+
+親Issueの計画段階で、解決したい課題、対象ユーザー、実利用シナリオ、成功条件、失敗条件、検証環境、実データ / fixture、人間確認項目、検収タイミングを定義します。
+
+Deploy後は、Health Check / Smoke Testとは別に主要ユースケースを最初から最後まで実行し、計画時の成功条件と照合します。`Implementation Done`、`Deployed`、`Product Accepted` は別状態です。検収結果は `Accepted` / `Not Accepted` / `Conditional` で記録し、発見事項は `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類します。
+
+新要求や改善案を、元PRのレビュー修正ループへ無制限に戻しません。必要に応じて別Issue候補として次サイクルへ送り、設計前提の誤りは `Design Decision Escalation` へ戻します。
+
 ## 5. 子Issueテンプレート
 
 ファイル:
@@ -398,11 +408,15 @@ SHA更新確認 → ローカルテスト → CI → セキュリティチェッ
 Merge
     ↓
 Merge済みIssue用branchを自動削除
-    ↓
-最新mainから次のIssue用branchを作成
-    ↓
-次の子Issue
+    ├─→ 最新mainから次のIssue用branchを作成 → 次の子Issue
+    └─→ Production Deploy後の実利用シナリオ検証
+         ↓
+       計画時の成功条件との照合 → Accepted / Not Accepted / Conditional
+         ↓
+       発見事項の分類 → 修正Issue / 改善Issue / 次サイクル
 ```
+
+Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立した工程として扱う。依存関係のない次Issueは、検収完了を待たずに優先順位と依存関係に従って開始できる。検収で見つかった事項は、元PRの修正ループへ戻さず、必要な修正Issue / 改善Issueとして追跡する。
 
 ## 15. 新規リポジトリ初期化チェックリスト
 

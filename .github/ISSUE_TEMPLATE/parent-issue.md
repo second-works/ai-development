@@ -73,6 +73,21 @@ assignees: []
 - Rollback単位・永続データ互換性:
 - MergeからProduction Deployまでの承認境界:
 
+## 実利用検証 / 検収計画
+
+<!-- 実装前に定義する。詳細な責務・記録形式は docs/acceptance-verification.md を参照する。対象外の場合も理由を記録する。 -->
+
+- 解決したい課題 / 利用目的:
+- 対象ユーザー / 利用者:
+- 実利用シナリオ（開始条件から完了まで）:
+- 成功条件（利用者が達成できること、測定方法）:
+- 失敗条件（検収不可とする条件）:
+- 検証環境（Production、Staging、ローカル等）:
+- 必要な実データ / fixtureとデータ準備方法:
+- 人間確認が必要な項目（UX、操作感、出力の有用性、実データの妥当性等）:
+- 検収実施タイミング:
+- 検証結果の保存先:
+
 ## 子Issue実装中のDesign Decision Escalation
 
 子Issueの実装中に、Issue本文またはこの親Issueの `Design Decision` に明記・事前承認されていない重要な設計判断が必要になった場合、Codexは独自判断で実装を継続せず停止する。Codexは停止理由、設計境界、選択肢、影響範囲、推奨案、親Issue更新・追加Issueの要否、元Issue再開に必要な決定事項を提示する。
@@ -111,5 +126,10 @@ assignees: []
 - [ ] 利用可能なセキュリティチェックを確認した
 - [ ] ドキュメントが更新されている
 - [ ] 実環境または想定環境で基本動作を確認している
+- [ ] `Implementation Done`、`Deployed`、`Product Accepted` を別状態として記録した
+- [ ] 実利用シナリオを実行し、計画時の成功条件と照合して検収判定を記録した
+- [ ] `Product Accepted` が `Accepted`、または受入条件・期限を明記した許容済み `Conditional` である（`Not Accepted` や未解決の `ACCEPTANCE BLOCKER` を残したまま完了扱いにしていない）
+- [ ] 発見事項を `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類した
+- [ ] `IMPROVEMENT / FUTURE` を元PRの修正ループへ戻さず、必要な別Issue候補を記録した
 - [ ] 残っているwarning / deprecationを確認し、必要なら後続メンテナンスIssueを作成した
 - [ ] 人間による最終確認が完了している
