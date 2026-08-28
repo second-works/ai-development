@@ -179,8 +179,8 @@ RAGを採用する各プロジェクトでは、原則として `docs/architectu
 12. GitHub Actions CIの結果を確認する。CIも同じ `./scripts/verify.sh` を呼び出す。
 13. CI失敗時は原因を修正し、成功するまでPRを完了扱いにしない。
 14. CI成功後にCodex Code Reviewを実行する。Automatic reviewsが有効な場合は自動結果を確認し、無効な場合はPRで `@codex review` を依頼する。
-15. P0 / P1 / P2指摘がある場合は、下記「Code Review Rules」の修正ループに従い、既存PRのhead branchをチェックアウトして修正する。
-16. P0 / P1が解消され、P2がないか人間が残置理由を確認し、CIが成功し、利用可能なセキュリティチェックが成功または人間が例外を明示判断した状態で人間の最終確認へ進む。
+15. P0 / P1 / BLOCKINGと分類したP2指摘がある場合は、下記「Code Review Rules」の修正ループに従い、既存PRのhead branchをチェックアウトして修正する。非BLOCKING P2は四分類と記録を行い、追加修正ループへ戻さない。
+16. P0 / P1およびBLOCKING P2が解消され、非BLOCKING P2が四分類・記録され、CIが成功し、利用可能なセキュリティチェックが成功または人間が例外を明示判断した状態で人間の最終確認へ進む。
 17. PR本文に対応Issue、変更内容、標準検証・CI結果、Codexレビュー結果、注意点を記載する。
 18. PR作成後は勝手に次のIssueへ範囲を拡張しない。
 
@@ -298,10 +298,10 @@ Codex Code Reviewを、GitHub Actions CI後・人間の最終確認前の標準�
 
 ### 修正ループ
 
-CodexレビューでP0 / P1 / P2が見つかった場合は、次の順で対応する。
+CodexレビューでP0 / P1 / BLOCKINGと分類したP2が見つかった場合は、次の順で対応する。
 
 1. 指摘内容がIssue範囲内か確認する。
-2. `@codex review` はレビュー専用とし、レビュー担当に修正を実行させない。P0 / P1 / P2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で実施する。
+2. `@codex review` はレビュー専用とし、レビュー担当に修正を実行させない。P0 / P1 / BLOCKINGと分類したP2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で実施する。
 3. 修正前に対象PR番号、head branch、head SHAをGitHub上で確認・記録し、既存PRのhead branchをチェックアウトする。PR番号とIssue番号、head branchと作業用の別branchを混同しない。
 4. 指摘がIssue範囲内なら既存PRのhead branch上で修正し、同じhead branchへcommit / pushする。新しいPRを作らず、既存PRを再利用する。
 5. pushした修正コミットのSHAを確認し、GitHub上の同じPRのhead branchとhead SHAが、そのpushしたコミットSHAと一致することを確認する。単に修正前後でSHAが異なるだけでは完了扱いにしない。
@@ -318,8 +318,8 @@ CodexレビューでP0 / P1 / P2が見つかった場合は、次の順で対応
 - 台帳登録後の新しいSHAに対して、標準検証入口 → GitHub Actions CI → 利用可能なセキュリティチェック → `@codex review` を同じ順で再実行する。各結果と最終head確認が新しいSHAに対するものになるまで完了扱いにしない。
 - 台帳登録を行わない `NOTE` / `DISMISS` の分類では、この台帳登録後の再検証遷移を開始しない。
 
-10. 更新後のheadに対する再レビューで前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
-11. 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならず、P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の明示判断を要する。
+10. 更新後のheadに対する再レビューで前回のBLOCKINGが解消され、新しいP0 / P1 / BLOCKING P2がないことを確認する。非BLOCKING P2は四分類・記録後に追加修正ループへ戻さない。
+11. 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / BLOCKING P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならず、P0 / P1またはBLOCKING P2が残る場合はMerge禁止とする。非BLOCKING P2のみが残る場合は、分類と記録後に追加修正ループへ戻さない。
 12. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
 
 AIレビューは品質判断を補助するものであり、AI自身にMerge権限を委譲しない。最終Mergeは必ず人間が判断する。
@@ -399,7 +399,7 @@ PRには最低限以下を書く。
 - GitHub Actions CI結果
 - セキュリティチェック結果（有効な場合）
 - Codex Code Review結果（P0 / P1 / P2 / P3と未解決指摘）
-- レビュー修正ラウンド数と収束判断（3ラウンド停止、P2残置、人間の継続・受容判断を含む）
+- レビュー修正ラウンド数と収束判断（3ラウンド停止、P2四分類、非BLOCKING P2の記録と追加修正ループ非再開を含む）
 - 標準検証 `./scripts/verify.sh` の結果
 - warning / deprecationの有無
 - 注意点・残課題
@@ -433,11 +433,11 @@ PRには最低限以下を書く。
 - セキュリティ上重要な判断
 - CI例外の許可
 - セキュリティチェック例外の許可
-- CodexレビューのP2を残置する例外判断
+- P2を四分類へ分類できない場合の判断
 - mainへのmerge
 
 ## Standard Codex Instruction
 
 Codexにリポジトリを指定して作業させる場合の基本指示は次のとおりとする。
 
-> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果を確認し、失敗している場合はIssue範囲内で修正してください。CI成功後は `@codex review` をレビュー専用で実行し、P0 / P1 / P2指摘があれば `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして修正してください。修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / pushした後、pushした修正コミットSHAとGitHub上の同じPRのhead SHAが一致することを確認してください。head branchまたはSHAを確認できない、SHAが更新されていない、またはpushした修正コミットSHAとPR head SHAが一致しない場合は再テスト・CI・セキュリティチェック・再レビューへ進まず人間に確認してください。修正コミットSHAを検証対象SHAとして記録し、更新後のheadに対してローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証してください。各チェックの対象SHAを記録し、再検証完了時にGitHub上のPR head SHAがpushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認してください。不一致の場合は完了扱いにせず人間に確認してください。新しいPRを作らず既存PRを再利用し、最終Mergeは人間が判断します。
+> このリポジトリのGitHub Issueを確認し、未完了Issueを依存関係と優先順位に従って実装してください。AGENTS.mdを遵守し、1 Issue = 1 PRで進めてください。各Issueで必要なテストを実行し、Issueの範囲外は実装しないでください。PR作成後はGitHub Actions CIと利用可能なセキュリティチェックの結果を確認し、失敗している場合はIssue範囲内で修正してください。CI成功後は `@codex review` をレビュー専用で実行し、P0 / P1 / BLOCKINGと分類したP2指摘があれば `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをチェックアウトして修正してください。非BLOCKING P2は四分類と記録を行い、追加修正ループへ戻さないでください。修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / pushした後、pushした修正コミットSHAとGitHub上の同じPRのhead SHAが一致することを確認してください。head branchまたはSHAを確認できない、SHAが更新されていない、またはpushした修正コミットSHAとPR head SHAが一致しない場合は再テスト・CI・セキュリティチェック・再レビューへ進まず人間に確認してください。修正コミットSHAを検証対象SHAとして記録し、更新後のheadに対してローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証してください。各チェックの対象SHAを記録し、再検証完了時にGitHub上のPR head SHAがpushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認してください。不一致の場合は完了扱いにせず人間に確認してください。新しいPRを作らず既存PRを再利用し、最終Mergeは人間が判断します。
