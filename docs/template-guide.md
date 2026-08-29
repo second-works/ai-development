@@ -31,7 +31,9 @@
 9. Ruleset / Branch protection
 10. `Automatically delete head branches` の有効化
 
-設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。
+設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
+
+
 
 ## 3. AGENTS.md
 
@@ -97,6 +99,16 @@ MergeはProduction Deployを意味しません。CI、Security Check、Release�
 Deploy後は、Health Check / Smoke Testとは別に主要ユースケースを最初から最後まで実行し、計画時の成功条件と照合します。`Implementation Done`、`Deployed`、`Product Accepted` は別状態です。検収結果は `Accepted` / `Not Accepted` / `Conditional` で記録し、発見事項は `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類します。
 
 新要求や改善案を、元PRのレビュー修正ループへ無制限に戻しません。必要に応じて別Issue候補として次サイクルへ送り、設計前提の誤りは `Design Decision Escalation` へ戻します。
+
+## 4.3 Plan Review Gate（計画書Grilling）
+
+計画書の存在と、実装開始できるほど重要判断が確定していることは別です。Plan Review Gateの正本は [docs/plan-review-gate.md](plan-review-gate.md) とし、計画書からIssue化する前に参照します。
+
+- PASS: 親Issue / 子Issue化へ進む
+- NEEDS_DECISION: Issue化・実装開始を止め、既存のDesign Decisionへ戻す
+- NOT_APPLICABLE: 軽微な変更等。省略理由を記録する
+
+Plan Reviewは子Issue品質チェックを置き換えません。Issue化後は従来どおり docs/issue-quality-check.md を使い、1 Issue / 1 PR、CI、Codex Code Review、人間Mergeの流れを維持します。Deployment設計、実利用検証、Issue #30の状態設計原則は各正本文書を参照し、同じ詳細を重複記載しません。
 
 ## 5. 子Issueテンプレート
 
