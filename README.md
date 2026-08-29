@@ -13,20 +13,20 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 3. 必要なDesign Decisionを確定
 4. 親Issueを作成
 5. 1 PR単位の子Issueへ分解
-4. Codexで実装
-5. 標準検証 `./scripts/verify.sh` 実行
-6. PR作成
-7. GitHub Actions CI
-8. Codex Code Review（レビュー専用）
-9. P0 / P1指摘は必ず修正し、P2は原則修正する。残す場合は人間が理由を確認して明示判断し、既存PRのhead branchをチェックアウトして修正
-10. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
-11. GitHub上で修正後のhead SHAが、pushした修正コミットSHAと一致することを確認
-12. SHA未確認・未更新・不一致の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
-13. 修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象にローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証
-14. 各チェックの対象SHAを記録し、再検証完了時にPR head SHAがpushした修正コミットSHAおよび検証対象SHAと一致することを確認。不一致なら完了扱いにせず停止
-15. 新しいPRを作らず既存PRを再利用
-16. 人間が最終確認
-17. 人間がMerge
+6. Codexで実装
+7. 標準検証 `./scripts/verify.sh` 実行
+8. PR作成
+9. GitHub Actions CI
+10. Codex Code Review（レビュー専用）
+11. P0 / P1指摘は必ず修正し、P2は原則修正する。残す場合は人間が理由を確認して明示判断し、既存PRのhead branchをチェックアウトして修正
+12. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
+13. GitHub上で修正後のhead SHAが、pushした修正コミットSHAと一致することを確認
+14. SHA未確認・未更新・不一致の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
+15. 修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象にローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証
+16. 各チェックの対象SHAを記録し、再検証完了時にPR head SHAがpushした修正コミットSHAおよび検証対象SHAと一致することを確認。不一致なら完了扱いにせず停止
+17. 新しいPRを作らず既存PRを再利用
+18. 人間が最終確認
+19. 人間がMerge
 
 P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として使用せず、`@codex review` はレビュー専用とします。CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
 
