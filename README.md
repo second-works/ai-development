@@ -8,9 +8,11 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 
 ## 標準フロー
 
-1. ChatGPTで要件整理
-2. 親Issueを作成
-3. 1 PR単位の子Issueへ分解
+1. ChatGPTで要件整理・計画書作成
+2. Plan Review Gate（Grilling）
+3. 必要なDesign Decisionを確定
+4. 親Issueを作成
+5. 1 PR単位の子Issueへ分解
 4. Codexで実装
 5. 標準検証 `./scripts/verify.sh` 実行
 6. PR作成
@@ -40,6 +42,7 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 - `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール
 - `docs/nine-standard-ai-development-flow.md` — 標準開発フロー
+- `docs/plan-review-gate.md` — 計画書の実装前Plan Review正本文書
 - `docs/deployment-release-design.md` — Deployment as Code・Release / Production設計標準
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート
@@ -48,6 +51,7 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 ## 基本原則
 
+- 計画書はIssue化前にPlan Review Gateで実装可能性を確認する
 - ChatGPTは考える
 - GitHubは仕事を管理する
 - Codexは実装する
