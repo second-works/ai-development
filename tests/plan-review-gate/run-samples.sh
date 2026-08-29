@@ -37,6 +37,8 @@ done
 assert_contains "$flow" 'Plan Review Gate（Grilling）'
 assert_contains "$guide" 'Plan Review Gate（Grilling）'
 assert_contains "$guide" '- [ ] `docs/plan-review-gate.md` を配置'
+assert_contains "$guide" '11. Plan Review正本文書'
+assert_contains "$flow" 'PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み'
 assert_contains "$guide" 'NEEDS_DECISION → Design Decision → 計画書更新 → 再Review'
 assert_contains "$guide" 'Issue化前にPlan Review（Grilling）を実施'
 assert_contains "$agents" 'docs/plan-review-gate.md'
@@ -44,6 +46,13 @@ assert_contains "$agents" 'PASSまたは理由付きNOT_APPLICABLEの場合だ�
 assert_contains "$parent" '# Plan Review Gate'
 assert_contains "$parent" '判定: `PASS / NEEDS_DECISION / NOT_APPLICABLE`'
 assert_contains "$readme" 'docs/plan-review-gate.md'
+
+guide_setup_line="$(grep -nF '11. Plan Review正本文書' "$guide" | cut -d: -f1)"
+guide_after_setup_line="$(grep -nF '設定後、計画書を親Issue・子Issueへ変換' "$guide" | cut -d: -f1)"
+[[ -n "$guide_setup_line" && -n "$guide_after_setup_line" && "$guide_setup_line" -lt "$guide_after_setup_line" ]] || {
+  printf 'Plan Review source must be listed before issue conversion\n' >&2
+  exit 1
+}
 
 guide_plan_line="$(grep -nF 'Plan Review Gate（Grilling）' "$guide" | tail -1 | cut -d: -f1)"
 guide_parent_line="$(grep -nF '    ├─ PASS → 親Issue' "$guide" | cut -d: -f1)"
