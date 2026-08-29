@@ -6,6 +6,18 @@ labels: []
 assignees: []
 ---
 
+# Plan Review Gate（計画書検証）
+
+<!-- 計画書から親Issue化する場合は、Issue化前にPlan Reviewを実施する。詳細は docs/plan-review-gate.md を参照する。 -->
+<!-- 親Issue化後の判定は PASS または理由付き NOT_APPLICABLE とする。NEEDS_DECISION の間はIssue化しない。 -->
+
+- 判定: `PASS / NEEDS_DECISION / NOT_APPLICABLE`
+- 計画書 / Review記録:
+- Review実施日:
+- Design Decision反映先:
+- Issue化可否: 可 / 不可
+- 未決定事項: なし、またはDesign Decisionへの参照
+
 # 目的
 
 <!-- 何を実現するか -->
