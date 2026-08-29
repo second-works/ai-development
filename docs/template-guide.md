@@ -391,7 +391,10 @@ Nine標準AI開発フローでは、AIだけにもGitHubだけにも品質保証
     ↓
 ChatGPTで計画書
     ↓
-親Issue
+Plan Review Gate（Grilling）
+    ├─ NEEDS_DECISION → Design Decision → 計画書更新 → 再Review
+    ├─ PASS → 親Issue
+    └─ NOT_APPLICABLE → 省略理由を記録 → 親Issue
     ↓
 子Issue案
     ↓
@@ -435,6 +438,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 新しい開発リポジトリを作成したら以下を確認します。
 
 - [ ] `AGENTS.md` を配置
+- [ ] `docs/plan-review-gate.md` を配置
 - [ ] 親Issueテンプレートを配置
 - [ ] 子Issueテンプレートを配置
 - [ ] PRテンプレートを配置
@@ -458,7 +462,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 
 ChatGPTには例えば次のように依頼します。
 
-> この計画をNine標準AI開発フローでIssue化して。
+> この計画をNine標準AI開発フローでIssue化して。Issue化前にPlan Review（Grilling）を実施し、PASSまたは理由付きNOT_APPLICABLEの場合だけ親Issue / 子Issueへ変換して。NEEDS_DECISIONの場合はIssue化を止め、Design Decisionの候補案と推奨案を提示して。
 
 または
 
