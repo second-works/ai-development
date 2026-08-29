@@ -30,6 +30,7 @@
 8. 利用可能ならCodeQL
 9. Ruleset / Branch protection
 10. `Automatically delete head branches` の有効化
+11. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
 
 設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
 
