@@ -37,12 +37,12 @@ done
 assert_contains "$flow" 'Plan Review Gate（Grilling）'
 assert_contains "$guide" 'Plan Review Gate（Grilling）'
 assert_contains "$agents" 'docs/plan-review-gate.md'
-assert_contains "$parent" '## Plan Review Gate'
+assert_contains "$parent" '# Plan Review Gate'
 assert_contains "$parent" '判定: `PASS / NEEDS_DECISION / NOT_APPLICABLE`'
 assert_contains "$readme" 'docs/plan-review-gate.md'
 
-plan_line="$(grep -nF 'Plan Review Gate（Grilling）' "$flow" | head -1 | cut -d: -f1)"
-parent_line="$(grep -nF '親Issue' "$flow" | head -1 | cut -d: -f1)"
+plan_line="$(grep -nF '## 2.1 Plan Review Gate（計画書Grilling）' "$flow" | cut -d: -f1)"
+parent_line="$(grep -nF '## 3. 親Issue' "$flow" | cut -d: -f1)"
 [[ -n "$plan_line" && -n "$parent_line" && "$plan_line" -lt "$parent_line" ]] || {
   printf 'Plan Review Gate must precede parent Issue conversion\n' >&2
   exit 1
