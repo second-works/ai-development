@@ -6,7 +6,7 @@
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・設計 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 必要なら修正・再CI・再レビュー → 人間確認 → Merge → Deploy → 実利用検証 → 検収判定**
+**要望 → ChatGPTで要件整理・計画書作成 → Plan Review Gate（Grilling） → 必要なDesign Decision確定 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 必要なら修正・再CI・再レビュー → 人間確認 → Merge → Deploy → 実利用検証 → 検収判定**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
@@ -40,9 +40,15 @@ ChatGPTは開発マネージャー兼設計担当として使う。
 
 > この開発内容をGitHub Issueベースで実装できる形に整理してください。親Issueと1 PR単位の子Issueに分解し、各子Issueには完了条件、変更対象、変更禁止範囲、テスト条件、依存関係を書いてください。
 
+## 2.1 Plan Review Gate（計画書Grilling）
+
+計画書から親Issue / 子Issueへ変換する前に、[docs/plan-review-gate.md](plan-review-gate.md) に従ってPlan Review Gateを実施する。
+
+PASSの場合だけIssue化へ進み、NEEDS_DECISIONの場合はIssue化・実装開始を止めて既存のDesign Decisionへ接続する。NOT_APPLICABLEの場合は省略理由を記録する。Plan Reviewは計画書の全面書き換え、一問一答の強制、既存のDesign Decision Escalationの置換ではない。
+
 ## 3. 親Issue
 
-親Issueは実装指示ではなくプロジェクト全体のロードマップとして使う。
+親Issueは実装指示ではなくプロジェクト全体のロードマップとして使う。Plan Review GateがPASSまたは理由付きのNOT_APPLICABLEとなった後に作成する。
 
 含める項目：
 
