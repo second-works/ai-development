@@ -70,6 +70,12 @@
 
 英語の技術用語を無理に翻訳して意味を曖昧にしない。日本語説明の中で必要に応じて英語の固有名詞・識別子をそのまま使用する。
 
+## Plan Review Gate
+
+計画書から親Issue / 子Issueへ変換する場合は、Issue化・実装開始前に [docs/plan-review-gate.md](docs/plan-review-gate.md) を参照してPlan Review Gate（Grilling）を実施する。PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_DECISIONの場合は重要な未決定事項を既存のDesign Decisionへ接続して計画書を更新し、再Reviewする。NOT_APPLICABLEとする場合は省略理由を記録する。
+
+Plan Review Gateは計画書の全面書き換えや一問一答の強制ではなく、既存のDesign Decision、Design Decision Escalation、子Issue品質チェック、1 Issue / 1 PRを置き換えない。
+
 ## Child Issue Quality Gate
 
 子IssueはGitHub登録・Codex実装前に妥当性チェックを行う。
