@@ -53,7 +53,7 @@ done
 
 for marker in \
   'Review Evidence Contract' \
-  'BLOCKING判定には' \
+  '`BLOCKING` 判定には' \
   'Evidence不足の指摘をSeverityだけでBLOCKING扱いにしない' \
   '決定的な静的根拠' \
   '非BLOCKING P2の残置に個別の人間承認を要求しない'; do
