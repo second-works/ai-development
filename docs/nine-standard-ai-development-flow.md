@@ -277,7 +277,7 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 
 CIとSecurityは別の判定として記録する。GitHub Code Scanning / Security checkが利用できる場合はその結果を優先し、利用できない場合は [`templates/security/security-preflight.sh`](../templates/security/security-preflight.sh) を `scripts/security-preflight.sh` として配置する。
 
-Security Preflightは `SECURITY_PASSED`、`SECURITY_FAILED`、`SECURITY_NOT_APPLICABLE`、`SECURITY_UNAVAILABLE` のいずれかを出力する。`SECURITY_FAILED` はMerge禁止、`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させない。マニフェストがない場合だけ `SECURITY_NOT_APPLICABLE` とし、対象外理由をPRへ記録する。修正後はCIとSecurityを同じ新しいhead SHAに対して再実行する。
+Security Preflightは全体の `SECURITY_STATUS` と依存チェックの `DEPENDENCY_STATUS` を出力する。状態は `SECURITY_PASSED`、`SECURITY_FAILED`、`SECURITY_NOT_APPLICABLE`、`SECURITY_UNAVAILABLE` を用い、`SECURITY_FAILED` はMerge禁止、`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させない。マニフェストがない場合は `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` とし、対象外理由をPRへ記録する。修正後はCIとSecurityを同じ新しいhead SHAに対して再実行する。
 
 ## 11. CI / セキュリティチェック失敗時
 

@@ -296,7 +296,7 @@ Codex Code Reviewを、GitHub Actions CI後・人間の最終確認前の標準�
 標準Merge条件は次のとおりとする。
 
 - GitHub Actions CI成功
-- `CI_STATUS=CI_PASSED` かつ、`SECURITY_STATUS=SECURITY_PASSED` または理由付き `SECURITY_NOT_APPLICABLE`
+- `CI_STATUS=CI_PASSED` かつ、`SECURITY_STATUS=SECURITY_PASSED`。依存チェック対象外の場合は `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` と理由を記録する
 - `SECURITY_FAILED` はMerge禁止。`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させない
 - Codex Code ReviewのP0 / P1が0件
 - 四分類後の`BLOCKING` P2が0件
@@ -395,14 +395,14 @@ Dependabot PRも通常のCIとレビューを通してからmergeする。古い
 
 CIの成功をSecurityの成功として扱わない。標準の待機処理はCIとSecurityを別々に分類し、利用可能なGitHub Code Scanning / Security checkがない場合はプロジェクトへ配置した `scripts/security-preflight.sh` をfallbackとして実行する。
 
-原本は [`templates/security/security-preflight.sh`](templates/security/security-preflight.sh) とする。スクリプトは機械可読な次の状態を出力する。
+原本は [`templates/security/security-preflight.sh`](templates/security/security-preflight.sh) とする。スクリプトは全体の `SECURITY_STATUS` と依存チェックの `DEPENDENCY_STATUS` として、機械可読な次の状態を出力する。
 
 - `SECURITY_PASSED`: 秘密情報検出と利用可能な依存脆弱性検査が成功
 - `SECURITY_FAILED`: 秘密情報またはHigh/Critical脆弱性を検出。Merge禁止
-- `SECURITY_NOT_APPLICABLE`: 対象マニフェストがなく、依存脆弱性検査の対象外。理由を記録する
+- `SECURITY_NOT_APPLICABLE`: 依存チェックの対象マニフェストがなく、`DEPENDENCY_STATUS` が対象外。理由を記録する
 - `SECURITY_UNAVAILABLE`: 必要なscanner、実行環境、または結果が利用できない。人間の判断なしに通過させない
 
-fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `SECURITY_NOT_APPLICABLE` と混同しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
+fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は各lockfileのディレクトリで `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` と混同しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
 
 ## Before PR
 

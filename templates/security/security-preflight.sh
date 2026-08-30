@@ -44,7 +44,8 @@ done < <(git -C "$repo_root" ls-files -z)
 
 manifest_paths=()
 while IFS= read -r -d '' path; do
-  case "$path" in
+  manifest_name="${path##*/}"
+  case "$manifest_name" in
     package.json|package-lock.json|npm-shrinkwrap.json|pnpm-lock.yaml|yarn.lock|requirements.txt|requirements-*.txt|pyproject.toml|poetry.lock|Pipfile.lock|uv.lock)
       manifest_paths+=("$path")
       ;;
@@ -54,27 +55,39 @@ done < <(git -C "$repo_root" ls-files -z)
 dependency_status='SECURITY_NOT_APPLICABLE'
 dependency_reason='no supported dependency manifest is present'
 dependency_manifest=''
+dependency_manifests=()
 
 for path in "${manifest_paths[@]}"; do
-  case "$path" in
+  manifest_name="${path##*/}"
+  case "$manifest_name" in
     package-lock.json|npm-shrinkwrap.json|pnpm-lock.yaml|yarn.lock)
-      dependency_manifest="$path"
-      break
+      dependency_manifests+=("$path")
       ;;
   esac
 done
 
-if [[ -n "$dependency_manifest" ]]; then
-  if ! command -v npm >/dev/null 2>&1; then
-    dependency_status='SECURITY_UNAVAILABLE'
-    dependency_reason="npm is unavailable for $dependency_manifest"
-  else
+if ((${#dependency_manifests[@]} > 0)); then
+  dependency_manifest="$(IFS=,; printf '%s' "${dependency_manifests[*]}")"
+  dependency_status='SECURITY_PASSED'
+  dependency_reasons=()
+  dependency_failed=0
+  dependency_unavailable=0
+
+  for path in "${dependency_manifests[@]}"; do
+    if [[ "$path" == */* ]]; then
+      audit_dir="$repo_root/${path%/*}"
+    else
+      audit_dir="$repo_root"
+    fi
+
     audit_output="$(mktemp "${TMPDIR:-/tmp}/security-preflight-audit.XXXXXX")"
-    trap 'rm -f "$audit_output"' EXIT
-    if npm audit --json --audit-level=high --package-lock-only >"$audit_output" 2>&1; then
-      dependency_status='SECURITY_PASSED'
-      dependency_reason="npm audit reported no high or critical vulnerabilities for $dependency_manifest"
-    elif python3 - "$audit_output" <<'PY'
+    if ! command -v npm >/dev/null 2>&1; then
+      dependency_unavailable=1
+      dependency_reasons+=("npm is unavailable for $path")
+    elif (cd "$audit_dir" && npm audit --json --audit-level=high --package-lock-only >"$audit_output" 2>&1); then
+      dependency_reasons+=("npm audit reported no high or critical vulnerabilities for $path")
+  else
+      if python3 - "$audit_output" <<'PY'
 import json
 import sys
 
@@ -91,23 +104,32 @@ high = int(vulnerabilities.get("high", 0) or 0)
 critical = int(vulnerabilities.get("critical", 0) or 0)
 raise SystemExit(0 if high or critical else 1)
 PY
-    then
-      dependency_status='SECURITY_FAILED'
-      dependency_reason="npm audit reported high or critical vulnerabilities for $dependency_manifest"
-    else
-      audit_parse_status=$?
-      if [[ "$audit_parse_status" -eq 1 ]]; then
-        dependency_status='SECURITY_PASSED'
-        dependency_reason="npm audit reported no high or critical vulnerabilities for $dependency_manifest"
+      then
+        dependency_failed=1
+        dependency_reasons+=("npm audit reported high or critical vulnerabilities for $path")
       else
-        dependency_status='SECURITY_UNAVAILABLE'
-        dependency_reason="npm audit could not produce a machine-readable result for $dependency_manifest"
+        audit_parse_status=$?
+        if [[ "$audit_parse_status" -eq 1 ]]; then
+          dependency_reasons+=("npm audit reported no high or critical vulnerabilities for $path")
+        else
+          dependency_unavailable=1
+          dependency_reasons+=("npm audit could not produce a machine-readable result for $path")
+        fi
       fi
     fi
+    rm -f "$audit_output"
+  done
+
+  if ((dependency_failed)); then
+    dependency_status='SECURITY_FAILED'
+  elif ((dependency_unavailable)); then
+    dependency_status='SECURITY_UNAVAILABLE'
   fi
+  dependency_reason="${dependency_reasons[*]}"
 else
   for path in "${manifest_paths[@]}"; do
-    if [[ "$path" == 'package.json' ]]; then
+    manifest_name="${path##*/}"
+    if [[ "$manifest_name" == 'package.json' ]]; then
       dependency_status='SECURITY_UNAVAILABLE'
       dependency_reason='package.json is present but no supported npm lockfile is available'
       dependency_manifest="$path"
@@ -116,7 +138,8 @@ else
   done
   for path in "${manifest_paths[@]}"; do
     [[ "$dependency_status" == 'SECURITY_NOT_APPLICABLE' ]] || break
-    case "$path" in
+    manifest_name="${path##*/}"
+    case "$manifest_name" in
       requirements.txt|requirements-*.txt|pyproject.toml|poetry.lock|Pipfile.lock|uv.lock)
         dependency_status='SECURITY_UNAVAILABLE'
         dependency_reason="no supported dependency scanner is defined for $path"

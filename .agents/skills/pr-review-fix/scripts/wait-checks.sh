@@ -89,7 +89,7 @@ def flatten_pages(pages, key):
     return items
 
 security_pattern = re.compile(
-    r"codeql|code[ -]?scanning|security|secret|gitleaks|semgrep|trivy|osv|snyk|dependabot|dependency[ -]?scan|bandit|pip[ -]?audit|npm[ -]?audit",
+    r"codeql|code[ -]?scanning|security|secret|gitleaks|semgrep|trivy|osv|snyk|dependabot|dependency[ -]?scan|bandit|pip[ -]?audit|npm[ -]?audit|^analy[sz]e(?:\s*\(|$)",
     re.IGNORECASE,
 )
 

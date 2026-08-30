@@ -358,11 +358,11 @@ CodeQLは通常のCIとは役割が異なります。
 
 利用可能な言語・GitHubプラン・リポジトリ設定を確認してから有効化します。
 
-GitHub Security checkの有無にかかわらず、CIとSecurityの判定は分離します。利用可能なGitHub Security checkがないプロジェクトでは、`templates/security/security-preflight.sh` を `scripts/security-preflight.sh` としてコピーし、`chmod +x scripts/security-preflight.sh` を実行します。Security Preflightは既知のsecret patternと、対応するlockfileがある場合のnpm auditを検査し、次の状態を機械可読に出力します。
+GitHub Security checkの有無にかかわらず、CIとSecurityの判定は分離します。利用可能なGitHub Security checkがないプロジェクトでは、`templates/security/security-preflight.sh` を `scripts/security-preflight.sh` としてコピーし、`chmod +x scripts/security-preflight.sh` を実行します。Security Preflightは既知のsecret patternと、対応するlockfileがある場合のnpm auditを検査し、全体の `SECURITY_STATUS` と依存チェックの `DEPENDENCY_STATUS` を機械可読に出力します。
 
 - `SECURITY_PASSED`
 - `SECURITY_FAILED`
-- `SECURITY_NOT_APPLICABLE`（依存マニフェストがない場合。理由を監査記録へ残す）
+- `SECURITY_NOT_APPLICABLE`（依存チェックの対象マニフェストがない場合。`DEPENDENCY_STATUS` と理由を監査記録へ残す）
 - `SECURITY_UNAVAILABLE`（未対応マニフェスト、scanner、実行環境、結果が利用できない場合。人間判断が必要）
 
 標準の待機スクリプトへfallbackのパスを渡す例:

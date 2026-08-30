@@ -28,6 +28,7 @@ assert_contains "$wait_checks" 'CI_STATUS='
 assert_contains "$wait_checks" 'SECURITY_STATUS='
 assert_contains "$wait_checks" 'SECURITY_UNAVAILABLE'
 assert_contains "$wait_checks" 'security_pattern'
+assert_contains "$wait_checks" '^analy[sz]e'
 assert_contains "$wait_checks" 'SECURITY_FAILED'
 assert_contains "$wait_checks" 'security-preflight.sh'
 assert_contains "$repo_root/AGENTS.md" 'CIの成功をSecurityの成功として扱わない'
@@ -59,6 +60,28 @@ else
   grep -Fq 'SECURITY_STATUS=SECURITY_UNAVAILABLE' <<<"$manifest_result"
   grep -Fq 'DEPENDENCY_STATUS=SECURITY_UNAVAILABLE' <<<"$manifest_result"
 fi
+
+mkdir -p "$fixture_dir/packages/api" "$fixture_dir/packages/web" "$fixture_dir/.fake-bin"
+printf '{}\n' > "$fixture_dir/packages/api/package-lock.json"
+printf '{}\n' > "$fixture_dir/packages/web/package-lock.json"
+git -C "$fixture_dir" add packages
+git -C "$fixture_dir" commit -qm nested-lockfiles
+audit_pwd_file="$fixture_dir/audit-pwd.txt"
+printf '%s\n' '#!/usr/bin/env bash' \
+  'printf "%s\\n" "$PWD" >> "$SECURITY_AUDIT_PWD_FILE"' \
+  'printf "%s\\n" '\''{"auditReportVersion":2,"metadata":{"vulnerabilities":{"high":0,"critical":0}}}'\''' \
+  > "$fixture_dir/.fake-bin/npm"
+chmod +x "$fixture_dir/.fake-bin/npm"
+if ! SECURITY_AUDIT_PWD_FILE="$audit_pwd_file" PATH="$fixture_dir/.fake-bin:$PATH" "$preflight" "$fixture_dir" > "$fixture_dir/nested-result.txt"; then
+  printf 'nested lockfile fixture was not audited successfully\n' >&2
+  exit 1
+fi
+grep -Fq 'SECURITY_STATUS=SECURITY_PASSED' "$fixture_dir/nested-result.txt"
+grep -Fxq "$fixture_dir/packages/api" "$audit_pwd_file"
+grep -Fxq "$fixture_dir/packages/web" "$audit_pwd_file"
+
+git -C "$fixture_dir" rm -qr package.json packages
+git -C "$fixture_dir" commit -qm cleanup-manifests
 
 printf '%s%s\n' 'sk-proj-' 'abcdefghijklmnopqrstuvwxyz' > "$fixture_dir/secret.txt"
 git -C "$fixture_dir" add secret.txt
