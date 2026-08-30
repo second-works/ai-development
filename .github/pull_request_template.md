@@ -6,6 +6,19 @@ Closes #
 
 - 
 
+# Review Context
+
+- 変更目的:
+- 対象ユーザー / 利用者:
+- Issue受入条件:
+- 禁止結果:
+- 変更対象:
+- 変更しない範囲:
+- 主な影響先:
+- 実行済みテスト:
+- 特に確認する境界・失敗条件:
+- 未決事項:
+
 # テスト結果
 
 - [ ] 標準検証入口 `./scripts/verify.sh` 成功（lint → type check → test → build）
@@ -41,6 +54,29 @@ Closes #
 セキュリティチェック例外理由（該当時）:
 
 - なし
+
+
+# Review Evidence Contract
+
+P0 / P1、および `BLOCKING` 候補のP2は、以下を根拠付きで記録する。再現可能な問題は、可能な限り修正前に失敗し修正後に成功するテストまたは再現手順を残す。実行再現が困難な場合は決定的な静的根拠を記録する。
+
+```text
+Finding ID:
+Severity:
+Classification:
+Location:
+Claim:
+Trigger:
+Expected:
+Actual:
+PR Causality:
+Acceptance Criteria:
+Reproduction:
+Confidence:
+Disposition:
+```
+
+Evidence不足の指摘をSeverityだけで `BLOCKING` と扱わない。P2は `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類し、非BLOCKING P2の個別人間承認をMerge条件にしない。
 
 # Codex Code Review
 
@@ -106,7 +142,7 @@ Safeレーンを採用しない場合は `なし` とし、採用する場合は
 
 - [ ] Codex Code Review実行済み
 - [ ] P0 / P1 指摘なし、またはすべて解消済み
-- [ ] P2 指摘なし、または人間が残置理由を確認済み
+- [ ] P2が四分類され、`BLOCKING` P2がない（非BLOCKING P2に個別人間承認を要求していない）
 - [ ] 修正を行った場合、修正前のPR head SHAと修正後のPR head SHAを比較し、実際に更新されたことを確認済み
 - [ ] 修正を行った場合、head SHA更新確認後にローカルテスト（tests / lint / type check / build）を再実行済み
 - [ ] 修正を行った場合、更新後のheadを対象にCIを再実行済み
@@ -119,7 +155,7 @@ Safeレーンを採用しない場合は `なし` とし、採用する場合は
 - P1: なし
 - P2: なし
 - P3: なし
-- 未解決指摘・残置理由: なし
+- 未解決指摘・残置理由: なし（非BLOCKING P2は分類・記録済み、またはなし）
 
 <!-- Automatic reviewsが無効な場合はPR上で @codex review を依頼する。@codex reviewはレビュー専用とし、修正は既存PRのhead branchで行う。 -->
 
