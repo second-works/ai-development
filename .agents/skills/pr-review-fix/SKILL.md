@@ -110,6 +110,61 @@ FOLLOW-UPの記録追加によって、非BLOCKING P2を当該PRの必須修正�
 一致したFollow-up IDから発生元Issue / PR、レビュー指摘、後回しにした根拠へ遡り、候補の状態が `open` かを確認する。
 解決または設計変更で不要になった場合は、対応する解決Issue / PRまたは置換理由とともに状態を更新する。
 
+## Review Evidence Contract
+
+レビュー指摘はSeverityラベルだけでなく、検証可能な証拠と今回PRとの因果関係を伴う形で記録する。
+P0 / P1、および `BLOCKING` 候補のP2には、最低限次の項目を記載する。
+
+```text
+Finding ID:
+Severity:
+Classification:
+
+Location:
+- file:
+- line / symbol:
+
+Claim:
+- 何が壊れるか
+
+Trigger:
+- 問題が成立する入力・状態・実行経路
+
+Expected:
+- Issue / Design Decision上の期待動作
+
+Actual:
+- 現行差分で実際に起こる動作
+
+PR Causality:
+- 今回PRのどの差分が原因か
+
+Acceptance Criteria:
+- どの受入条件・契約・安全条件に違反するか
+
+Reproduction:
+- 再現手順 / failing test / 検証方法
+
+Confidence:
+- high / medium / low
+
+Disposition:
+- BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS
+```
+
+`BLOCKING` とするには、成立条件、今回PR差分との因果、Issue / 契約 / 安全条件上の根拠、および `Reproduction` または実行再現が困難な場合の決定的な静的根拠を説明できることを要求する。
+再現可能な問題は、可能な限り修正前に失敗し修正後に成功するテストまたは再現手順を残す。Security、競合状態、契約違反、型・schema不整合など、実行再現が困難でも静的に成立を説明できる問題では、決定的な静的根拠を使用できる。
+Evidence不足の指摘をSeverityだけで `BLOCKING` と扱わない。P2は必ず `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類し、非BLOCKING P2は分類と記録後に追加修正ループへ戻さない。
+
+## Rule Promotion
+
+同種の妥当なレビュー指摘が複数PRで反復する場合は、反復性、誤検知リスク、適用範囲を確認して機械判定可能性を評価する。
+
+- 機械判定可能: lint / type check / test / CodeQL / CI / security ruleへの昇格を検討する
+- 機械判定が困難: AGENTS / coding rule / design guidelineへの明文化を検討する
+
+Rule Promotionは自動的にルール化する仕組みではなく、レビュー判断を置き換えない。FOLLOW-UP台帳の責務とも重複させない。
+
 ## レビュー収束ルール
 
 初回レビューと修正後レビューを区別する。
