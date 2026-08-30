@@ -110,7 +110,7 @@ Codex実装終了後は以下の流れとする。
 
 レビュー後に修正する場合は、レビュー担当と修正担当を分離する。
 
-修正ラウンドは、Codex Code Review → Issue範囲内の修正 → 更新後headの標準検証・再レビューを1単位とする。初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならない。P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の理由確認と明示判断が必要である。Safe Auto-Fix / Auto-Mergeを採用する場合のSafety Gate、1ラウンド制限、SHA照合、停止条件、監査記録は [docs/safe-auto-fix-auto-merge.md](safe-auto-fix-auto-merge.md) を正本とする。
+修正ラウンドは、Codex Code Review → Issue範囲内の修正 → 更新後headの標準検証・再レビューを1単位とする。初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならない。P0 / P1が残る場合はMerge禁止、非BLOCKING P2のみが残る場合は、四分類と記録後に追加修正ループへ戻さない。通常レーンの最終Mergeは従来どおり人間が判断する。Safe Auto-Fix / Auto-Mergeを採用する場合のSafety Gate、1ラウンド制限、SHA照合、停止条件、監査記録は [docs/safe-auto-fix-auto-merge.md](safe-auto-fix-auto-merge.md) を正本とする。
 
 1. `@codex review` はレビュー専用とし、修正には使わない。
 2. P0 / P1 / P2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で既存PRのhead branchをチェックアウトして行う。
@@ -197,25 +197,37 @@ Codex Code Reviewを、CI成功後・人間の最終確認前の標準品質ゲ�
 - 不要な依存追加や破壊的変更がないか
 - テスト削除・skip・例外握りつぶしで品質ゲートを回避していないか
 
+### Review Evidence Contract
+
+Codex Code Reviewの指摘は、Severityだけでなく検証可能な証拠と今回PRとの因果関係を記録する。P0 / P1、および `BLOCKING` 候補のP2には、Location、Claim、Trigger、Expected、Actual、PR Causality、Acceptance Criteria、Reproductionまたは決定的な静的根拠、Confidence、Dispositionを含める。
+
+`BLOCKING` 判定には、Issue受入条件・契約・安全条件との関係、具体的な入力・状態・実行経路、今回PR差分との因果を要求する。Evidence不足の指摘をSeverityだけでBLOCKING扱いにしない。再現可能な問題は、可能な限り修正前に失敗し修正後に成功するテストまたは再現手順を残し、実行再現が困難なSecurity・競合状態・契約違反・型/schema不整合は決定的な静的根拠で検証できる。
+
 ### SeverityとMerge条件
 
-- **P0 / P1**: Merge禁止。必ず修正する。
-- **P2**: 原則としてMerge前に修正する。残す場合は人間が理由を確認して明示判断する。
-- **P3**: 改善候補。原則としてMerge阻害条件にはしない。必要なら後続Issueへ切り出す。
+- **P0 / P1**: 原則として `BLOCKING`。Merge禁止で必ず修正する。
+- **P2**: SeverityだけでMerge可否を決定せず、必ず `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類する。
+  - `BLOCKING`: 今回のPR差分が原因で、Issue受入条件違反、明確な機能不具合、回帰、データ破損、セキュリティ問題、または本番運用上の明確な破綻が具体的に発生する場合。
+  - `IN-SCOPE FIX`: Issue範囲内で修正が小さく合理的な場合。原則としてMerge blockerではない。
+  - `FOLLOW-UP`: 妥当だが今回のIssue目的には不要な場合。既存の台帳・コメント記録ルールに従う。
+  - `DISMISS`: 誤検知、根拠不足、スタイル差、重複指摘、または解消済みの場合。
+- **P3**: 改善候補。原則としてMerge阻害条件にはしない。
+- 非BLOCKING P2の残置に個別の人間承認を要求しない。分類と記録後、追加修正ループへ戻さない。
+- 通常レーンの最終Merge判断は人間が行う。Safe Auto-Fix / Auto-Mergeは既存のSafety Gateと人間の採用判断を維持する。
 
-標準Merge条件：
+標準Merge条件は次のとおりとする。
 
 - GitHub Actions CI成功
-- 利用可能なセキュリティチェック成功、または例外を人間が明示判断
+- 利用可能なセキュリティチェック成功、または既存ルールに基づく人間の明示的な例外判断
 - Codex Code ReviewのP0 / P1が0件
-- P2が0件、または残置理由を人間が明示判断
+- 四分類後の `BLOCKING` P2が0件
+- 非BLOCKING P2は分類と記録が完了している
 - 人間の最終確認完了
-
 ### 修正ループ
 
 CodexレビューでP0 / P1 / P2が出た場合：
 
-修正ラウンドは、Codex Code Review → 修正 → 標準検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は自動修正を停止して人間へ戻す。3ラウンドで強制Mergeしてはならない。P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の理由確認と明示判断が必要である。
+修正ラウンドは、Codex Code Review → 修正 → 標準検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は自動修正を停止して人間へ戻す。3ラウンドで強制Mergeしてはならない。P0 / P1が残る場合はMerge禁止、非BLOCKING P2のみが残る場合は、四分類と記録後に追加修正ループへ戻さない。通常レーンの最終Mergeは従来どおり人間が判断する。
 
 1. 指摘がIssue範囲内か確認する。
 2. `@codex review` はレビュー専用であり、レビュー担当に修正を実行させない。P0 / P1 / P2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で行う。
@@ -229,6 +241,10 @@ CodexレビューでP0 / P1 / P2が出た場合：
 10. PR本文へ現在の修正ラウンド数、新規P0 / P1 / P2、3ラウンド到達時の停止判断、P2残置理由、人間の継続指示または受容判断、標準検証結果を記録する。
 11. 同じ問題を3回以上繰り返す、仕様判断が必要、branchを取り違える、pushに失敗する、破壊的変更が必要、Issue範囲外へ広がる、または第3ラウンド後に新しいP1 / P2が発生する場合は自律修正を停止し人間へ戻す。
 通常レーンではAIレビューを補助として扱い、最終Merge判断は人間が行う。Safe Auto-Fix / Auto-Mergeは、正本文書のSafety Gateを満たし、人間が採用を明示した場合だけ利用できる限定例外である。
+
+### Rule Promotion
+
+同種の妥当なレビュー指摘が複数PRで反復する場合は、反復性、誤検知リスク、適用範囲を確認し、機械判定可能ならlint / type check / test / CodeQL / CI / security ruleへ、困難ならAGENTS / coding rule / design guidelineへ昇格を検討する。自動的なルール化やFOLLOW-UP台帳との責務重複は行わない。
 
 ## 10. GitHub側ガードレール
 
