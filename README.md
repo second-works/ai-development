@@ -18,7 +18,7 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 8. PR作成
 9. GitHub Actions CI
 10. Codex Code Review（レビュー専用）
-11. P0 / P1指摘は必ず修正し、P2は原則修正する。残す場合は人間が理由を確認して明示判断し、既存PRのhead branchをチェックアウトして修正
+11. P0 / P1は原則BLOCKINGとして必ず修正し、P2はSeverityだけで判断せず四分類（`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`）する。非BLOCKING P2に個別人間承認は要求せず、既存PRのhead branchでBLOCKINGだけを修正
 12. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
 13. GitHub上で修正後のhead SHAが、pushした修正コミットSHAと一致することを確認
 14. SHA未確認・未更新・不一致の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
@@ -30,7 +30,9 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 
 P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として使用せず、`@codex review` はレビュー専用とします。CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
 
-レビュー修正ラウンドは、Codex Code Review → 修正 → 再検証・再レビューを1単位とし、初回レビューはラウンド0として記録します。第3ラウンド完了後に新しいP1 / P2が発生した場合は自動修正を停止して人間へ戻し、3ラウンドで強制Mergeしません。P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の明示判断が必要です。P3は原則Merge阻害条件にしません。
+レビュー修正ラウンドは、Codex Code Review → 修正 → 再検証・再レビューを1単位とし、初回レビューはラウンド0として記録します。第3ラウンド完了後に新しいP1 / P2が発生した場合は自動修正を停止して人間へ戻し、3ラウンドで強制Mergeしません。P0 / P1が残る場合はMerge禁止、非BLOCKING P2のみが残る場合は、分類と記録後に追加修正ループへ戻しません。通常レーンの最終Mergeは人間が判断します。P3は原則Merge阻害条件にしません。
+
+レビュー指摘はReview Evidence Contract（Location、Trigger、Expected、Actual、PR Causality、Acceptance Criteria、Reproductionまたは決定的な静的根拠、Disposition）を伴って判断します。証拠不足の指摘をSeverityだけでBLOCKING扱いにしません。
 
 レビュー指摘の修正ではrepo-local Skill `.agents/skills/pr-review-fix/` を利用できます。Codexへ `PR #XXのレビュー修正を進めて` と依頼すると、既存PRのhead branch固定、同一branchへの修正/push、SHA一致確認、CI/セキュリティチェック待機、更新後headへの再レビュー確認までを行い、Merge前で停止します。
 
