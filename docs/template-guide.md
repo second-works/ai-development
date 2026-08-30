@@ -53,6 +53,7 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 - 必要なテストを実行する
 - GitHub Actions CIの結果も確認する
 - Codexレビュー後の修正は既存PRのhead branchへ反映し、head SHA更新を確認する
+- レビュー指摘はReview Evidence Contractで成立条件・期待結果・実結果・PR因果・受入条件・再現または静的根拠を記録する
 - 秘密情報をcommitしない
 - 仕様が不明確なら推測で拡張しない
 
@@ -201,7 +202,7 @@ Codexまたは人間がPRを作成するときの報告形式を統一します�
 
 ### Codexレビュー後の修正
 
-PRテンプレートには、修正時の対象PR番号、head branch、修正前後のhead SHAを記録します。
+PRテンプレートには、Review ContextとReview Evidence Contractに加え、修正時の対象PR番号、head branch、修正前後のhead SHAを記録します。P0 / P1およびBLOCKING候補のP2は証拠を記録し、Evidence不足をSeverityだけでBLOCKING扱いにしません。
 
 標準手順は次のとおりです。
 
@@ -212,7 +213,7 @@ PRテンプレートには、修正時の対象PR番号、head branch、修正�
 5. pushした修正コミットSHAを検証対象SHAとして記録し、GitHub上の同じPRのhead branchとhead SHAがそのSHAと一致することを確認する。SHAを確認できない、更新されていない、または一致しない場合は再検証へ進まない。
 6. 記録した検証対象SHAを固定して、更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証し、各チェックの対象SHAを記録する。
 7. 再検証完了時に、GitHub上のPR head SHAがpushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認する。不一致の場合は完了扱いにせず停止する。
-8. 通常レーンではAIはMergeせず、人間が最終Mergeを判断する。Safe Auto-Fix / Auto-Mergeは正本文書の条件を満たし、人間が採用を明示した場合だけ例外として扱う。
+8. 非BLOCKING P2は四分類と記録後に追加修正ループへ戻さず、通常レーンの最終Mergeは人間が判断する。Safe Auto-Fix / Auto-Mergeは正本文書の条件を満たし、人間が採用を明示した場合だけ例外として扱う。
 
 
 ## 8. 標準検証入口とGitHub Actions CIテンプレート
