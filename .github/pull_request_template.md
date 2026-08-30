@@ -76,7 +76,7 @@ Confidence:
 Disposition:
 ```
 
-Evidence不足の指摘をSeverityだけで `BLOCKING` と扱わない。P2は `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類し、非BLOCKING P2の個別人間承認をMerge条件にしない。
+`BLOCKING` 判定には、Issue / 契約 / 安全条件との関係、具体的な入力・状態・実行経路、今回PR差分との因果を記録する。Evidence不足の指摘をSeverityだけで `BLOCKING` と扱わない。P2は `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類し、非BLOCKING P2の個別人間承認をMerge条件にしない。
 
 # Codex Code Review
 
