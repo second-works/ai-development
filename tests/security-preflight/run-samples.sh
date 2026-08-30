@@ -119,4 +119,18 @@ else
   [[ "$(grep -c '^SECURITY_STATUS=' <<<"$newline_result")" -eq 1 ]]
 fi
 
+real_git="$(command -v git)"
+printf '%s\n' '#!/usr/bin/env bash' \
+  'if [[ "$1" == "-C" && "$3" == "ls-files" ]]; then exit 1; fi' \
+  "exec \"$real_git\" \"\$@\"" \
+  > "$fixture_dir/.fake-bin/git"
+chmod +x "$fixture_dir/.fake-bin/git"
+if git_failure_result="$(PATH="$fixture_dir/.fake-bin:$PATH" "$preflight" "$fixture_dir" 2>/dev/null)"; then
+  printf 'git ls-files failure was not marked unavailable\n' >&2
+  exit 1
+else
+  grep -Fq 'SECURITY_STATUS=SECURITY_UNAVAILABLE' <<<"$git_failure_result"
+  grep -Fq 'git ls-files failed' <<<"$git_failure_result"
+fi
+
 printf 'security preflight contract passed\n'

@@ -21,6 +21,19 @@ git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
   exit 4
 }
 
+tracked_files=''
+if ! tracked_files="$(mktemp "${TMPDIR:-/tmp}/security-preflight-files.XXXXXX")"; then
+  echo 'SECURITY_STATUS=SECURITY_UNAVAILABLE'
+  echo 'SECURITY_REASON=could not allocate a tracked-file list'
+  exit 4
+fi
+trap 'rm -f "$tracked_files"' EXIT
+if ! git -C "$repo_root" ls-files -z >"$tracked_files"; then
+  echo 'SECURITY_STATUS=SECURITY_UNAVAILABLE'
+  echo 'SECURITY_REASON=git ls-files failed; tracked files were not fully inspected'
+  exit 4
+fi
+
 secret_pattern='ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
 
 escape_path() {
@@ -47,7 +60,7 @@ while IFS= read -r -d '' path; do
     secret_reason="secret-like value detected in $(escape_path "$path")"
     break
   fi
-done < <(git -C "$repo_root" ls-files -z)
+done < "$tracked_files"
 
 manifest_paths=()
 while IFS= read -r -d '' path; do
@@ -57,7 +70,7 @@ while IFS= read -r -d '' path; do
       manifest_paths+=("$path")
       ;;
   esac
-done < <(git -C "$repo_root" ls-files -z)
+done < "$tracked_files"
 
 dependency_status='SECURITY_NOT_APPLICABLE'
 dependency_reason='no supported dependency manifest is present'
