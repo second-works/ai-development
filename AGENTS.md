@@ -402,7 +402,7 @@ CIの成功をSecurityの成功として扱わない。標準の待機処理はC
 - `SECURITY_NOT_APPLICABLE`: 依存チェックの対象マニフェストがなく、`DEPENDENCY_STATUS` が対象外。理由を記録する
 - `SECURITY_UNAVAILABLE`: 必要なscanner、実行環境、または結果が利用できない。人間の判断なしに通過させない
 
-fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は各lockfileのディレクトリで `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` と混同しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
+fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は各lockfileのディレクトリで `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` と混同しない。パス由来の状態理由はCR/LFをエスケープし、機械可読な状態行を汚染しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
 
 ## Before PR
 

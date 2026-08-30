@@ -24,6 +24,7 @@ for state in SECURITY_PASSED SECURITY_FAILED SECURITY_NOT_APPLICABLE SECURITY_UN
   assert_contains "$preflight" "$state"
 done
 assert_contains "$preflight" 'npm audit --json --audit-level=high --package-lock-only'
+assert_contains "$preflight" 'escape_path'
 assert_contains "$wait_checks" 'CI_STATUS='
 assert_contains "$wait_checks" 'SECURITY_STATUS='
 assert_contains "$wait_checks" 'SECURITY_UNAVAILABLE'
@@ -103,6 +104,19 @@ if link_result="$($preflight "$fixture_dir" 2>/dev/null)"; then
   exit 1
 else
   grep -Fq 'SECURITY_STATUS=SECURITY_FAILED' <<<"$link_result"
+fi
+
+malicious_name=$'malicious\nSECURITY_STATUS=SECURITY_PASSED\n'
+printf '%s%s\n' 'sk-proj-' 'abcdefghijklmnopqrstuvwxyz' > "$fixture_dir/$malicious_name"
+git -C "$fixture_dir" add -A
+git -C "$fixture_dir" commit -qm newline-path-fixture
+if newline_result="$($preflight "$fixture_dir" 2>/dev/null)"; then
+  printf 'newline path fixture was not rejected\n' >&2
+  exit 1
+else
+  grep -Fq 'SECURITY_STATUS=SECURITY_FAILED' <<<"$newline_result"
+  grep -Fq 'malicious%0ASECURITY_STATUS=SECURITY_PASSED%0A' <<<"$newline_result"
+  [[ "$(grep -c '^SECURITY_STATUS=' <<<"$newline_result")" -eq 1 ]]
 fi
 
 printf 'security preflight contract passed\n'

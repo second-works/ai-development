@@ -23,6 +23,13 @@ git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
 
 secret_pattern='ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
 
+escape_path() {
+  local value="$1"
+  value="${value//$'\r'/%0D}"
+  value="${value//$'\n'/%0A}"
+  printf '%s' "$value"
+}
+
 scan_file() {
   local file="$1"
   if [[ -L "$file" ]]; then
@@ -37,7 +44,7 @@ secret_reason='tracked files and symlink targets contained no known secret patte
 while IFS= read -r -d '' path; do
   if scan_file "$repo_root/$path"; then
     secret_status='SECURITY_FAILED'
-    secret_reason="secret-like value detected in $path"
+    secret_reason="secret-like value detected in $(escape_path "$path")"
     break
   fi
 done < <(git -C "$repo_root" ls-files -z)
@@ -67,7 +74,11 @@ for path in "${manifest_paths[@]}"; do
 done
 
 if ((${#dependency_manifests[@]} > 0)); then
-  dependency_manifest="$(IFS=,; printf '%s' "${dependency_manifests[*]}")"
+  dependency_display_manifests=()
+  for path in "${dependency_manifests[@]}"; do
+    dependency_display_manifests+=("$(escape_path "$path")")
+  done
+  dependency_manifest="$(IFS=,; printf '%s' "${dependency_display_manifests[*]}")"
   dependency_status='SECURITY_PASSED'
   dependency_reasons=()
   dependency_failed=0
@@ -83,9 +94,9 @@ if ((${#dependency_manifests[@]} > 0)); then
     audit_output="$(mktemp "${TMPDIR:-/tmp}/security-preflight-audit.XXXXXX")"
     if ! command -v npm >/dev/null 2>&1; then
       dependency_unavailable=1
-      dependency_reasons+=("npm is unavailable for $path")
+      dependency_reasons+=("npm is unavailable for $(escape_path "$path")")
     elif (cd "$audit_dir" && npm audit --json --audit-level=high --package-lock-only >"$audit_output" 2>&1); then
-      dependency_reasons+=("npm audit reported no high or critical vulnerabilities for $path")
+      dependency_reasons+=("npm audit reported no high or critical vulnerabilities for $(escape_path "$path")")
   else
       if python3 - "$audit_output" <<'PY'
 import json
@@ -106,14 +117,14 @@ raise SystemExit(0 if high or critical else 1)
 PY
       then
         dependency_failed=1
-        dependency_reasons+=("npm audit reported high or critical vulnerabilities for $path")
+        dependency_reasons+=("npm audit reported high or critical vulnerabilities for $(escape_path "$path")")
       else
         audit_parse_status=$?
         if [[ "$audit_parse_status" -eq 1 ]]; then
-          dependency_reasons+=("npm audit reported no high or critical vulnerabilities for $path")
+          dependency_reasons+=("npm audit reported no high or critical vulnerabilities for $(escape_path "$path")")
         else
           dependency_unavailable=1
-          dependency_reasons+=("npm audit could not produce a machine-readable result for $path")
+          dependency_reasons+=("npm audit could not produce a machine-readable result for $(escape_path "$path")")
         fi
       fi
     fi
@@ -132,7 +143,7 @@ else
     if [[ "$manifest_name" == 'package.json' ]]; then
       dependency_status='SECURITY_UNAVAILABLE'
       dependency_reason='package.json is present but no supported npm lockfile is available'
-      dependency_manifest="$path"
+      dependency_manifest="$(escape_path "$path")"
       break
     fi
   done
@@ -142,8 +153,8 @@ else
     case "$manifest_name" in
       requirements.txt|requirements-*.txt|pyproject.toml|poetry.lock|Pipfile.lock|uv.lock)
         dependency_status='SECURITY_UNAVAILABLE'
-        dependency_reason="no supported dependency scanner is defined for $path"
-        dependency_manifest="$path"
+        dependency_reason="no supported dependency scanner is defined for $(escape_path "$path")"
+        dependency_manifest="$(escape_path "$path")"
         break
         ;;
     esac
