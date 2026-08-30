@@ -299,12 +299,12 @@ test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 ### 9. CI / securityを対象SHAで待機・確認
 
 ```bash
-bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA"
+bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA" 300 60 30 "./scripts/security-preflight.sh"
 ```
 
 check未観測やsuccess以外の結果を成功扱いにしない。
 
-wait-checks.shは次を保証する。
+wait-checks.shはCIとSecurityを別々に分類し、次を保証する。
 
 - REPOをhostとrepository pathへ分離し、対象hostだけ認証確認する
 - check runs / statusを `--paginate --slurp` で全ページ取得する
@@ -312,6 +312,9 @@ wait-checks.shは次を保証する。
 - check runは `conclusion=success` だけ成功扱いにする
 - `neutral` / `skipped` を含むsuccess以外のconclusionは停止し、人間判断なしに通過させない
 - status contextも `success` だけ成功扱いにする
+- CodeQL / code scanning / secret / dependency系のcheckをCIと分離して `SECURITY_STATUS` として出力する
+- GitHub Security checkがない場合はfallbackの `scripts/security-preflight.sh` を利用し、`SECURITY_PASSED` / `SECURITY_FAILED` / `SECURITY_NOT_APPLICABLE` / `SECURITY_UNAVAILABLE` を出力する
+- `SECURITY_FAILED` は即時停止し、`SECURITY_UNAVAILABLE` はgrace期間後も人間判断なしに通過させない
 - check/status集合と結果が一定時間変化しない安定期間を待つ
 - 後発checkやpending復帰で安定判定をリセットする
 - grace期間後も0件なら `STATUS=NO_CHECKS_OBSERVED` を出して非0終了し停止する

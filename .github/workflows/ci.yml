@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Shell syntax
-        run: bash -n templates/verification/verify.sh tests/verification/run-samples.sh tests/acceptance-verification/run-samples.sh
+        run: bash -n templates/verification/verify.sh templates/security/security-preflight.sh tests/verification/run-samples.sh tests/acceptance-verification/run-samples.sh tests/security-preflight/run-samples.sh
 
       - name: Verification samples
         run: tests/verification/run-samples.sh
@@ -38,3 +38,6 @@ jobs:
 
       - name: Safe Auto-Fix and Auto-Merge documentation contract
         run: bash tests/safe-auto-fix/run-samples.sh
+
+      - name: Security Preflight documentation contract
+        run: bash tests/security-preflight/run-samples.sh
