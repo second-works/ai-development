@@ -194,6 +194,10 @@ Codexまたは人間がPRを作成するときの報告形式を統一します�
 
 可能な場合は `Closes #Issue番号` を使い、Merge時にIssueと連動させます。
 
+### Safe Auto-Fix / Auto-Merge
+
+軽微P2の自動修正・Auto-Mergeを採用する場合は、[Safe Auto-Fix / Auto-Mergeレーン標準](safe-auto-fix-auto-merge.md)を正本として参照します。PRにはSafety Gate、検証対象SHA、Securityの適用除外、人間の採用判断、Auto-Merge監査記録を残します。1項目でも条件を満たさない場合は通常レーンへ戻し、テンプレートを配置しただけでAuto-Mergeを有効化してはなりません。
+
 ### Codexレビュー後の修正
 
 PRテンプレートには、修正時の対象PR番号、head branch、修正前後のhead SHAを記録します。
@@ -207,7 +211,7 @@ PRテンプレートには、修正時の対象PR番号、head branch、修正�
 5. pushした修正コミットSHAを検証対象SHAとして記録し、GitHub上の同じPRのhead branchとhead SHAがそのSHAと一致することを確認する。SHAを確認できない、更新されていない、または一致しない場合は再検証へ進まない。
 6. 記録した検証対象SHAを固定して、更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証し、各チェックの対象SHAを記録する。
 7. 再検証完了時に、GitHub上のPR head SHAがpushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認する。不一致の場合は完了扱いにせず停止する。
-8. AIはMergeせず、人間が最終Mergeを判断する。
+8. 通常レーンではAIはMergeせず、人間が最終Mergeを判断する。Safe Auto-Fix / Auto-Mergeは正本文書の条件を満たし、人間が採用を明示した場合だけ例外として扱う。
 
 
 ## 8. 標準検証入口とGitHub Actions CIテンプレート
@@ -413,7 +417,9 @@ GitHub Actions CI
     ↓
 CodeQL等のセキュリティチェック
     ↓
-Codex Code Review（レビュー専用）
+    Codex Code Review（レビュー専用）
+    ↓
+通常レーン / Safe Auto-Fix・Auto-Merge判定
     ↓
 必要なら既存PRのhead branchで修正
     ↓

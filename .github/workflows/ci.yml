@@ -35,3 +35,6 @@ jobs:
 
       - name: Acceptance verification documentation contract
         run: bash tests/acceptance-verification/run-samples.sh
+
+      - name: Safe Auto-Fix and Auto-Merge documentation contract
+        run: bash tests/safe-auto-fix/run-samples.sh

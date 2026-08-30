@@ -38,6 +38,30 @@ Closes #
 
 # Codex Code Review
 
+## Safe Auto-Fix / Auto-Merge（該当時のみ）
+
+Safeレーンを採用しない場合は `なし` とし、採用する場合は [Safe Auto-Fix / Auto-Mergeレーン標準](../docs/safe-auto-fix-auto-merge.md) の全条件を確認する。
+
+- Safeレーン: `なし / 判定中 / 採用 / 通常レーンへ復帰`
+- AUTO-FIX対象P2 / 元レビューID:
+- eligibility / Safety Gate結果:
+- 不成立のGate（該当時）:
+- 自動修正commit SHA:
+- `verify.sh`対象SHA:
+- CI対象SHA:
+- Security / Code Scanning対象SHA:
+- Codex再Review対象SHA:
+- Security適用除外の理由・人間の判断（該当時）:
+- Auto-Merge Gate:
+- Auto-Merge実行主体 / 実行時刻 / マージSHA（該当時）:
+
+- [ ] P0 / P1 / `BLOCKING` P2がない
+- [ ] 公開契約、DB、auth、security、infra、Deploy、network、Workflow権限、dependency major updateを変更していない
+- [ ] テスト削除・skip・品質ゲート緩和をしていない
+- [ ] AUTO-FIXは1ラウンドだけで、追加自動修正へ戻らない
+- [ ] 自動修正commit SHA、各検証対象SHA、PR head SHAが一致している
+- [ ] 必要な監査記録をPR上に残している
+
 ## レビュー修正ラウンド / 収束判断
 
 - 現在のレビュー修正ラウンド数（初回レビューは0）:
@@ -71,7 +95,7 @@ Closes #
 - [ ] ローカルテスト・CI・セキュリティチェック・再レビューの対象SHAを記録した
 - [ ] 再検証完了時に、修正コミットSHA・検証対象SHA・PR head SHAが一致している
 - [ ] SHA未確認・未更新・不一致時は再検証または完了扱いにせず停止した
-- [ ] AIにMerge権限を与えず、最終Mergeは人間が判断する
+- [ ] 通常レーンではAIにMerge権限を与えず、人間が最終Mergeを判断する。Safeレーン採用時は正本文書の条件と人間の採用判断を記録する
 
 - [ ] Codex Code Review実行済み
 - [ ] P0 / P1 指摘なし、またはすべて解消済み
