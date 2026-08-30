@@ -6,7 +6,7 @@
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・計画書作成 → Plan Review Gate（Grilling） → 必要なDesign Decision確定 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 必要なら修正・再CI・再レビュー → 人間確認 → Merge → Deploy → 実利用検証 → 検収判定**
+**要望 → ChatGPTで要件整理・計画書作成 → Plan Review Gate（Grilling） → 必要なDesign Decision確定 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定 → 必要なら修正・再CI・再レビュー → 人間確認またはSafety Gate成立後のAuto-Merge → Deploy → 実利用検証 → 検収判定**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
@@ -104,13 +104,13 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 Codex実装終了後は以下の流れとする。
 
-**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review**
+**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定**
 
 ### レビュー修正時のPR / head branch固定
 
 レビュー後に修正する場合は、レビュー担当と修正担当を分離する。
 
-修正ラウンドは、Codex Code Review → Issue範囲内の修正 → 更新後headの標準検証・再レビューを1単位とする。初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならない。P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の理由確認と明示判断が必要である。
+修正ラウンドは、Codex Code Review → Issue範囲内の修正 → 更新後headの標準検証・再レビューを1単位とする。初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならない。P0 / P1が残る場合はMerge禁止、P2のみ残る場合は人間の理由確認と明示判断が必要である。Safe Auto-Fix / Auto-Mergeを採用する場合のSafety Gate、1ラウンド制限、SHA照合、停止条件、監査記録は [docs/safe-auto-fix-auto-merge.md](safe-auto-fix-auto-merge.md) を正本とする。
 
 1. `@codex review` はレビュー専用とし、修正には使わない。
 2. P0 / P1 / P2の修正は標準手順から `@codex address that feedback` を外し、Codex Desktop / Work等で既存PRのhead branchをチェックアウトして行う。
@@ -228,7 +228,7 @@ CodexレビューでP0 / P1 / P2が出た場合：
 9. 前回指摘が解消され、新しいP0 / P1 / P2がないことを確認する。
 10. PR本文へ現在の修正ラウンド数、新規P0 / P1 / P2、3ラウンド到達時の停止判断、P2残置理由、人間の継続指示または受容判断、標準検証結果を記録する。
 11. 同じ問題を3回以上繰り返す、仕様判断が必要、branchを取り違える、pushに失敗する、破壊的変更が必要、Issue範囲外へ広がる、または第3ラウンド後に新しいP1 / P2が発生する場合は自律修正を停止し人間へ戻す。
-AIレビューは補助であり、自動Mergeには使わない。最終Merge判断は人間が行う。
+通常レーンではAIレビューを補助として扱い、最終Merge判断は人間が行う。Safe Auto-Fix / Auto-Mergeは、正本文書のSafety Gateを満たし、人間が採用を明示した場合だけ利用できる限定例外である。
 
 ## 10. GitHub側ガードレール
 

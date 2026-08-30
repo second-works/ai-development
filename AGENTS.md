@@ -328,7 +328,15 @@ CodexレビューでP0 / P1 / BLOCKINGと分類したP2が見つかった場合�
 11. 修正ラウンドはCodex Code Review → Issue範囲内の修正 → 更新後headの再検証・再レビューを1単位とし、初回レビューはラウンド0として記録する。第3ラウンド完了後の再レビューで新しいP1 / BLOCKING P2が発生した場合は、4ラウンド目の自動修正へ進まず停止して人間へ戻す。3ラウンドで強制Mergeしてはならず、P0 / P1またはBLOCKING P2が残る場合はMerge禁止とする。非BLOCKING P2のみが残る場合は、分類と記録後に追加修正ループへ戻さない。
 12. 同じ問題を3回以上繰り返す、仕様判断が必要、破壊的変更が必要、同じhead branchへpushできない、またはIssue範囲外へ広がる場合は自律修正を停止して人間に判断を求める。
 
-AIレビューは品質判断を補助するものであり、AI自身にMerge権限を委譲しない。最終Mergeは必ず人間が判断する。
+通常レーンのMergeは人間が最終判断する。Safe Auto-Fix / Auto-Mergeレーンは、[`docs/safe-auto-fix-auto-merge.md`](docs/safe-auto-fix-auto-merge.md) のSafety Gateをすべて満たし、人間が採用を明示した場合に限り、記録された主体がAuto-Mergeできる例外として扱う。
+
+### Safe Auto-Fix / Auto-Merge
+
+- `IN-SCOPE FIX`であることだけではAUTO-FIX eligibleとはみなさず、Safety Gateの全項目を確認する。
+- P0 / P1 / `BLOCKING` P2、仕様・設計判断、公開契約、DB、auth、security、infra、Deploy、network、Workflow権限、dependency major update、テスト弱体化、Issue範囲外変更は通常レーンへ戻す。
+- AUTO-FIXは原則1ラウンドだけとし、修正で変わったhead SHAに対して標準検証 → CI → 利用可能なSecurity（または事前定義済みの安全な適用除外） → Codex再Review → 最終SHA確認を実施する。
+- 自動修正後の再レビューで新しいP2が1件でも発生した場合は、分類・記録後もAuto-Mergeせず通常レーンへ戻す。非BLOCKING P2でも追加AUTO-FIXへ戻さない。
+- Auto-MergeはP0 / P1 / `BLOCKING` P2がなく、元P2が解消し、全検証対象SHAとPR head SHAが一致し、監査記録が残る場合だけ許可する。条件を満たさない場合は人間の通常レーンへ戻す。
 
 ## GitHub Guardrails
 
