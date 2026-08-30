@@ -133,4 +133,15 @@ else
   grep -Fq 'git ls-files failed' <<<"$git_failure_result"
 fi
 
+rm -f "$fixture_dir/.fake-bin/git"
+printf '%s\n' '#!/usr/bin/env bash' 'exit 2' > "$fixture_dir/.fake-bin/grep"
+chmod +x "$fixture_dir/.fake-bin/grep"
+if grep_failure_result="$(PATH="$fixture_dir/.fake-bin:$PATH" "$preflight" "$fixture_dir" 2>/dev/null)"; then
+  printf 'grep failure was not marked unavailable\n' >&2
+  exit 1
+else
+  grep -Fq 'SECURITY_STATUS=SECURITY_UNAVAILABLE' <<<"$grep_failure_result"
+  grep -Fq 'secret scanner failed' <<<"$grep_failure_result"
+fi
+
 printf 'security preflight contract passed\n'

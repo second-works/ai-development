@@ -46,10 +46,26 @@ escape_path() {
 scan_file() {
   local file="$1"
   if [[ -L "$file" ]]; then
-    readlink "$file" | grep -Eiq -- "$secret_pattern"
-    return $?
+    local link_target
+    if ! link_target="$(readlink "$file")"; then
+      return 2
+    fi
+    if printf '%s' "$link_target" | grep -Eiq -- "$secret_pattern"; then
+      return 0
+    else
+      local grep_status=$?
+      [[ "$grep_status" -eq 1 ]] && return 1
+      return 2
+    fi
   fi
-  [[ -f "$file" ]] && grep -Eiq -- "$secret_pattern" "$file"
+  [[ -f "$file" ]] || return 2
+  if grep -Eiq -- "$secret_pattern" "$file"; then
+    return 0
+  else
+    local grep_status=$?
+    [[ "$grep_status" -eq 1 ]] && return 1
+    return 2
+  fi
 }
 
 secret_status='SECURITY_PASSED'
@@ -59,6 +75,13 @@ while IFS= read -r -d '' path; do
     secret_status='SECURITY_FAILED'
     secret_reason="secret-like value detected in $(escape_path "$path")"
     break
+  else
+    scan_status=$?
+    if [[ "$scan_status" -ne 1 ]]; then
+      printf 'SECURITY_STATUS=SECURITY_UNAVAILABLE\n'
+      printf 'SECURITY_REASON=secret scanner failed for %s\n' "$(escape_path "$path")"
+      exit 4
+    fi
   fi
 done < "$tracked_files"
 
