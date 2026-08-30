@@ -28,7 +28,7 @@ assert_absent() {
   fi
 }
 
-for file in "$AGENTS_FILE" "$SKILL_FILE" "$FLOW_FILE"; do
+for file in "$AGENTS_FILE" "$SKILL_FILE"; do
   for marker in \
     'Review Evidence Contract' \
     'Finding ID:' \
@@ -49,6 +49,15 @@ for file in "$AGENTS_FILE" "$SKILL_FILE" "$FLOW_FILE"; do
     'Rule Promotion'; do
     assert_contains "$file" "$marker"
   done
+done
+
+for marker in \
+  'Review Evidence Contract' \
+  'BLOCKING判定には' \
+  'Evidence不足の指摘をSeverityだけでBLOCKING扱いにしない' \
+  '決定的な静的根拠' \
+  '非BLOCKING P2の残置に個別の人間承認を要求しない'; do
+  assert_contains "$FLOW_FILE" "$marker"
 done
 
 for marker in \
