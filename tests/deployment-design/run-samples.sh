@@ -6,6 +6,7 @@ doc="$repo_root/docs/deployment-release-design.md"
 parent="$repo_root/.github/ISSUE_TEMPLATE/parent-issue.md"
 flow="$repo_root/docs/nine-standard-ai-development-flow.md"
 guide="$repo_root/docs/template-guide.md"
+preflight="$repo_root/templates/security/security-preflight.sh"
 
 assert_contains() {
   local file="$1"
@@ -43,51 +44,12 @@ assert_contains "$parent" "Rollback単位・永続データ互換性:"
 assert_contains "$parent" "MergeからProduction Deployまでの承認境界:"
 assert_contains "$flow" "docs/deployment-release-design.md"
 assert_contains "$guide" "docs/deployment-release-design.md"
+assert_contains "$preflight" "secret_pattern"
 
-secret_pattern='ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9-]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
-
-scan_file() {
-  local file="$1"
-  if [[ -L "$file" ]]; then
-    readlink "$file" | grep -Eiq -- "$secret_pattern"
-    return $?
-  fi
-  [[ -f "$file" ]] && grep -Eiq -- "$secret_pattern" "$file"
+security_result="$($preflight "$repo_root")"
+grep -Fq 'SECURITY_STATUS=SECURITY_PASSED' <<<"$security_result" || {
+  printf 'security preflight did not pass for the repository\n' >&2
+  exit 1
 }
-
-scan_tracked_files() {
-  local path
-  while IFS= read -r -d '' path; do
-    if scan_file "$repo_root/$path"; then
-      return 0
-    fi
-  done < <(git -C "$repo_root" ls-files -z)
-  return 1
-}
-
-if ! git -C "$repo_root" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  printf 'repository is not a git worktree\n' >&2
-  exit 1
-fi
-
-if scan_tracked_files; then
-  printf 'possible secret-like value found in repository\n' >&2
-  exit 1
-fi
-
-fixture_dir="$(mktemp -d)"
-trap 'rm -rf "$fixture_dir"' EXIT
-printf '%s%s\n' 'sk-proj-' 'abcdefghijklmnopqrstuvwxyz' > "$fixture_dir/secret-fixture.txt"
-if ! scan_file "$fixture_dir/secret-fixture.txt"; then
-  printf 'secret scanner did not detect sk-proj fixture\n' >&2
-  exit 1
-fi
-
-link_target="$(printf '%s%s' 'github_pat_' 'abcdefghijklmnopqrstuvwxyz')"
-ln -s "$link_target" "$fixture_dir/secret-link"
-if ! scan_file "$fixture_dir/secret-link"; then
-  printf 'secret scanner did not detect token-like symlink content\n' >&2
-  exit 1
-fi
 
 printf 'deployment design documentation contract: ok\n'

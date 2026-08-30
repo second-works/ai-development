@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
-if [[ $# -lt 2 || $# -gt 5 ]]; then
-  echo "Usage: $0 <repo-identity> <expected-sha> [timeout-seconds] [no-checks-grace-seconds] [stability-seconds]" >&2
+set -Eeuo pipefail
+
+if [[ $# -lt 2 || $# -gt 6 ]]; then
+  echo "Usage: $0 <repo-identity> <expected-sha> [timeout-seconds] [no-checks-grace-seconds] [stability-seconds] [security-preflight-script]" >&2
   exit 2
 fi
 
@@ -11,6 +12,7 @@ EXPECTED_SHA="$2"
 TIMEOUT="${3:-300}"
 NO_CHECKS_GRACE="${4:-60}"
 STABILITY_SECONDS="${5:-30}"
+SECURITY_PREFLIGHT_SCRIPT="${6:-}"
 INTERVAL=5
 START="$(date +%s)"
 STABLE_SINCE=""
@@ -31,8 +33,29 @@ gh auth status --hostname "$HOST" >/dev/null 2>&1 || {
   exit 1
 }
 
+if [[ -z "$SECURITY_PREFLIGHT_SCRIPT" && -x "$PWD/scripts/security-preflight.sh" ]]; then
+  SECURITY_PREFLIGHT_SCRIPT="$PWD/scripts/security-preflight.sh"
+fi
+
 TMPDIR_RUN="$(mktemp -d "${TMPDIR:-/tmp}/pr-review-checks.XXXXXX")"
 trap 'rm -rf "$TMPDIR_RUN"' EXIT
+
+SECURITY_PREFLIGHT_OUTPUT="$TMPDIR_RUN/security-preflight.result"
+if [[ -n "$SECURITY_PREFLIGHT_SCRIPT" ]]; then
+  if [[ ! -x "$SECURITY_PREFLIGHT_SCRIPT" ]]; then
+    printf '%s\n' 'SECURITY_STATUS=SECURITY_UNAVAILABLE' 'SECURITY_REASON=security preflight script is not executable' >"$SECURITY_PREFLIGHT_OUTPUT"
+  else
+    set +e
+    "$SECURITY_PREFLIGHT_SCRIPT" "$PWD" >"$SECURITY_PREFLIGHT_OUTPUT" 2>&1
+    PREFLIGHT_EXIT=$?
+    set -e
+    if ! grep -qE '^SECURITY_STATUS=(SECURITY_PASSED|SECURITY_FAILED|SECURITY_NOT_APPLICABLE|SECURITY_UNAVAILABLE)$' "$SECURITY_PREFLIGHT_OUTPUT"; then
+      printf '%s\n' 'SECURITY_STATUS=SECURITY_UNAVAILABLE' "SECURITY_REASON=security preflight exited without a machine-readable status (exit=$PREFLIGHT_EXIT)" >>"$SECURITY_PREFLIGHT_OUTPUT"
+    fi
+  fi
+else
+  printf '%s\n' 'SECURITY_STATUS=SECURITY_UNAVAILABLE' 'SECURITY_REASON=no security preflight script was configured' >"$SECURITY_PREFLIGHT_OUTPUT"
+fi
 
 while :; do
   NOW="$(date +%s)"
@@ -45,61 +68,123 @@ while :; do
     "repos/$REPO_PATH/commits/$EXPECTED_SHA/status?per_page=100" \
     >"$TMPDIR_RUN/status.json"
 
-  RESULT="$(python3 - "$TMPDIR_RUN/check-runs.json" "$TMPDIR_RUN/status.json" <<'PY'
-import json, sys, hashlib
+  RESULT="$(python3 - "$TMPDIR_RUN/check-runs.json" "$TMPDIR_RUN/status.json" "$SECURITY_PREFLIGHT_OUTPUT" <<'PY'
+import hashlib
+import json
+import re
+import sys
 
-with open(sys.argv[1], encoding='utf-8') as f:
+check_path, status_path, fallback_path = sys.argv[1:]
+
+with open(check_path, encoding="utf-8") as f:
     check_pages = json.load(f)
-with open(sys.argv[2], encoding='utf-8') as f:
+with open(status_path, encoding="utf-8") as f:
     status_pages = json.load(f)
 
-checks = []
-for page in check_pages:
-    if isinstance(page, dict):
-        checks.extend(page.get('check_runs', []))
+def flatten_pages(pages, key):
+    items = []
+    for page in pages:
+        if isinstance(page, dict):
+            items.extend(page.get(key, []))
+    return items
 
-statuses = []
-for page in status_pages:
-    if isinstance(page, dict):
-        statuses.extend(page.get('statuses', []))
+security_pattern = re.compile(
+    r"codeql|code[ -]?scanning|security|secret|gitleaks|semgrep|trivy|osv|snyk|dependabot|dependency[ -]?scan|bandit|pip[ -]?audit|npm[ -]?audit",
+    re.IGNORECASE,
+)
 
-failed = []
-pending = []
+def group_for(name):
+    return "security" if security_pattern.search(name or "") else "ci"
+
+checks = flatten_pages(check_pages, "check_runs")
+statuses = flatten_pages(status_pages, "statuses")
+groups = {
+    "ci": {"count": 0, "pending": [], "failed": []},
+    "security": {"count": 0, "pending": [], "failed": []},
+}
 items = []
-for r in checks:
-    name = r.get('name') or '<unnamed-check>'
-    status = r.get('status')
-    conclusion = r.get('conclusion')
-    items.append(('check', str(r.get('id') or ''), name, status or '', conclusion or ''))
-    if status != 'completed':
-        pending.append(name)
-    elif conclusion != 'success':
-        # A skipped/neutral check did not successfully execute the CI/security
-        # validation. Treat every non-success conclusion as blocking unless a
-        # future policy explicitly distinguishes optional checks.
-        failed.append(f"{name}:{conclusion}")
-for s in statuses:
-    name = s.get('context') or '<unnamed-status>'
-    state = s.get('state')
-    items.append(('status', str(s.get('id') or ''), name, state or '', ''))
-    if state == 'pending':
-        pending.append(name)
-    elif state != 'success':
-        failed.append(f"{name}:{state}")
 
-signature = hashlib.sha256(repr(sorted(items)).encode()).hexdigest()
+for run in checks:
+    name = run.get("name") or "<unnamed-check>"
+    group = group_for(name)
+    state = run.get("status")
+    conclusion = run.get("conclusion")
+    groups[group]["count"] += 1
+    items.append((group, "check", str(run.get("id") or ""), name, state or "", conclusion or ""))
+    if state != "completed":
+        groups[group]["pending"].append(name)
+    elif conclusion != "success":
+        groups[group]["failed"].append(f"{name}:{conclusion}")
+
+for status in statuses:
+    name = status.get("context") or "<unnamed-status>"
+    group = group_for(name)
+    state = status.get("state")
+    groups[group]["count"] += 1
+    items.append((group, "status", str(status.get("id") or ""), name, state or "", ""))
+    if state == "pending":
+        groups[group]["pending"].append(name)
+    elif state != "success":
+        groups[group]["failed"].append(f"{name}:{state}")
+
+fallback = {}
+with open(fallback_path, encoding="utf-8") as f:
+    for line in f:
+        key, separator, value = line.rstrip("\n").partition("=")
+        if separator:
+            fallback[key] = value
+
+fallback_status = fallback.get("SECURITY_STATUS", "SECURITY_UNAVAILABLE")
+if fallback_status not in {"SECURITY_PASSED", "SECURITY_FAILED", "SECURITY_NOT_APPLICABLE", "SECURITY_UNAVAILABLE"}:
+    fallback_status = "SECURITY_UNAVAILABLE"
+
+ci = groups["ci"]
+security = groups["security"]
+if ci["count"] == 0:
+    ci_status = "CI_UNAVAILABLE"
+elif ci["pending"]:
+    ci_status = "CI_PENDING"
+elif ci["failed"]:
+    ci_status = "CI_FAILED"
+else:
+    ci_status = "CI_PASSED"
+
+if security["count"] == 0:
+    security_status = fallback_status
+elif security["pending"]:
+    security_status = "SECURITY_PENDING"
+elif security["failed"]:
+    security_status = "SECURITY_FAILED"
+else:
+    security_status = "SECURITY_PASSED"
+
+all_pending = ci["pending"] + security["pending"]
+all_failed = ci["failed"] + security["failed"]
+signature = hashlib.sha256(repr(sorted(items) + [("fallback", fallback_status)]).encode()).hexdigest()
 print(f"COUNT={len(checks) + len(statuses)}")
-print(f"PENDING={len(pending)}")
-print(f"FAILED={len(failed)}")
+print(f"PENDING={len(all_pending)}")
+print(f"FAILED={len(all_failed)}")
+print(f"CI_COUNT={ci['count']}")
+print(f"CI_PENDING={len(ci['pending'])}")
+print(f"CI_FAILED={len(ci['failed'])}")
+print(f"CI_STATUS={ci_status}")
+print(f"SECURITY_COUNT={security['count']}")
+print(f"SECURITY_PENDING={len(security['pending'])}")
+print(f"SECURITY_FAILED={len(security['failed'])}")
+print(f"SECURITY_STATUS={security_status}")
+print(f"SECURITY_FALLBACK_STATUS={fallback_status}")
 print(f"SIGNATURE={signature}")
-if pending:
-    print("PENDING_NAMES=" + ",".join(sorted(pending)))
-if failed:
-    print("FAILED_NAMES=" + ",".join(sorted(failed)))
+if all_pending:
+    print("PENDING_NAMES=" + ",".join(sorted(all_pending)))
+if all_failed:
+    print("FAILED_NAMES=" + ",".join(sorted(all_failed)))
 PY
-)"
+  )"
 
   COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="COUNT"{print $2}')"
+  CI_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="CI_COUNT"{print $2}')"
+  CI_STATUS="$(printf '%s\n' "$RESULT" | awk -F= '$1=="CI_STATUS"{print $2}')"
+  SECURITY_STATUS="$(printf '%s\n' "$RESULT" | awk -F= '$1=="SECURITY_STATUS"{print $2}')"
   PENDING="$(printf '%s\n' "$RESULT" | awk -F= '$1=="PENDING"{print $2}')"
   FAILED="$(printf '%s\n' "$RESULT" | awk -F= '$1=="FAILED"{print $2}')"
   SIGNATURE="$(printf '%s\n' "$RESULT" | awk -F= '$1=="SIGNATURE"{print $2}')"
@@ -110,7 +195,31 @@ PY
     exit 1
   fi
 
-  if [[ "$COUNT" -gt 0 && "$PENDING" -eq 0 ]]; then
+  if [[ "$SECURITY_STATUS" == "SECURITY_FAILED" ]]; then
+    printf '%s\n' "$RESULT" >&2
+    echo "ERROR: security preflight/check failed for $EXPECTED_SHA" >&2
+    exit 1
+  fi
+
+  if [[ "$CI_STATUS" == "CI_UNAVAILABLE" && "$ELAPSED" -ge "$NO_CHECKS_GRACE" ]]; then
+    printf '%s\n' "$RESULT" >&2
+    echo "EXPECTED_SHA=$EXPECTED_SHA" >&2
+    echo "WAITED_SECONDS=$ELAPSED" >&2
+    echo "STATUS=CI_UNAVAILABLE" >&2
+    echo "ERROR: no CI checks were observed; explicit human decision is required before continuing" >&2
+    exit 4
+  fi
+
+  if [[ "$SECURITY_STATUS" == "SECURITY_UNAVAILABLE" && "$ELAPSED" -ge "$NO_CHECKS_GRACE" ]]; then
+    printf '%s\n' "$RESULT" >&2
+    echo "EXPECTED_SHA=$EXPECTED_SHA" >&2
+    echo "WAITED_SECONDS=$ELAPSED" >&2
+    echo "STATUS=SECURITY_UNAVAILABLE" >&2
+    echo "ERROR: security checks and fallback were unavailable; explicit human decision is required before continuing" >&2
+    exit 4
+  fi
+
+  if [[ "$CI_STATUS" == "CI_PASSED" && ( "$SECURITY_STATUS" == "SECURITY_PASSED" || "$SECURITY_STATUS" == "SECURITY_NOT_APPLICABLE" ) ]]; then
     if [[ "$SIGNATURE" != "$LAST_SIGNATURE" || -z "$STABLE_SINCE" ]]; then
       LAST_SIGNATURE="$SIGNATURE"
       STABLE_SINCE="$NOW"
@@ -127,14 +236,6 @@ PY
   else
     STABLE_SINCE=""
     LAST_SIGNATURE="$SIGNATURE"
-  fi
-
-  if [[ "$COUNT" -eq 0 && "$ELAPSED" -ge "$NO_CHECKS_GRACE" ]]; then
-    echo "EXPECTED_SHA=$EXPECTED_SHA" >&2
-    echo "WAITED_SECONDS=$ELAPSED" >&2
-    echo "STATUS=NO_CHECKS_OBSERVED" >&2
-    echo "ERROR: no CI/security checks were observed; explicit human decision is required before continuing" >&2
-    exit 4
   fi
 
   if [[ "$ELAPSED" -ge "$TIMEOUT" ]]; then

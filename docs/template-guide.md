@@ -27,10 +27,11 @@
 5. `.github/workflows/ci.yml`
 6. Dependabot設定
 7. Secrets管理方針
-8. 利用可能ならCodeQL
-9. Ruleset / Branch protection
-10. `Automatically delete head branches` の有効化
-11. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
+8. Security Preflight
+9. 利用可能ならCodeQL
+10. Ruleset / Branch protection
+11. `Automatically delete head branches` の有効化
+12. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
 
 設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
 
@@ -342,7 +343,7 @@ CIのrequired status checkは、workflowを一度実行しないと候補に出�
 
 Codexへの指示にも秘密情報をコードへ埋め込まないことを含めます。
 
-## 12. CodeQL
+## 12. Security Preflight / CodeQL
 
 利用可能なリポジトリでは `.github/workflows/codeql.yml` として配置します。
 
@@ -356,6 +357,21 @@ CodeQLは通常のCIとは役割が異なります。
 - CodeQL: セキュリティ上問題になり得るコードパターンの検出
 
 利用可能な言語・GitHubプラン・リポジトリ設定を確認してから有効化します。
+
+GitHub Security checkの有無にかかわらず、CIとSecurityの判定は分離します。利用可能なGitHub Security checkがないプロジェクトでは、`templates/security/security-preflight.sh` を `scripts/security-preflight.sh` としてコピーし、`chmod +x scripts/security-preflight.sh` を実行します。Security Preflightは既知のsecret patternと、対応するlockfileがある場合のnpm auditを検査し、次の状態を機械可読に出力します。
+
+- `SECURITY_PASSED`
+- `SECURITY_FAILED`
+- `SECURITY_NOT_APPLICABLE`（依存マニフェストがない場合。理由を監査記録へ残す）
+- `SECURITY_UNAVAILABLE`（未対応マニフェスト、scanner、実行環境、結果が利用できない場合。人間判断が必要）
+
+標準の待機スクリプトへfallbackのパスを渡す例:
+
+```bash
+bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA" 300 60 30 "./scripts/security-preflight.sh"
+```
+
+`SECURITY_FAILED` はMerge禁止、`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させません。CIの成功だけでSecurity成功とは判断せず、修正後は同じ新しいPR head SHAに対してCI・Security・レビューを再実行します。
 
 ## 13. 二重チェックの考え方
 
@@ -461,6 +477,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 - [ ] Dependabotを設定
 - [ ] Secrets管理を確認
 - [ ] 利用可能ならSecret scanning / push protectionを有効化
+- [ ] `templates/security/security-preflight.sh` を `scripts/security-preflight.sh` として配置し、実行権限を付与
 - [ ] 利用可能ならCodeQLを有効化
 - [ ] 最初の親Issueを作成
 - [ ] 子Issue品質チェックを実施

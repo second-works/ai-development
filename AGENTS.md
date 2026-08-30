@@ -296,7 +296,8 @@ Codex Code Reviewを、GitHub Actions CI後・人間の最終確認前の標準�
 標準Merge条件は次のとおりとする。
 
 - GitHub Actions CI成功
-- 利用可能なセキュリティチェック成功、または人間が例外を明示判断
+- `CI_STATUS=CI_PASSED` かつ、`SECURITY_STATUS=SECURITY_PASSED` または理由付き `SECURITY_NOT_APPLICABLE`
+- `SECURITY_FAILED` はMerge禁止。`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させない
 - Codex Code ReviewのP0 / P1が0件
 - 四分類後の`BLOCKING` P2が0件
 - `IN-SCOPE FIX`、`FOLLOW-UP`、`DISMISS` に分類された非BLOCKING P2は、分類と記録のルールに従って残置できる
@@ -337,6 +338,7 @@ CodexレビューでP0 / P1 / BLOCKINGと分類したP2が見つかった場合�
 - AUTO-FIXは原則1ラウンドだけとし、修正で変わったhead SHAに対して標準検証 → CI → 利用可能なSecurity（または事前定義済みの安全な適用除外） → Codex再Review → 最終SHA確認を実施する。
 - 自動修正後の再レビューで新しいP2が1件でも発生した場合は、分類・記録後もAuto-Mergeせず通常レーンへ戻す。非BLOCKING P2でも追加AUTO-FIXへ戻さない。
 - Auto-MergeはP0 / P1 / `BLOCKING` P2がなく、元P2が解消し、全検証対象SHAとPR head SHAが一致し、監査記録が残る場合だけ許可する。条件を満たさない場合は人間の通常レーンへ戻す。
+- Auto-Mergeでは `SECURITY_STATUS=SECURITY_PASSED` を必須とし、`SECURITY_FAILED` または `SECURITY_UNAVAILABLE` は許可しない。`SECURITY_NOT_APPLICABLE` は対象外理由と人間の監査記録がある場合だけ通常のMerge判断で扱う。
 
 ## GitHub Guardrails
 
@@ -388,6 +390,19 @@ Dependabot PRも通常のCIとレビューを通してからmergeする。古い
 対象言語はプロジェクトに合わせて調整する。
 
 プラン、リポジトリ種別、対象言語等の条件により利用できない場合は、その事実を記録し、通常CIとレビューで補完する。
+
+## Security Preflight
+
+CIの成功をSecurityの成功として扱わない。標準の待機処理はCIとSecurityを別々に分類し、利用可能なGitHub Code Scanning / Security checkがない場合はプロジェクトへ配置した `scripts/security-preflight.sh` をfallbackとして実行する。
+
+原本は [`templates/security/security-preflight.sh`](templates/security/security-preflight.sh) とする。スクリプトは機械可読な次の状態を出力する。
+
+- `SECURITY_PASSED`: 秘密情報検出と利用可能な依存脆弱性検査が成功
+- `SECURITY_FAILED`: 秘密情報またはHigh/Critical脆弱性を検出。Merge禁止
+- `SECURITY_NOT_APPLICABLE`: 対象マニフェストがなく、依存脆弱性検査の対象外。理由を記録する
+- `SECURITY_UNAVAILABLE`: 必要なscanner、実行環境、または結果が利用できない。人間の判断なしに通過させない
+
+fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `SECURITY_NOT_APPLICABLE` と混同しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
 
 ## Before PR
 

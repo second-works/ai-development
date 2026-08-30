@@ -6,7 +6,7 @@
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・計画書作成 → Plan Review Gate（Grilling） → 必要なDesign Decision確定 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定 → 必要なら修正・再CI・再レビュー → 人間確認またはSafety Gate成立後のAuto-Merge → Deploy → 実利用検証 → 検収判定**
+**要望 → ChatGPTで要件整理・計画書作成 → Plan Review Gate（Grilling） → 必要なDesign Decision確定 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → Security Preflight / GitHub Security checks → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定 → 必要なら修正・再CI・再Security・再レビュー → 人間確認またはSafety Gate成立後のAuto-Merge → Deploy → 実利用検証 → 検収判定**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
@@ -104,7 +104,7 @@ Codexには原則として子Issueを1件ずつ渡す。
 
 Codex実装終了後は以下の流れとする。
 
-**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → セキュリティチェック → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定**
+**Issue → Branch → 実装 → ローカルテスト → Commit → PR → GitHub Actions CI → Security Preflight / GitHub Security checks → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定**
 
 ### レビュー修正時のPR / head branch固定
 
@@ -267,13 +267,17 @@ Dependabot PRも通常のCI・レビューを通してmergeする。
 - Secret scanning / push protectionが利用可能なら有効化する
 - ログへの秘密情報出力を避ける
 
-### CodeQL / Code Scanning
+### Security PreflightとCodeQL / Code Scanning
 
 利用可能なプロジェクトではCodeQLまたはcode scanningを有効化する。
 
 標準workflow：`templates/github-actions/codeql.yml`
 
 対象言語はプロジェクトに合わせて変更する。利用条件を満たさない場合は、その事実を記録し、CIとレビューで補完する。
+
+CIとSecurityは別の判定として記録する。GitHub Code Scanning / Security checkが利用できる場合はその結果を優先し、利用できない場合は [`templates/security/security-preflight.sh`](../templates/security/security-preflight.sh) を `scripts/security-preflight.sh` として配置する。
+
+Security Preflightは `SECURITY_PASSED`、`SECURITY_FAILED`、`SECURITY_NOT_APPLICABLE`、`SECURITY_UNAVAILABLE` のいずれかを出力する。`SECURITY_FAILED` はMerge禁止、`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させない。マニフェストがない場合だけ `SECURITY_NOT_APPLICABLE` とし、対象外理由をPRへ記録する。修正後はCIとSecurityを同じ新しいhead SHAに対して再実行する。
 
 ## 11. CI / セキュリティチェック失敗時
 

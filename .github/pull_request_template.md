@@ -29,8 +29,14 @@ Closes #
 
 # GitHubチェック
 
-- [ ] GitHub Actions CI成功
-- [ ] 利用可能なセキュリティチェックが成功、または利用不能・失敗時に人間が例外を明示判断済み
+- CI判定: `CI_PASSED / CI_FAILED / CI_UNAVAILABLE`
+- Security Preflight判定: `SECURITY_PASSED / SECURITY_FAILED / SECURITY_NOT_APPLICABLE / SECURITY_UNAVAILABLE`
+- GitHub Security / Code Scanning判定:
+- CI対象SHA:
+- Security対象SHA:
+- `SECURITY_NOT_APPLICABLE` / `SECURITY_UNAVAILABLE` / 未実行の理由:
+- [ ] CIとSecurityを別々に確認した
+- [ ] `SECURITY_FAILED` がなく、`SECURITY_UNAVAILABLE` は人間が明示判断済み
 
 セキュリティチェック例外理由（該当時）:
 

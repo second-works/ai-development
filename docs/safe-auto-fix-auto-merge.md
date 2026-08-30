@@ -24,7 +24,7 @@ Issue → 実装 → verify.sh → CI → Security → Codex Review
   → P2分類 → Safety Gate
   → 軽微P2を1ラウンドだけ自動修正
   → 新しいhead SHAを固定
-  → verify.sh → CI → Security → Codex再Review
+  → verify.sh → CI → Security Preflight / GitHub Security → Codex再Review
   → Safety Gate再確認 → Auto-Merge
 ```
 
@@ -71,7 +71,7 @@ Safeレーンへの参加判断、例外の承認、Safety Gateの不成立時�
 
 1. 標準検証入口 `./scripts/verify.sh`（lint → type check → test → build）
 2. GitHub Actions CI
-3. 利用可能なSecurity / Code Scanning
+3. Security Preflight / 利用可能なSecurity / Code Scanning
 4. Codex Code Review再実行
 5. Auto-Merge直前のPR head SHA再確認
 
@@ -79,7 +79,10 @@ Safeレーンへの参加判断、例外の承認、Safety Gateの不成立時�
 
 - `verify.sh`成功
 - CI成功
-- Security成功、または事前定義済みの安全な適用除外条件を満たす
+- `SECURITY_STATUS=SECURITY_PASSED`
+- `SECURITY_STATUS=SECURITY_FAILED` ではない
+- `SECURITY_STATUS=SECURITY_UNAVAILABLE` ではない。人間の例外判断だけでSafe Auto-Mergeへ進めない
+- `SECURITY_STATUS=SECURITY_NOT_APPLICABLE` の場合は対象外理由と監査記録を残し、Safe Auto-Mergeではなく人間の通常Merge判断へ戻す
 - P0 = 0、P1 = 0、`BLOCKING` P2 = 0
 - AUTO-FIX対象の元P2が解消済み
 - 再レビューで新しいP2が1件も発生していない。1件でも発生した場合は、分類・記録後もAuto-Mergeせず通常レーンへ戻す
@@ -87,7 +90,9 @@ Safeレーンへの参加判断、例外の承認、Safety Gateの不成立時�
 - 自動修正コミットSHA、全検証対象SHA、PR head SHAが一致する
 - Auto-Merge実行主体と実行時刻が記録される
 
-### Securityの安全な適用除外
+### Security Preflightと安全な適用除外
+
+Securityの判定はCIと分離する。標準fallbackは [`templates/security/security-preflight.sh`](../templates/security/security-preflight.sh) とし、GitHub Security checkが無い場合でも秘密情報検出を実行する。`SECURITY_PASSED`、`SECURITY_FAILED`、`SECURITY_NOT_APPLICABLE`、`SECURITY_UNAVAILABLE` をPRと対象SHAに紐づけて記録する。
 
 Security / Code Scanningがリポジトリのプラン、リポジトリ種別、対象言語等の理由で利用できない場合は、事前に次を記録する。
 
@@ -95,9 +100,10 @@ Security / Code Scanningがリポジトリのプラン、リポジトリ種別�
 - 対象外である理由
 - secrets、credential、auth、権限、infra、Deploy、dependency major updateを変更しないこと
 - 利用可能なSecurity画面・チェックに未解決の警告がないこと
+- `SECURITY_UNAVAILABLE` と `SECURITY_NOT_APPLICABLE` を混同していないこと
 - Safeレーン継続を人間が明示判断したこと
 
-単にSecurity結果が空であることや、確認を省略したことは安全な適用除外にならない。
+`SECURITY_UNAVAILABLE` はSafe Auto-Mergeの成立条件を満たさない。単にSecurity結果が空であることや、確認を省略したことは安全な適用除外にならない。
 
 ## 6. 無限修正ループ防止
 
