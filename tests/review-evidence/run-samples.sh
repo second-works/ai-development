@@ -88,6 +88,9 @@ for file in "$AGENTS_FILE" "$SKILL_FILE" "$FLOW_FILE" "$PR_FILE" "$README_FILE" 
   assert_absent "$file" 'P2のみ残る場合は人間の理由確認と明示判断が必要である。'
   assert_absent "$file" 'P2が0件、または残置理由を人間が明示判断'
   assert_absent "$file" 'P2のみ残る場合は人間の明示判断が必要です。'
+  assert_absent "$file" '新しいP1 / P2'
+  assert_absent "$file" '新しいP0 / P1 / P2がないことを確認する。'
+  assert_absent "$file" 'P2は解消または人間が残置理由を確認済みか'
 done
 
 printf 'Review Evidence documentation contract passed\n'
