@@ -29,7 +29,8 @@ assert_contains "$doc" '自動修正後に標準検証、CI、利用可能なSec
 assert_contains "$doc" 'Security成功、または事前定義済みの安全な適用除外条件'
 assert_contains "$doc" '自動修正コミットSHA、全検証対象SHA、PR head SHAが一致する'
 assert_contains "$doc" '原則1ラウンドだけ実行する'
-assert_contains "$doc" '追加AUTO-FIXへ戻らない'
+assert_contains "$doc" '追加AUTO-FIXへ戻らず、分類・記録後もAuto-Mergeせず通常レーンへ戻す'
+assert_contains "$doc" '自動修正後の再レビューで新しいP2が1件でも発生した場合は、追加AUTO-FIXへ戻らず、分類・記録後もAuto-Mergeせず通常レーンへ戻す'
 assert_contains "$doc" 'AI / automationによるAuto-Merge'
 
 assert_contains "$agents" 'Safe Auto-Fix / Auto-Merge'

@@ -335,6 +335,7 @@ CodexレビューでP0 / P1 / BLOCKINGと分類したP2が見つかった場合�
 - `IN-SCOPE FIX`であることだけではAUTO-FIX eligibleとはみなさず、Safety Gateの全項目を確認する。
 - P0 / P1 / `BLOCKING` P2、仕様・設計判断、公開契約、DB、auth、security、infra、Deploy、network、Workflow権限、dependency major update、テスト弱体化、Issue範囲外変更は通常レーンへ戻す。
 - AUTO-FIXは原則1ラウンドだけとし、修正で変わったhead SHAに対して標準検証 → CI → 利用可能なSecurity（または事前定義済みの安全な適用除外） → Codex再Review → 最終SHA確認を実施する。
+- 自動修正後の再レビューで新しいP2が1件でも発生した場合は、分類・記録後もAuto-Mergeせず通常レーンへ戻す。非BLOCKING P2でも追加AUTO-FIXへ戻さない。
 - Auto-MergeはP0 / P1 / `BLOCKING` P2がなく、元P2が解消し、全検証対象SHAとPR head SHAが一致し、監査記録が残る場合だけ許可する。条件を満たさない場合は人間の通常レーンへ戻す。
 
 ## GitHub Guardrails

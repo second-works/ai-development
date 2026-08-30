@@ -56,6 +56,7 @@ Safeレーンを採用しない場合は `なし` とし、採用する場合は
 - Auto-Merge実行主体 / 実行時刻 / マージSHA（該当時）:
 
 - [ ] P0 / P1 / `BLOCKING` P2がない
+- [ ] 自動修正後の再レビューで新しいP2が発生していない（発生時は通常レーンへ復帰）
 - [ ] 公開契約、DB、auth、security、infra、Deploy、network、Workflow権限、dependency major updateを変更していない
 - [ ] テスト削除・skip・品質ゲート緩和をしていない
 - [ ] AUTO-FIXは1ラウンドだけで、追加自動修正へ戻らない
