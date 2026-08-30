@@ -30,7 +30,7 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 
 P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として使用せず、`@codex review` はレビュー専用とします。CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
 
-レビュー修正ラウンドは、Codex Code Review → 修正 → 再検証・再レビューを1単位とし、初回レビューはラウンド0として記録します。第3ラウンド完了後に新しいP1 / P2が発生した場合は自動修正を停止して人間へ戻し、3ラウンドで強制Mergeしません。P0 / P1が残る場合はMerge禁止、非BLOCKING P2のみが残る場合は、分類と記録後に追加修正ループへ戻しません。通常レーンの最終Mergeは人間が判断します。P3は原則Merge阻害条件にしません。
+レビュー修正ラウンドは、Codex Code Review → 修正 → 再検証・再レビューを1単位とし、初回レビューはラウンド0として記録します。第3ラウンド完了後に新しいP1 / BLOCKING P2が発生した場合は自動修正を停止して人間へ戻し、3ラウンドで強制Mergeしません。P0 / P1が残る場合はMerge禁止、非BLOCKING P2のみが残る場合は、分類と記録後に追加修正ループへ戻しません。通常レーンの最終Mergeは人間が判断します。P3は原則Merge阻害条件にしません。
 
 レビュー指摘はReview Evidence Contract（Location、Trigger、Expected、Actual、PR Causality、Acceptance Criteria、Reproductionまたは決定的な静的根拠、Disposition）を伴って判断します。証拠不足の指摘をSeverityだけでBLOCKING扱いにしません。
 
