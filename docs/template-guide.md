@@ -374,6 +374,18 @@ bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA" 300 60 30 "./
 
 `SECURITY_FAILED` はMerge禁止、`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させません。CIの成功だけでSecurity成功とは判断せず、修正後は同じ新しいPR head SHAに対してCI・Security・レビューを再実行します。
 
+## 12.1 AI Agent Security Boundary
+
+新規プロジェクトでAIエージェントにToolを渡す場合は、docs/ai-agent-security-boundary.md を読み、Parent Issue、Child Issue、PRの該当欄へ適用結果を記録する。
+
+- 情報をPUBLIC / INTERNAL / CONFIDENTIALに分類する。
+- LLM環境をMANAGED / UNMANAGEDと判定し、CONFIDENTIAL情報の送信先を確認する。
+- Intake / ReadとExposure / Writeを分け、Sensitive Read Capability × External Write Capabilityを高リスクとして判定する。
+- Least PrivilegeのscopeとHuman Approval Boundaryを記録する。
+- 外部コンテンツをtrusted instructionとして扱わず、適用対象外や例外の理由、残るリスク、代替制御、承認者を記録する。
+
+テンプレート利用プロジェクトでは、適用可否を「対象外」とだけ書かず、対象Tool、データ分類、代替制御、承認者まで記録する。
+
 ## 13. 二重チェックの考え方
 
 Nine標準AI開発フローでは、AIだけにもGitHubだけにも品質保証を依存しません。
