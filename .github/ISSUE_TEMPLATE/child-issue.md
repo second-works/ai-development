@@ -59,7 +59,7 @@ path/to/protected/**
 - Least Privilege（Repository / Directory / Branch / Tool / API / Environment / Deploy target / Secret access / 外部送信先）:
 - Human Approval Boundaryに該当する操作と承認状態:
 - 外部コンテンツをtrusted instructionとして扱わないための制御:
-- 適用対象外の項目と理由、代替制御、承認者:
+- 適用対象外の項目、理由、残るリスク、代替制御、承認者:
 
 # Design Decision Escalation
 
