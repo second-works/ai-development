@@ -57,11 +57,21 @@ Read可能であることは、外部送信可能であることを意味しな�
 - email送信
 - Slack / Discord投稿
 - GitHub Issue / PRへの書き込み
+- git pushによるremote Repositoryへの書き込み
 - ファイルUpload
 - 外部API送信
 - 任意URLへのHTTP request
 - Deploy
 - Production変更
+
+### Sensitive Read Capabilityの判定
+
+Sensitive Read Capabilityは、Read Toolが扱う情報分類に基づいて判定する。
+
+- PUBLICだけを読むRead能力は、情報分類だけを理由にSensitiveとは判定しない。
+- INTERNALまたはCONFIDENTIALを読むRead能力は、Sensitive Read Capabilityとして扱う。
+- 複数の分類を読む場合は最も厳しい分類を用いるため、PUBLICとINTERNALまたはCONFIDENTIALを組み合わせるRead能力もSensitive Read Capabilityとなる。
+- Repository、Directory、Database、RAGなどの対象がINTERNALまたはCONFIDENTIALに分類される場合、そのRead能力はSensitive Read Capabilityとなる。
 
 `Sensitive Read Capability × External Write Capability` は高リスクの組み合わせとして扱う。
 この組み合わせが成立する場合、利用可能なTool、対象Repository、filesystem、network、外部送信先を明示的に絞り、必要な操作ごとに承認境界を設ける。
@@ -131,7 +141,7 @@ Parent Issue、Child Issue、PRでは、次を記録する。
 - [ ] Repository、Directory、Branch、Tool、API、Environment、Deploy target、Secret access、外部送信先の最小範囲を記録した。
 - [ ] Human Approval Boundaryに該当する操作と承認状態を記録した。
 - [ ] 外部コンテンツを `trusted instruction` として扱わないことを確認した。
-- [ ] 適用対象外の項目がある場合、その理由と代替する制御を記録した。
+- [ ] 適用対象外の項目がある場合、その理由、残るリスク、代替制御、承認者を記録した。
 
 ## 既存標準との関係
 
