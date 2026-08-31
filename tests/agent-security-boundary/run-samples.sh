@@ -49,6 +49,21 @@ require_marker "docs/safe-auto-fix-auto-merge.md" "Sensitive Read Capability × 
 require_marker "SECURITY.md" "ai-agent-security-boundary.md"
 require_marker "docs/template-guide.md" "AI Agent Security Boundary"
 require_marker "docs/template-guide.md" "適用可否"
+
+require_section_marker() {
+  local file="$1"
+  local start="$2"
+  local end="$3"
+  local marker="$4"
+  local section
+  section="$(sed -n "/^$start/,/^$end/p" "$ROOT/$file")"
+  if ! grep -Fq -- "$marker" <<< "$section"; then
+    printf 'missing section marker: %s (%s to %s): %s\n' "$file" "$start" "$end" "$marker" >&2
+    failures=1
+  fi
+}
+require_section_marker "docs/template-guide.md" "## 2. 新規プロジェクト開始時の使い方" "## 3. AGENTS.md" "docs/ai-agent-security-boundary.md"
+require_section_marker "docs/template-guide.md" "## 15. 新規リポジトリ初期化チェックリスト" "## 16. 普段の短縮指示" "docs/ai-agent-security-boundary.md"
 require_marker "docs/nine-standard-ai-development-flow.md" "AI Agent Security Boundary"
 require_marker ".agents/skills/pr-review-fix/SKILL.md" "AI Agent Security Boundary"
 
