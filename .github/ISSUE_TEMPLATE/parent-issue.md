@@ -68,6 +68,19 @@ assignees: []
   - 決定タイミング:
   - 関連Issue: #
 
+# Agent Security Boundary
+
+<!-- 詳細は docs/ai-agent-security-boundary.md を参照する。対象外の場合も理由と代替制御を記録する。 -->
+
+- [ ] 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）を決めた。
+- [ ] LLM Trust Boundary（MANAGED / UNMANAGED）とCONFIDENTIAL情報の扱いを確認した。
+- [ ] Intake / Read ToolとExposure / Write Toolを分けて列挙した。
+- [ ] Sensitive Read Capability × External Write Capabilityの有無と、該当時の制御を記録した。
+- [ ] Least PrivilegeとしてRepository、Directory、Branch、Tool、API、Environment、Deploy target、Secret access、外部送信先の最小範囲を記録した。
+- [ ] Human Approval Boundaryに該当する操作と承認状態を記録した。
+- [ ] Web、Issue、PR、README、外部文書、RAG、メール、チャット、APIレスポンスをtrusted instructionとして扱わないことを確認した。
+- [ ] 適用対象外の項目がある場合、その理由、残るリスク、代替制御、承認者を記録した。
+
 ## デプロイ設計 / Release・Production計画
 
 <!-- 詳細な項目と安全条件は docs/deployment-release-design.md を参照する。不要な項目も理由を記録する。 -->
