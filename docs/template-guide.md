@@ -21,17 +21,18 @@
 その後、原則として以下を準備します。
 
 1. `AGENTS.md`
-2. `.github/ISSUE_TEMPLATE/parent-issue.md`
-3. `.github/ISSUE_TEMPLATE/child-issue.md`
-4. `.github/pull_request_template.md`
-5. `.github/workflows/ci.yml`
-6. Dependabot設定
-7. Secrets管理方針
-8. Security Preflight
-9. 利用可能ならCodeQL
-10. Ruleset / Branch protection
-11. `Automatically delete head branches` の有効化
-12. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
+2. `docs/ai-agent-security-boundary.md`
+3. `.github/ISSUE_TEMPLATE/parent-issue.md`
+4. `.github/ISSUE_TEMPLATE/child-issue.md`
+5. `.github/pull_request_template.md`
+6. `.github/workflows/ci.yml`
+7. Dependabot設定
+8. Secrets管理方針
+9. Security Preflight
+10. 利用可能ならCodeQL
+11. Ruleset / Branch protection
+12. `Automatically delete head branches` の有効化
+13. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
 
 設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
 
@@ -474,6 +475,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 新しい開発リポジトリを作成したら以下を確認します。
 
 - [ ] `AGENTS.md` を配置
+- [ ] `docs/ai-agent-security-boundary.md` を配置
 - [ ] `docs/plan-review-gate.md` を配置
 - [ ] 親Issueテンプレートを配置
 - [ ] 子Issueテンプレートを配置
