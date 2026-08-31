@@ -56,6 +56,22 @@ Closes #
 - なし
 
 
+# Agent Security Boundary
+
+<!-- docs/ai-agent-security-boundary.md に基づいて、今回のPRでの適用結果を記録する。 -->
+
+- 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）:
+- LLM Trust Boundary（MANAGED / UNMANAGED）:
+- Intake / Read Tool:
+- Exposure / Write Tool:
+- Sensitive Read Capability × External Write Capability:
+  - [ ] 該当なし
+  - [ ] 該当あり。Tool、Destination、filesystem、repository、networkの制御と理由:
+- Least Privilege（Repository / Directory / Branch / Tool / API / Environment / Deploy target / Secret access / 外部送信先）:
+- Human Approval Boundaryに該当する操作と承認状態:
+- 外部コンテンツをtrusted instructionとして扱わないための制御:
+- 適用対象外または例外の理由、残るリスク、代替制御、承認者:
+
 # Review Evidence Contract
 
 P0 / P1、および `BLOCKING` 候補のP2は、以下を根拠付きで記録する。再現可能な問題は、可能な限り修正前に失敗し修正後に成功するテストまたは再現手順を残す。実行再現が困難な場合は決定的な静的根拠を記録する。
