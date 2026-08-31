@@ -69,7 +69,7 @@ Closes #
   - [ ] 該当あり。Tool、Destination、filesystem、repository、networkの制御と理由:
 - Least Privilege（Repository / Directory / Branch / Tool / API / Environment / Deploy target / Secret access / 外部送信先）:
 - Human Approval Boundaryに該当する操作と承認状態:
-- 外部コンテンツをtrusted instructionとして扱わないための制御:
+- Prompt Injection対策として外部コンテンツをtrusted instructionとして扱わないための制御:
 - 適用対象外または例外の理由、残るリスク、代替制御、承認者:
 
 # Review Evidence Contract
