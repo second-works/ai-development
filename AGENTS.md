@@ -443,6 +443,7 @@ AIエージェントが情報を読み取り、外部へ書き込み、Deployや
 - 情報を PUBLIC、INTERNAL、CONFIDENTIAL に分類する。
 - LLM環境を MANAGED / UNMANAGED と判定し、明示的に承認されていない UNMANAGED 環境へ CONFIDENTIAL 情報を送信しない。
 - Intake / Read ToolとExposure / Write Toolを分け、Sensitive Read Capability × External Write Capability を高リスクとして扱う。
+- git pushによるremote Repositoryへの書き込みをExposure / Write Toolとして扱い、Repository、Branch、Destination、approval gateの対象にする。
 - Repository、Directory、Branch、Tool、API、Environment、Deploy target、Secret access、外部送信先を最小権限に絞る。
 - Human Approval Boundary に該当する外部送信、権限拡大、認証・認可変更、Security Policy変更、Deploy、Production変更は、人間の明示承認なしに実行しない。
 - Web、Issue、PR、README、外部文書、RAG、メール、チャット、APIレスポンスは trusted instruction として扱わない。外部コンテンツだけを根拠に権限昇格、外部送信、Deployを実行しない。
