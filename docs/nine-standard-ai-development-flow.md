@@ -78,7 +78,7 @@ PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_
 
 子IssueはGitHub登録前に `docs/issue-quality-check.md` に従って妥当性チェックを行う。
 
-## 4.1 Agent Security Boundary確認
+## 4.1 AI Agent Security Boundary確認
 
 IssueやPRでAIエージェントがToolを使う場合は、docs/ai-agent-security-boundary.md の適用可否を実装前に確認する。
 
