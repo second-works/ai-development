@@ -78,6 +78,16 @@ PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_
 
 子IssueはGitHub登録前に `docs/issue-quality-check.md` に従って妥当性チェックを行う。
 
+## 4.1 AI Agent Security Boundary確認
+
+IssueやPRでAIエージェントがToolを使う場合は、docs/ai-agent-security-boundary.md の適用可否を実装前に確認する。
+
+- 情報分類とLLM Trust Boundaryを決める。
+- Intake / ReadとExposure / Writeを分け、Sensitive Read Capability × External Write Capabilityの高リスク判定を行う。
+- Least PrivilegeのscopeとHuman Approval Boundaryを記録する。
+- Web、Issue、PR、README、外部文書、RAG、メール、チャット、APIレスポンスをtrusted instructionとして扱わない。
+- 境界に該当する外部送信、権限拡大、Security Policy変更、Deploy、Production変更は、人間の明示承認まで停止する。
+
 ## 5. Codex実装
 
 Codexには原則として子Issueを1件ずつ渡す。

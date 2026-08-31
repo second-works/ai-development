@@ -42,6 +42,17 @@ Issue用の短命head branchは保護対象branchとは区別する。新規リ�
 
 ## 4. CodeQL / Code Scanning
 
+## 4.1 AI Agent Security Boundary
+
+AIエージェントの情報フローは docs/ai-agent-security-boundary.md を基準とする。
+Repository Security Baselineが扱うリポジトリ、Secrets、CodeQL、Ruleset、Branch Protectionの防御と、Agent Security Boundaryが扱う情報分類、LLM環境、ToolのRead / Exposure、最小権限、外部送信、人間承認を分けて記録する。
+
+- Sensitive Read Capability × External Write Capability を高リスクとして判定する。
+- Tool、Destination、filesystem、repository、networkのscopeを最小化し、外部コンテンツを trusted instruction として扱わない。
+- CONFIDENTIAL 情報の外部送信、権限拡大、Production変更などは、人間の明示承認まで実行しない。
+
+
+
 利用可能なリポジトリではCodeQLを有効化する。
 
 テンプレート: `templates/github-actions/codeql.yml`

@@ -21,17 +21,18 @@
 その後、原則として以下を準備します。
 
 1. `AGENTS.md`
-2. `.github/ISSUE_TEMPLATE/parent-issue.md`
-3. `.github/ISSUE_TEMPLATE/child-issue.md`
-4. `.github/pull_request_template.md`
-5. `.github/workflows/ci.yml`
-6. Dependabot設定
-7. Secrets管理方針
-8. Security Preflight
-9. 利用可能ならCodeQL
-10. Ruleset / Branch protection
-11. `Automatically delete head branches` の有効化
-12. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
+2. `docs/ai-agent-security-boundary.md`
+3. `.github/ISSUE_TEMPLATE/parent-issue.md`
+4. `.github/ISSUE_TEMPLATE/child-issue.md`
+5. `.github/pull_request_template.md`
+6. `.github/workflows/ci.yml`
+7. Dependabot設定
+8. Secrets管理方針
+9. Security Preflight
+10. 利用可能ならCodeQL
+11. Ruleset / Branch protection
+12. `Automatically delete head branches` の有効化
+13. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
 
 設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
 
@@ -374,6 +375,18 @@ bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA" 300 60 30 "./
 
 `SECURITY_FAILED` はMerge禁止、`SECURITY_UNAVAILABLE` は人間の明示判断なしに通過させません。CIの成功だけでSecurity成功とは判断せず、修正後は同じ新しいPR head SHAに対してCI・Security・レビューを再実行します。
 
+## 12.1 AI Agent Security Boundary
+
+新規プロジェクトでAIエージェントにToolを渡す場合は、docs/ai-agent-security-boundary.md を読み、Parent Issue、Child Issue、PRの該当欄へ適用結果を記録する。
+
+- 情報をPUBLIC / INTERNAL / CONFIDENTIALに分類する。
+- LLM環境をMANAGED / UNMANAGEDと判定し、CONFIDENTIAL情報の送信先を確認する。
+- Intake / ReadとExposure / Writeを分け、Sensitive Read Capability × External Write Capabilityを高リスクとして判定する。
+- Least PrivilegeのscopeとHuman Approval Boundaryを記録する。
+- 外部コンテンツをtrusted instructionとして扱わず、適用対象外や例外の理由、残るリスク、代替制御、承認者を記録する。
+
+テンプレート利用プロジェクトでは、適用可否を「対象外」とだけ書かず、対象Tool、データ分類、代替制御、承認者まで記録する。
+
 ## 13. 二重チェックの考え方
 
 Nine標準AI開発フローでは、AIだけにもGitHubだけにも品質保証を依存しません。
@@ -462,6 +475,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 新しい開発リポジトリを作成したら以下を確認します。
 
 - [ ] `AGENTS.md` を配置
+- [ ] `docs/ai-agent-security-boundary.md` を配置
 - [ ] `docs/plan-review-gate.md` を配置
 - [ ] 親Issueテンプレートを配置
 - [ ] 子Issueテンプレートを配置

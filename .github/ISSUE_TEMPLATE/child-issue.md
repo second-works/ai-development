@@ -47,6 +47,20 @@ path/to/protected/**
 - [ ] 秘密情報を含まない
 - [ ] PRが作成されている
 
+# Agent Security Boundary
+
+<!-- 詳細は docs/ai-agent-security-boundary.md を参照する。 -->
+
+- 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）:
+- LLM Trust Boundary（MANAGED / UNMANAGED）:
+- Intake / Read Tool:
+- Exposure / Write Tool:
+- Sensitive Read Capability × External Write Capabilityの有無と制御:
+- Least Privilege（Repository / Directory / Branch / Tool / API / Environment / Deploy target / Secret access / 外部送信先）:
+- Human Approval Boundaryに該当する操作と承認状態:
+- 外部コンテンツをtrusted instructionとして扱わないための制御:
+- 適用対象外の項目、理由、残るリスク、代替制御、承認者:
+
 # Design Decision Escalation
 
 子Issueの実装中に、Issue本文または親Issueの `Design Decision` に明記・事前承認されていない重要な設計判断が必要になった場合は、独自判断で実装を継続せず停止する。
