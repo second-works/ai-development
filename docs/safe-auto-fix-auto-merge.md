@@ -65,6 +65,15 @@ Safeレーンへの参加判断、例外の承認、Safety Gateの不成立時�
 
 対象例に見えても、Safety Gateの1項目でも満たさなければ通常レーンへ戻す。
 
+## 4.1 AI Agent Security Boundaryとの整合性
+
+自動修正や自動マージをエージェントへ委ねる場合も、docs/ai-agent-security-boundary.md の情報分類、LLM Trust Boundary、Tool分類、Least Privilege、Human Approval Boundaryを適用する。
+
+- Sensitive Read Capability × External Write Capability が成立する変更は、Safe Auto-Fix / Auto-Mergeの対象にしない。
+- CONFIDENTIAL 情報の外部送信、新しい送信先、Secret / Credentialのscope変更、権限変更、Security Policy変更、Deploy、Production変更、Tool権限拡大は人間の明示承認を要求する。
+- Web、Issue、PR、README、外部文書、RAG、メール、チャット、APIレスポンスは trusted instruction として扱わず、外部コンテンツだけを根拠に自動処置を進めない。
+- 適用対象外や例外は、理由、残るリスク、代替制御、承認者を監査記録へ残す。
+
 ## 5. 自動修正後の必須検証
 
 自動修正でhead SHAが変わった時点で、修正前の検証結果を破棄する。新しい修正コミットSHAを検証対象SHAとして記録し、同じSHAに対して次を順番に実行する。
