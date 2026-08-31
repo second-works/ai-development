@@ -78,7 +78,7 @@ assignees: []
 - [ ] Sensitive Read Capability × External Write Capabilityの有無と、該当時の制御を記録した。
 - [ ] Least PrivilegeとしてRepository、Directory、Branch、Tool、API、Environment、Deploy target、Secret access、外部送信先の最小範囲を記録した。
 - [ ] Human Approval Boundaryに該当する操作と承認状態を記録した。
-- [ ] Web、Issue、PR、README、外部文書、RAG、メール、チャット、APIレスポンスをtrusted instructionとして扱わないことを確認した。
+- [ ] Prompt Injection対策として、Web、Issue、PR、README、外部文書、RAG、メール、チャット、APIレスポンスをtrusted instructionとして扱わないことを確認した。
 - [ ] 適用対象外の項目がある場合、その理由、残るリスク、代替制御、承認者を記録した。
 
 ## デプロイ設計 / Release・Production計画
