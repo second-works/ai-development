@@ -61,6 +61,24 @@ path/to/protected/**
 - 外部コンテンツをtrusted instructionとして扱わないための制御:
 - 適用対象外の項目、理由、残るリスク、代替制御、承認者:
 
+# Harness Minimalism / ETCSLV
+
+<!-- 新しいハーネスの追加または既存ハーネスの変更では、各項目を記入する。詳細は docs/ai-development-harness-inventory.md を参照する。 -->
+
+- 対象ハーネス:
+- ETCSLV分類（Execution / Tools / Context / State / Lifecycle Hooks / Verification）:
+- 解決する失敗モード:
+- 発火条件:
+- 入力 / Context:
+- 出力 / State変更:
+- 決定論的判定へ移せるか:
+- 実行コスト / 運用負荷:
+- 重複する仕組み:
+- 安全上必須か:
+- 判定（KEEP / STRENGTHEN / SIMPLIFY / REMOVE_CANDIDATE）:
+- 削除・再評価条件:
+- 関連Issue / 正本文書:
+
 # Design Decision Escalation
 
 子Issueの実装中に、Issue本文または親Issueの `Design Decision` に明記・事前承認されていない重要な設計判断が必要になった場合は、独自判断で実装を継続せず停止する。
