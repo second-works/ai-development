@@ -43,6 +43,26 @@ extract_field_value() {
   ' <<< "$section"
 }
 
+extract_ledger_section() {
+  local id="$1"
+  awk -v id="$id" '
+    function normalize_atx(line) {
+      if (line ~ /^(### | ### |  ### |   ### |## | ## |  ## |   ## )/) {
+        sub(/^ */, "", line)
+        return line
+      }
+      return ""
+    }
+    {
+      line=normalize_atx($0)
+      if (index(line, "### " id " ") == 1) { found=1; next }
+      if (found && line ~ /^### /) { exit }
+      if (found && line ~ /^## /) { exit }
+      if (found) { print }
+    }
+  ' "$ROOT/docs/ai-development-harness-inventory.md"
+}
+
 require_ledger_fields() {
   local id="$1"
   local section
@@ -64,22 +84,7 @@ require_ledger_fields() {
     "関連Issue / 正本文書"
   )
 
-  section="$(awk -v id="$id" '
-    function normalize_atx(line) {
-      if (line ~ /^(### | ### |  ### |   ### |## | ## |  ## |   ## )/) {
-        sub(/^ */, "", line)
-        return line
-      }
-      return ""
-    }
-    {
-      line=normalize_atx($0)
-      if (index(line, "### " id " ") == 1) { found=1; next }
-      if (found && line ~ /^### /) { exit }
-      if (found && line ~ /^## /) { exit }
-      if (found) { print }
-    }
-  ' "$ROOT/docs/ai-development-harness-inventory.md")"
+  section="$(extract_ledger_section "$id")"
 
   if [[ -z "$section" ]]; then
     printf 'missing ledger section: %s\n' "$id" >&2
@@ -175,6 +180,70 @@ else
   for id in "${ledger_ids[@]}"; do
     require_ledger_fields "$id"
   done
+fi
+
+summary_rows=()
+while IFS=$'\t' read -r summary_id summary_class summary_judgment; do
+  summary_rows+=("$summary_id"$'\t'"$summary_class"$'\t'"$summary_judgment")
+done < <(awk -F'|' '
+  function trim(value) {
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+    return value
+  }
+  /^## 主要ハーネスの判定$/ { in_summary=1; next }
+  in_summary && /^## / { exit }
+  in_summary && /^\\|/ {
+    id=trim($2)
+    classification=trim($4)
+    judgment=trim($5)
+    if (id != "" && id != "ID" && id !~ /^-+$/) {
+      print id "\t" classification "\t" judgment
+    }
+  }
+' "$ROOT/docs/ai-development-harness-inventory.md")
+
+if (( ${#summary_rows[@]} == 0 )); then
+  printf 'no summary table records found\\n' >&2
+  failures=1
+else
+  summary_ids=()
+  for row in "${summary_rows[@]}"; do
+    IFS=$'\t' read -r summary_id summary_class summary_judgment <<< "$row"
+    summary_ids+=("$summary_id")
+    detail_section="$(extract_ledger_section "$summary_id")"
+    detail_class="$(extract_field_value "$detail_section" "- **ETCSLV分類**：")"
+    detail_judgment="$(extract_field_value "$detail_section" "- **判定**：")"
+
+    case "$summary_class" in
+      E) expected_class="Execution" ;;
+      T) expected_class="Tools" ;;
+      C) expected_class="Context" ;;
+      S) expected_class="State" ;;
+      L) expected_class="Lifecycle Hooks" ;;
+      V) expected_class="Verification" ;;
+      *) expected_class="$summary_class" ;;
+    esac
+    normalized_detail_judgment="${detail_judgment%。}"
+    normalized_summary_judgment="${summary_judgment%。}"
+
+    if [[ -z "$detail_section" || "$detail_class" != "$expected_class" || "$normalized_detail_judgment" != "$normalized_summary_judgment" ]]; then
+      printf 'summary/detail mismatch: %s: summary=%s/%s detail=%s/%s\\n' "$summary_id" "$summary_class" "$summary_judgment" "$detail_class" "$detail_judgment" >&2
+      failures=1
+    fi
+  done
+
+  duplicate_summary_ids="$(printf '%s\\n' "${summary_ids[@]}" | sort | uniq -d)"
+  if [[ -n "$duplicate_summary_ids" ]]; then
+    printf 'duplicate summary IDs: %s\\n' "$duplicate_summary_ids" >&2
+    failures=1
+  fi
+
+  summary_set="$(printf '%s\\n' "${summary_ids[@]}" | sed '/^\$/d' | sort -u)"
+  ledger_set="$(printf '%s\\n' "${ledger_ids[@]}" | sed '/^\$/d' | sort -u)"
+  if [[ "$summary_set" != "$ledger_set" ]]; then
+    printf 'summary/detail ID sets differ\\nsummary:\\n%s\\ndetail:\\n%s\\n' "$summary_set" "$ledger_set" >&2
+    failures=1
+  fi
 fi
 
 require_marker "docs/ai-development-harness-inventory.md" "解決する失敗モード"
