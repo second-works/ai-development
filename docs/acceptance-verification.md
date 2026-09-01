@@ -82,6 +82,17 @@ MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判�
 - 未解決事項:
 - 関連する修正Issue / 改善Issue:
 
+### Plan vs Reality
+- 計画時の主要予測 / 前提:
+- 実際の結果:
+- 失敗した前提:
+- 不要または過剰だった設計:
+- 予期せぬ問題:
+- 次の計画へ反映する教訓:
+- 代替案に対する優位性を確認できたか。確認できない場合の判定・扱い:
+
+Plan vs Realityは、実利用検証の結果をProduct Acceptedの記録として残す項目である。機能が動作していても、選択した設計・設定の価値や代替案に対する優位性が確認できない場合は、`Accepted` とせず、`Conditional`、`Not Accepted`、またはDesign Decision Escalationの対象として理由を記録する。
+
 検収を実施していない場合は、`Not run` と実施できない理由、実施予定のタイミングを記録する。`Conditional` の場合は、受入条件、期限、未解決事項を明記する。
 
 ## 6. 発見事項の分類と次の扱い
