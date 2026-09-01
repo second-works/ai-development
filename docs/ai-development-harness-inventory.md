@@ -61,6 +61,9 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | E-04 | Safe Auto-Fix / Auto-Merge | E | KEEP | docs/safe-auto-fix-auto-merge.md |
 | E-05 | Child Issue Quality Gate | E | KEEP | AGENTS.md、docs/issue-quality-check.md |
 | E-06 | Deployment Design / Release Gate | E | KEEP | docs/deployment-release-design.md、.github/workflows |
+| E-07 | RAG Architecture Standard | E | KEEP | AGENTS.md、docs/architecture/rag-guidelines.md、docs/architecture/rag-design.md |
+| E-08 | Test Design / Safe Test Deletion | E | KEEP | AGENTS.md、テスト実装、Issue / PR |
+| E-09 | Parent Issue Completion | E | KEEP | AGENTS.md、親Issue、子Issue、PR |
 | T-01 | CodexとSkills | T | SIMPLIFY | AGENTS.md、.agents/skills |
 | T-02 | GitHub Actionsと外部Tool | T | KEEP | .github/workflows、AI Agent Security Boundary |
 | C-01 | 正本文書とIssue / PR Context | C | STRENGTHEN | AGENTS.md、docs、Issue / PRテンプレート |
@@ -167,6 +170,51 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：KEEP。
 - **削除・再評価条件**：対象環境、データ、Release判定、backup・migration、Health Check、Monitoring、Rollback、人間承認を同等以上に記録・検証できる独立したRelease機構へ置換する場合に再評価する。
 - **関連Issue / 正本文書**：#56、E-06。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/deployment-release-design.md、.github/workflows、templates/verification。
+
+### E-07 RAG Architecture Standard
+
+- **ETCSLV分類**：Execution
+- **解決する失敗モード**：RAGを必要以上に複雑化し、採用Phase、Retriever / Reranker / Metadata、未採用Phase、品質指標、標準からの逸脱理由を記録しないまま構築・変更すること。また、本番RAGで引用・出典追跡、根拠整合性、ハルシネーション検証、権限制御を評価しないこと。
+- **発火条件**：RAGを新規構築または変更するとき、および本番RAGの品質・権限制御を設計するとき。
+- **入力 / Context**：RAG要件、採用Phase、Retriever、Reranker、Metadata、品質評価指標、未採用Phaseと理由、標準逸脱理由、引用・出典追跡、根拠整合性、ハルシネーション検証、権限制御。
+- **出力 / State変更**：採用構成、未採用理由、品質評価方法、標準逸脱理由、本番RAGの検証条件と設計判断の記録。
+- **決定論的判定可能か**：必須設計項目と記録の有無は機械確認できる。Phase選択、品質指標、標準逸脱の妥当性はレビューで確認する。
+- **実行コスト / 運用負荷**：RAGの新規構築・変更時に設計記録と品質評価を作成する負荷がある。高機能化による実装・運用コストを事前に比較できるため、不要な構成の導入を抑えられる。
+- **重複する仕組み**：C-01は正本文書とIssue / PR Contextを管理し、V-03はDeploy後の実利用検証を担う。E-07はRAG固有の構成選択、品質、出典、根拠、権限制御を対象とし、Context管理や実利用検収を代替しない。
+- **安全上必須か**：RAGの品質、出典追跡、権限制御、不要な複雑化を管理するために必要。Security Boundary、Human Approval Boundary、Production保護の代替ではない。
+- **判定**：KEEP。
+- **削除・再評価条件**：RAGの構成、品質、出典、根拠、ハルシネーション、権限制御、標準逸脱理由を同等以上に記録・検証できる設計ゲートへ置換する場合に再評価する。
+- **関連Issue / 正本文書**：#56、E-07。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、docs/architecture/rag-guidelines.md、docs/architecture/rag-design.md。
+
+### E-08 Test Design / Safe Test Deletion
+
+- **ETCSLV分類**：Execution
+- **解決する失敗モード**：テストの責務、適切なテスト層、検証責務の移行先を確認せず、速度・コード量・重複だけを理由にテストを削除または統合し、安全性確認や重要な回帰を失うこと。
+- **発火条件**：テストを追加、更新、削除、統合するとき。特に既存テストを削除・統合し、検証責務を別テストへ移すとき。
+- **入力 / Context**：対象テスト、保証する検証責務、テスト層、移行先テスト、認証・認可、入力検証、Repository境界、重要な回帰、Happy Path / Integration / E2E、削除理由、Issue / PR。
+- **出力 / State変更**：テスト層の選択、検証責務の移行先、削除・統合理由、新しいテストの成功確認、安全網の維持、PRまたはIssueへの記録。
+- **決定論的判定可能か**：テスト実行結果、対象ファイル、削除差分、移行先の存在は機械確認できる。責務の同等性、不要化の合理性、安全網の十分性はレビューで確認する。
+- **実行コスト / 運用負荷**：テスト追加・更新・削除時の責務確認と検証実行が必要。新しいテストを先に成功させる負荷はあるが、品質ゲートの弱体化と回帰の見逃しを防ぐ。
+- **重複する仕組み**：L-01はCIでテスト結果を検証し、E-08はテスト責務の設計と削除・統合時の安全条件を確認する。L-01の実行結果やV-03の実利用検証を代替しない。
+- **安全上必須か**：テスト削除・統合による検証責務の消失を防ぐために必要。
+- **判定**：KEEP。
+- **削除・再評価条件**：テスト責務、移行先、削除理由、安全性確認、新しいテストの成功を同等以上に記録・検証できる仕組みへ置換する場合に再評価する。
+- **関連Issue / 正本文書**：#56、E-08。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、テスト実装、Issue / PR。
+
+### E-09 Parent Issue Completion
+
+- **ETCSLV分類**：Execution
+- **解決する失敗モード**：子IssueのPRが自動Closeされたことだけを根拠に、親Issueのチェックボックス、全体完了条件、CI、Security、AIレビュー、手動確認、残課題、人間の最終確認を照合せず親IssueをCloseすること。
+- **発火条件**：親IssueをCloseするとき、および子IssueのMerge / Close後に親Issue全体の完了を確認するとき。
+- **入力 / Context**：親Issue、子Issue、PR、Merge / Close状態、チェックボックス、全体完了条件、CI、Security、AIレビュー、手動確認、warning / deprecation、後続メンテナンスIssue。
+- **出力 / State変更**：子Issueの完了一覧、親Issueチェックボックスの最終状態、全体完了条件との照合結果、残課題の記録、親IssueのClose可否、人間の最終確認。
+- **決定論的判定可能か**：子IssueとPRの状態、チェックボックス、CI・Security・レビュー結果は機械確認できる。全体完了条件、残課題、人間の最終確認はレビューで確認する。
+- **実行コスト / 運用負荷**：親IssueをCloseする前の一回の状態照合。子Issue、PR、CI、Security、レビュー、手動確認を確認する負荷はあるが、未完了の親Issueを誤ってCloseすることを防ぐ。
+- **重複する仕組み**：S-03はImplementation、Deploy、Product Acceptanceの状態を分離し、V-03は実利用検証と検収を担う。E-09は親Issueの子Issue完了、チェックボックス、全体完了条件、残課題、人間確認を担い、個別PRのCIや検収を代替しない。
+- **安全上必須か**：親Issueの完了状態と監査記録を正確に保つために必要。
+- **判定**：KEEP。
+- **削除・再評価条件**：子Issue、PR、完了条件、残課題、CI・Security・レビュー、手動確認を同等以上に照合し、親IssueのClose可否を記録できる仕組みへ置換する場合に再評価する。
+- **関連Issue / 正本文書**：#56、E-09。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、親Issue、子Issue、PR。
 
 ### T-01 CodexとSkills
 
