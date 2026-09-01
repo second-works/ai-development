@@ -44,7 +44,7 @@ ChatGPTは開発マネージャー兼設計担当として使う。
 
 計画書から親Issue / 子Issueへ変換する前に、[docs/plan-review-gate.md](plan-review-gate.md) に従ってPlan Review Gateを実施する。
 
-PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_DECISIONの場合はIssue化・実装開始を止めて既存のDesign Decisionへ接続する。NOT_APPLICABLEの場合は省略理由を記録する。Plan Reviewは計画書の全面書き換え、一問一答の強制、既存のDesign Decision Escalationの置換ではない。
+PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_DECISIONの場合はIssue化・実装開始を止めて既存のDesign Decisionへ接続する。NOT_APPLICABLEの場合は省略理由を記録する。Plan Reviewは計画書の全面書き換え、一問一答の強制、既存のDesign Decision Escalationの置換ではない。採用案の反証（失敗原因、成立条件、単純な代替案、不利な証拠、期待の先取り）も既存Plan Reviewの記録として確認する。
 
 ## 3. 親Issue
 
@@ -172,7 +172,7 @@ CloudflareでDockerが不要な構成、Home PC / VPSのself-hosted runnerとDoc
 永続データ、Secrets、backup、migration、Rollbackとデータ互換性をProduction計画に含める。
 詳細な記録項目は [docs/deployment-release-design.md](deployment-release-design.md) を参照する。
 
-Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオを実行し、計画時の目的・成功条件と照合して検収判定を行う。`Implementation Done`、`Deployed`、`Product Accepted` は別状態として記録する。詳細な検収計画・結果・発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) に従う。
+Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオを実行し、計画時の目的・成功条件と照合して検収判定を行う。Plan Reviewで整理した主要予測・失敗仮説は、実利用検証で実績・失敗した前提・不要 / 過剰設計・予期せぬ問題・次回の教訓と照合する。これは既存のProduct Accepted記録項目であり、新しいGateや台帳を追加しない。`Implementation Done`、`Deployed`、`Product Accepted` は別状態として記録する。詳細な検収計画・結果・発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) に従う。
 
 ## 8. GitHub Actions CI
 
