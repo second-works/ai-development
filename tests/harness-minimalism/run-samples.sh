@@ -192,7 +192,7 @@ done < <(awk -F'|' '
   }
   /^## 主要ハーネスの判定$/ { in_summary=1; next }
   in_summary && /^## / { exit }
-  in_summary && /^\\|/ {
+  in_summary && /^\|/ {
     id=trim($2)
     classification=trim($4)
     judgment=trim($5)
@@ -203,7 +203,7 @@ done < <(awk -F'|' '
 ' "$ROOT/docs/ai-development-harness-inventory.md")
 
 if (( ${#summary_rows[@]} == 0 )); then
-  printf 'no summary table records found\\n' >&2
+  printf 'no summary table records found\n' >&2
   failures=1
 else
   summary_ids=()
@@ -227,25 +227,24 @@ else
     normalized_summary_judgment="${summary_judgment%。}"
 
     if [[ -z "$detail_section" || "$detail_class" != "$expected_class" || "$normalized_detail_judgment" != "$normalized_summary_judgment" ]]; then
-      printf 'summary/detail mismatch: %s: summary=%s/%s detail=%s/%s\\n' "$summary_id" "$summary_class" "$summary_judgment" "$detail_class" "$detail_judgment" >&2
+      printf 'summary/detail mismatch: %s: summary=%s/%s detail=%s/%s\n' "$summary_id" "$summary_class" "$summary_judgment" "$detail_class" "$detail_judgment" >&2
       failures=1
     fi
   done
 
-  duplicate_summary_ids="$(printf '%s\\n' "${summary_ids[@]}" | sort | uniq -d)"
+  duplicate_summary_ids="$(printf '%s\n' "${summary_ids[@]}" | sort | uniq -d)"
   if [[ -n "$duplicate_summary_ids" ]]; then
-    printf 'duplicate summary IDs: %s\\n' "$duplicate_summary_ids" >&2
+    printf 'duplicate summary IDs: %s\n' "$duplicate_summary_ids" >&2
     failures=1
   fi
 
-  summary_set="$(printf '%s\\n' "${summary_ids[@]}" | sed '/^\$/d' | sort -u)"
-  ledger_set="$(printf '%s\\n' "${ledger_ids[@]}" | sed '/^\$/d' | sort -u)"
+  summary_set="$(printf '%s\n' "${summary_ids[@]}" | sed '/^$/d' | sort -u)"
+  ledger_set="$(printf '%s\n' "${ledger_ids[@]}" | sed '/^$/d' | sort -u)"
   if [[ "$summary_set" != "$ledger_set" ]]; then
-    printf 'summary/detail ID sets differ\\nsummary:\\n%s\\ndetail:\\n%s\\n' "$summary_set" "$ledger_set" >&2
+    printf 'summary/detail ID sets differ\nsummary:\n%s\ndetail:\n%s\n' "$summary_set" "$ledger_set" >&2
     failures=1
   fi
 fi
-
 require_marker "docs/ai-development-harness-inventory.md" "解決する失敗モード"
 require_marker "docs/ai-development-harness-inventory.md" "発火条件"
 require_marker "docs/ai-development-harness-inventory.md" "入力 / Context"
