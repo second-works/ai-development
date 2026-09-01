@@ -22,17 +22,18 @@
 
 1. `AGENTS.md`
 2. `docs/ai-agent-security-boundary.md`
-3. `.github/ISSUE_TEMPLATE/parent-issue.md`
-4. `.github/ISSUE_TEMPLATE/child-issue.md`
-5. `.github/pull_request_template.md`
-6. `.github/workflows/ci.yml`
-7. Dependabot設定
-8. Secrets管理方針
-9. Security Preflight
-10. 利用可能ならCodeQL
-11. Ruleset / Branch protection
-12. `Automatically delete head branches` の有効化
-13. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
+3. `docs/ai-development-harness-inventory.md`
+4. `.github/ISSUE_TEMPLATE/parent-issue.md`
+5. `.github/ISSUE_TEMPLATE/child-issue.md`
+6. `.github/pull_request_template.md`
+7. `.github/workflows/ci.yml`
+8. Dependabot設定
+9. Secrets管理方針
+10. Security Preflight
+11. 利用可能ならCodeQL
+12. Ruleset / Branch protection
+13. `Automatically delete head branches` の有効化
+14. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
 
 設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
 
@@ -387,6 +388,16 @@ bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA" 300 60 30 "./
 
 テンプレート利用プロジェクトでは、適用可否を「対象外」とだけ書かず、対象Tool、データ分類、代替制御、承認者まで記録する。
 
+## 12.2 Harness MinimalismとETCSLV台帳
+
+AI開発テンプレートへ新しいハーネスを追加する前に、docs/ai-development-harness-inventory.md へ失敗モード、発火条件、Context、State、決定論的判定、コスト、重複、安全上の必須性、判定、削除・再評価条件を記録する。
+
+既存ハーネスを削除または簡素化する場合は、対象の受入条件、代替制御、影響範囲、実測結果、対象SHAを記録する。
+新規プロジェクトでは、台帳を常時Contextへ投入せず、追加または変更するハーネスに関係する項目を参照する。
+
+モデル、Codex、Tool、CIの能力向上だけを理由にSecurity Boundary、Human Approval Boundary、Production保護を弱めない。
+対象外やREMOVE_CANDIDATEの判定は、失敗モードと代替制御を確認した別IssueまたはPRで決定する。
+
 ## 13. 二重チェックの考え方
 
 Nine標準AI開発フローでは、AIだけにもGitHubだけにも品質保証を依存しません。
@@ -476,6 +487,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 
 - [ ] `AGENTS.md` を配置
 - [ ] `docs/ai-agent-security-boundary.md` を配置
+- [ ] `docs/ai-development-harness-inventory.md` を配置
 - [ ] `docs/plan-review-gate.md` を配置
 - [ ] 親Issueテンプレートを配置
 - [ ] 子Issueテンプレートを配置
