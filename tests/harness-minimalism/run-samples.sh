@@ -42,7 +42,7 @@ require_ledger_fields() {
     "安全上必須か"
     "判定"
     "削除・再評価条件"
-    "関連Issue / 根拠レコード"
+    "関連Issue / 正本文書"
   )
 
   section="$(awk -v id="$id" '
@@ -70,7 +70,7 @@ require_ledger_fields() {
     fi
   done
 
-  if ! grep -F -- "- **関連Issue / 根拠レコード**：" <<< "$section" | grep -Eq "#[0-9]+"; then
+  if ! grep -F -- "- **関連Issue / 正本文書**：" <<< "$section" | grep -Eq "#[0-9]+"; then
     printf 'missing ledger Issue reference: %s: #<number>\\n' "$id" >&2
     failures=1
   fi
@@ -91,7 +91,7 @@ if (( ${#ledger_ids[@]} == 0 )); then
   printf 'no ledger records found\\n' >&2
   failures=1
 else
-  duplicate_ids="$(printf '%s\\n' "${ledger_ids[@]}" | sort | uniq -d)"
+  duplicate_ids="$(printf '%s\n' "${ledger_ids[@]}" | sort | uniq -d)"
   if [[ -n "$duplicate_ids" ]]; then
     printf 'duplicate ledger IDs: %s\\n' "$duplicate_ids" >&2
     failures=1
