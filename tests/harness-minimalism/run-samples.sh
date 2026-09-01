@@ -59,8 +59,13 @@ require_ledger_fields() {
   fi
 
   for marker in "${markers[@]}"; do
-    if ! grep -Fq -- "- **${marker}**：" <<< "$section"; then
-      printf 'missing ledger field: %s: %s\\n' "$id" "$marker" >&2
+    local prefix="- **${marker}**："
+    local field_line
+    local field_value
+    field_line="$(grep -F -- "$prefix" <<< "$section" | head -n 1 || true)"
+    field_value="${field_line#"$prefix"}"
+    if [[ -z "$field_line" ]] || ! grep -q '[^[:space:]]' <<< "$field_value"; then
+      printf 'missing or empty ledger field: %s: %s\\n' "$id" "$marker" >&2
       failures=1
     fi
   done
@@ -86,6 +91,12 @@ if (( ${#ledger_ids[@]} == 0 )); then
   printf 'no ledger records found\\n' >&2
   failures=1
 else
+  duplicate_ids="$(printf '%s\\n' "${ledger_ids[@]}" | sort | uniq -d)"
+  if [[ -n "$duplicate_ids" ]]; then
+    printf 'duplicate ledger IDs: %s\\n' "$duplicate_ids" >&2
+    failures=1
+  fi
+
   for id in "${ledger_ids[@]}"; do
     require_ledger_fields "$id"
   done
