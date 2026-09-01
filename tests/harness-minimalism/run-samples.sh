@@ -43,6 +43,21 @@ extract_field_value() {
   ' <<< "$section"
 }
 
+count_field_occurrences() {
+  local section="$1"
+  local prefix="$2"
+  awk -v prefix="$prefix" '
+    {
+      line=$0
+      sub(/^[[:space:]]+/, "", line)
+      if (index(line, prefix) == 1) {
+        count++
+      }
+    }
+    END { print count + 0 }
+  ' <<< "$section"
+}
+
 extract_ledger_section() {
   local id="$1"
   awk -v id="$id" '
@@ -93,7 +108,15 @@ require_ledger_fields() {
   fi
 
   for marker in "${markers[@]}"; do
-    field_value="$(extract_field_value "$section" "- **${marker}**：")"
+    field_prefix="- **${marker}**："
+    field_count="$(count_field_occurrences "$section" "$field_prefix")"
+    if [[ "$field_count" -ne 1 ]]; then
+      printf 'ledger field must appear exactly once: %s: %s (found %s)\n' "$id" "$marker" "$field_count" >&2
+      failures=1
+      continue
+    fi
+
+    field_value="$(extract_field_value "$section" "$field_prefix")"
     if [[ -z "$field_value" ]] || ! grep -q '[^[:space:]]' <<< "$field_value"; then
       printf 'missing or empty ledger field: %s: %s\n' "$id" "$marker" >&2
       failures=1
