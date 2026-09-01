@@ -73,24 +73,23 @@ require_ledger_fields() {
 
 require_marker "docs/ai-development-harness-inventory.md" "## Harness Minimalism"
 require_marker "docs/ai-development-harness-inventory.md" "ETCSLV"
-require_ledger_fields "E-01"
-require_ledger_fields "E-02"
-require_ledger_fields "E-03"
-require_ledger_fields "E-04"
-require_ledger_fields "T-01"
-require_ledger_fields "T-02"
-require_ledger_fields "C-01"
-require_ledger_fields "C-02"
-require_ledger_fields "S-01"
-require_ledger_fields "S-02"
-require_ledger_fields "S-03"
-require_ledger_fields "L-01"
-require_ledger_fields "L-02a"
-require_ledger_fields "L-02b"
-require_ledger_fields "L-02c"
-require_ledger_fields "V-01"
-require_ledger_fields "V-02"
-require_ledger_fields "V-03"
+ledger_ids=()
+while IFS= read -r id; do
+  [[ -n "$id" ]] && ledger_ids+=("$id")
+done < <(awk '
+  /^## 台帳$/ { in_ledger=1; next }
+  in_ledger && /^## / { exit }
+  in_ledger && /^### [^ ]+ / { print $2 }
+' "$ROOT/docs/ai-development-harness-inventory.md")
+
+if (( ${#ledger_ids[@]} == 0 )); then
+  printf 'no ledger records found\\n' >&2
+  failures=1
+else
+  for id in "${ledger_ids[@]}"; do
+    require_ledger_fields "$id"
+  done
+fi
 require_marker "docs/ai-development-harness-inventory.md" "解決する失敗モード"
 require_marker "docs/ai-development-harness-inventory.md" "発火条件"
 require_marker "docs/ai-development-harness-inventory.md" "入力 / Context"
@@ -98,6 +97,10 @@ require_marker "docs/ai-development-harness-inventory.md" "出力 / State変更"
 require_marker "docs/ai-development-harness-inventory.md" "決定論的判定可能か"
 require_marker "docs/ai-development-harness-inventory.md" "実行コスト / 運用負荷"
 require_marker "docs/ai-development-harness-inventory.md" "重複する仕組み"
+if grep -Fq -- "上記の実行コスト / 運用負荷欄に記載した比較対象" "$ROOT/docs/ai-development-harness-inventory.md"; then
+  printf 'generic overlap record remains\n' >&2
+  failures=1
+fi
 require_marker "docs/ai-development-harness-inventory.md" "安全上必須か"
 require_marker "docs/ai-development-harness-inventory.md" "KEEP / STRENGTHEN / SIMPLIFY / REMOVE_CANDIDATE"
 require_marker "docs/ai-development-harness-inventory.md" "削除・再評価条件"
