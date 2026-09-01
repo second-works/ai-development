@@ -59,14 +59,14 @@ require_ledger_fields() {
   fi
 
   for marker in "${markers[@]}"; do
-    if ! grep -Fq -- "$marker" <<< "$section"; then
+    if ! grep -Fq -- "- **${marker}**：" <<< "$section"; then
       printf 'missing ledger field: %s: %s\\n' "$id" "$marker" >&2
       failures=1
     fi
   done
 
-  if ! grep -Fq -- "#56" <<< "$section"; then
-    printf 'missing ledger evidence record: %s: #56\\n' "$id" >&2
+  if ! grep -Eq -- '^- **関連Issue / 根拠レコード**：.*#[0-9]+' <<< "$section"; then
+    printf 'missing ledger Issue reference: %s: #<number>\\n' "$id" >&2
     failures=1
   fi
 }
