@@ -388,6 +388,16 @@ bash "$RUNTIME_DIR/scripts/wait-checks.sh" "$REPO" "$EXPECTED_SHA" 300 60 30 "./
 
 テンプレート利用プロジェクトでは、適用可否を「対象外」とだけ書かず、対象Tool、データ分類、代替制御、承認者まで記録する。
 
+## 12.2 Harness MinimalismとETCSLV台帳
+
+AI開発テンプレートへ新しいハーネスを追加する前に、docs/ai-development-harness-inventory.md へ失敗モード、発火条件、Context、State、決定論的判定、コスト、重複、安全上の必須性、判定、削除・再評価条件を記録する。
+
+既存ハーネスを削除または簡素化する場合は、対象の受入条件、代替制御、影響範囲、実測結果、対象SHAを記録する。
+新規プロジェクトでは、台帳を常時Contextへ投入せず、追加または変更するハーネスに関係する項目を参照する。
+
+モデル、Codex、Tool、CIの能力向上だけを理由にSecurity Boundary、Human Approval Boundary、Production保護を弱めない。
+対象外やREMOVE_CANDIDATEの判定は、失敗モードと代替制御を確認した別IssueまたはPRで決定する。
+
 ## 13. 二重チェックの考え方
 
 Nine標準AI開発フローでは、AIだけにもGitHubだけにも品質保証を依存しません。
