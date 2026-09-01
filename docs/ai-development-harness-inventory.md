@@ -89,8 +89,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：追跡可能性と変更範囲の制御に必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：IssueとPRの対応を別の機械的な方法で同等以上に追跡できる場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、E-01。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：AGENTS.md、Issue / PRテンプレート。
+- **関連Issue / 正本文書**：#56、E-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、Issue / PRテンプレート。
 
 ### E-02 Plan Review Gate
 
@@ -105,8 +104,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：未決定のまま実装を始めないために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：計画の未決定事項を同等の証拠でIssue化前に確認できる仕組みが整った場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、E-02。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：docs/plan-review-gate.md。
+- **関連Issue / 正本文書**：#56、E-02。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/plan-review-gate.md。
 
 ### E-03 Design DecisionとEscalation
 
@@ -121,8 +119,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：仕様のない権限、データ、Production変更を止めるために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：設計判断の承認と停止を同等に追跡できる運用へ置き換える場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、E-03。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：Issueテンプレート、AGENTS.md。
+- **関連Issue / 正本文書**：#56、E-03。Issue #56の監査条件とこの項目の判定を追跡する。 正本：Issueテンプレート、AGENTS.md。
 
 ### E-04 Safe Auto-Fix / Auto-Merge
 
@@ -137,8 +134,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：自動化の権限範囲を制御するために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：安全条件、停止条件、監査記録を同等に保証できる自動化へ置換する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、E-04。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：docs/safe-auto-fix-auto-merge.md。
+- **関連Issue / 正本文書**：#56、E-04。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/safe-auto-fix-auto-merge.md。
 
 ### T-01 CodexとSkills
 
@@ -153,8 +149,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：個々のSkillは一律に必須ではない。PR修正のSHA管理など、追跡可能性を担う契約は維持する。
 - **判定**：SIMPLIFY。
 - **削除・再評価条件**：対象Skillに固有の失敗モード、再利用、検証上の効果がなくなった場合にREMOVE_CANDIDATEとして再評価する。
-- **関連Issue / 根拠レコード**：#56、T-01。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：AGENTS.md、.agents/skills/pr-review-fix/SKILL.md。
+- **関連Issue / 正本文書**：#56、T-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、.agents/skills/pr-review-fix/SKILL.md。
 
 ### T-02 GitHub Actionsと外部Tool
 
@@ -169,8 +164,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：Least Privilege、Security Boundary、Production保護に必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：許可範囲、監査、失敗時の停止を同等に保証できるToolへ置換する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、T-02。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：docs/ai-agent-security-boundary.md、GitHub workflow。
+- **関連Issue / 正本文書**：#56、T-02。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/ai-agent-security-boundary.md、GitHub workflow。
 
 ### C-01 正本文書とIssue / PR Context
 
@@ -185,8 +179,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：仕様と安全条件の一貫性に必要。
 - **判定**：STRENGTHEN。
 - **削除・再評価条件**：必要なContextをJIT取得でき、正本と参照の整合を契約テストで確認できる状態になった場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、C-01。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：AGENTS.md、docs、Issue / PRテンプレート。
+- **関連Issue / 正本文書**：#56、C-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、docs、Issue / PRテンプレート。
 
 ### C-02 Review Context
 
@@ -201,8 +194,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：レビューの再現性には必要だが、記録の全文複製は不要。
 - **判定**：SIMPLIFY。
 - **削除・再評価条件**：対象SHA、Issue範囲、指摘の因果を別の追跡可能な記録で保持できる場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、C-02。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：PRテンプレート、Review Evidence Contract。
+- **関連Issue / 正本文書**：#56、C-02。Issue #56の監査条件とこの項目の判定を追跡する。 正本：PRテンプレート、Review Evidence Contract。
 
 ### S-01 Issue、PR、head SHA
 
@@ -217,8 +209,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：古い検証結果の誤使用を防ぐために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：検証結果と差分の同一性を同等に証明できる仕組みへ置換する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、S-01。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：PR、Git履歴、CI結果。
+- **関連Issue / 正本文書**：#56、S-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：PR、Git履歴、CI結果。
 
 ### S-02 FOLLOW-UPとDesign Decision履歴
 
@@ -233,8 +224,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：未対応を消失させず、修正範囲を広げないために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：IssueとPRの状態から未対応事項を漏れなく復元できる場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、S-02。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：docs/review-followups.md、Issue。
+- **関連Issue / 正本文書**：#56、S-02。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/review-followups.md、Issue。
 
 ### S-03 Implementation、Deploy、Product Acceptance状態
 
@@ -249,8 +239,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：Production変更と利用者受入を混同しないために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：状態遷移を同等以上に表現できる構造化Stateへ移行する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、S-03。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：Issue、PR、docs/acceptance-verification.md。
+- **関連Issue / 正本文書**：#56、S-03。Issue #56の監査条件とこの項目の判定を追跡する。 正本：Issue、PR、docs/acceptance-verification.md。
 
 ### L-01 verify.shとCI
 
@@ -265,8 +254,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：変更の機械的な再検証に必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：同等の独立検証環境と再現可能な結果を持つ仕組みへ置換する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、L-01。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：templates/verification、.github/workflows/ci.yml。
+- **関連Issue / 正本文書**：#56、L-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：templates/verification、.github/workflows/ci.yml。
 
 ### L-02a Security Preflight
 
@@ -281,8 +269,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：Security Boundary、Least Privilege、Human Approval、Production保護を維持するために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：対象SHA、許可範囲、失敗時停止、監査記録を同等以上に保証するSecurity機構へ移行する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、L-02a。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：templates/security、docs/ai-agent-security-boundary.md。
+- **関連Issue / 正本文書**：#56、L-02a。Issue #56の監査条件とこの項目の判定を追跡する。 正本：templates/security、docs/ai-agent-security-boundary.md。
 
 ### L-02b CodeQL
 
@@ -297,8 +284,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：コード上の既知の脆弱性を検出するために必要。利用不能時の扱いも安全条件として維持する。
 - **判定**：KEEP。
 - **削除・再評価条件**：対象言語、exact SHA、失敗時の停止、解析結果の監査を同等以上に保証するコード解析へ移行する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、L-02b。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：GitHub Code Scanning、docs/github-repository-security-baseline.md。
+- **関連Issue / 正本文書**：#56、L-02b。Issue #56の監査条件とこの項目の判定を追跡する。 正本：GitHub Code Scanning、docs/github-repository-security-baseline.md。
 
 ### L-02c Dependabot
 
@@ -313,8 +299,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：依存由来の既知脆弱性を管理するために必要。自動更新PRの採用は人間レビューとCIを経る。
 - **判定**：KEEP。
 - **削除・再評価条件**：Dependency Graph、脆弱性情報、更新PR、レビュー記録を同等以上に保証する依存管理機構へ移行する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、L-02c。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：GitHub Dependabot、docs/github-repository-security-baseline.md。
+- **関連Issue / 正本文書**：#56、L-02c。Issue #56の監査条件とこの項目の判定を追跡する。 正本：GitHub Dependabot、docs/github-repository-security-baseline.md。
 
 ### V-01 Codex Code Review
 
@@ -329,8 +314,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：Issue仕様と差分の対応を独立に確認するために必要。
 - **判定**：SIMPLIFY。
 - **削除・再評価条件**：Issue受入条件、仕様、Security、変更因果を同等に検証できる別のレビュー契約が成立した場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、V-01。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：PR、AGENTS.md、レビュー履歴。
+- **関連Issue / 正本文書**：#56、V-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：PR、AGENTS.md、レビュー履歴。
 
 ### V-02 Review Evidence ContractとP2収束
 
@@ -345,8 +329,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：誤った修正範囲拡大と見逃しを分けるために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：同じ証拠、分類、停止、再レビューを同等に保証する契約へ移行する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、V-02。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：AGENTS.md、.agents/skills/pr-review-fix。
+- **関連Issue / 正本文書**：#56、V-02。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、.agents/skills/pr-review-fix。
 
 ### V-03 Acceptance Verification
 
@@ -361,8 +344,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：Product Acceptanceを実装完了と混同しないために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：利用者の目的と成功条件を同等に確認できる運用へ移行する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、V-03。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：docs/acceptance-verification.md。
+- **関連Issue / 正本文書**：#56、V-03。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/acceptance-verification.md。
 
 ## 削除候補と簡素化候補
 
