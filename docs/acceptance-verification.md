@@ -91,7 +91,7 @@ MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判�
 - 次の計画へ反映する教訓:
 - 代替案に対する優位性を確認できたか。確認できない場合の判定・扱い:
 
-Plan vs Realityは、実利用検証の結果をProduct Acceptedの記録として残す項目である。機能が動作していても、選択した設計・設定の価値や代替案に対する優位性の確認が計画時の目的・成功条件に含まれる場合、その優位性が確認できなければ `Accepted` とせず、`Conditional`、`Not Accepted`、またはDesign Decision Escalationの対象として理由を記録する。比較が計画上の対象外、または低リスク変更として対象外理由と扱いを事前定義していた場合は、その定義に従って `Accepted` を含む検収判定を行う。
+Plan vs Realityは、実利用検証の結果をProduct Acceptedの記録として残す項目である。機能が動作していても、選択した設計・設定の価値や代替案に対する優位性の確認が計画時の目的・成功条件に含まれる場合、その優位性が確認できなければ `Accepted` とせず、`Conditional`、`Not Accepted`、またはDesign Decision Escalationの対象として理由を記録する。比較が計画上の対象外、または低リスク変更として対象外理由と扱いを事前定義していた場合は、その定義に従って `Accepted` を含む検収判定を行う。 計画時に定義した設計判断の失敗観測または価値なし条件が実利用で成立した場合は、目的・成功条件への重複記載がなくても、検収結果を `Not Accepted` または `Conditional` とし、設計前提そのものの不適合ならDesign Decision Escalationへ接続する。
 
 検収を実施していない場合は、`Not run` と実施できない理由、実施予定のタイミングを記録する。`Conditional` の場合は、受入条件、期限、未解決事項を明記する。
 
