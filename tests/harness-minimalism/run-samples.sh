@@ -72,7 +72,7 @@ require_ledger_fields() {
   ' "$ROOT/docs/ai-development-harness-inventory.md")"
 
   if [[ -z "$section" ]]; then
-    printf 'missing ledger section: %s\\n' "$id" >&2
+    printf 'missing ledger section: %s\n' "$id" >&2
     failures=1
     return
   fi
@@ -80,7 +80,7 @@ require_ledger_fields() {
   for marker in "${markers[@]}"; do
     field_value="$(extract_field_value "$section" "- **${marker}**：")"
     if [[ -z "$field_value" ]] || ! grep -q '[^[:space:]]' <<< "$field_value"; then
-      printf 'missing or empty ledger field: %s: %s\\n' "$id" "$marker" >&2
+      printf 'missing or empty ledger field: %s: %s\n' "$id" "$marker" >&2
       failures=1
       continue
     fi
@@ -90,7 +90,7 @@ require_ledger_fields() {
         case "$field_value" in
           Execution|Tools|Context|State|"Lifecycle Hooks"|Verification) ;;
           *)
-            printf 'invalid ETCSLV classification: %s: %s\\n' "$id" "$field_value" >&2
+            printf 'invalid ETCSLV classification: %s: %s\n' "$id" "$field_value" >&2
             failures=1
             ;;
         esac
@@ -100,7 +100,7 @@ require_ledger_fields() {
         case "$normalized_value" in
           KEEP|STRENGTHEN|SIMPLIFY|REMOVE_CANDIDATE) ;;
           *)
-            printf 'invalid ledger judgment: %s: %s\\n' "$id" "$field_value" >&2
+            printf 'invalid ledger judgment: %s: %s\n' "$id" "$field_value" >&2
             failures=1
             ;;
         esac
@@ -110,7 +110,7 @@ require_ledger_fields() {
 
   field_value="$(extract_field_value "$section" "- **関連Issue / 正本文書**：")"
   if ! grep -Eq '#[0-9]+' <<< "$field_value"; then
-    printf 'missing ledger Issue reference: %s: #<number>\\n' "$id" >&2
+    printf 'missing ledger Issue reference: %s: #<number>\n' "$id" >&2
     failures=1
   fi
 }
@@ -127,7 +127,7 @@ done < <(awk '
 ' "$ROOT/docs/ai-development-harness-inventory.md")
 
 if (( ${#ledger_headings[@]} == 0 )); then
-  printf 'no ledger records found\\n' >&2
+  printf 'no ledger records found\n' >&2
   failures=1
 else
   ledger_ids=()
@@ -135,20 +135,20 @@ else
     id="${heading%% *}"
     name="${heading#* }"
     if [[ -z "$heading" || "$heading" == "$id" || -z "$id" || -z "$name" ]]; then
-      printf 'ledger heading must include an ID and name: ### %s\\n' "$heading" >&2
+      printf 'ledger heading must include an ID and name: ### %s\n' "$heading" >&2
       failures=1
       continue
     fi
     if [[ ! "$id" =~ ^[A-Z]+-[0-9]+[a-z]*$ ]]; then
-      printf 'invalid ledger ID: %s\\n' "$id" >&2
+      printf 'invalid ledger ID: %s\n' "$id" >&2
       failures=1
     fi
     ledger_ids+=("$id")
   done
 
-  duplicate_ids="$(printf '%s\\n' "${ledger_ids[@]}" | sort | uniq -d)"
+  duplicate_ids="$(printf '%s\n' "${ledger_ids[@]}" | sort | uniq -d)"
   if [[ -n "$duplicate_ids" ]]; then
-    printf 'duplicate ledger IDs: %s\\n' "$duplicate_ids" >&2
+    printf 'duplicate ledger IDs: %s\n' "$duplicate_ids" >&2
     failures=1
   fi
 
