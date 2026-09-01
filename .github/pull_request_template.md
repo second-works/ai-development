@@ -72,6 +72,24 @@ Closes #
 - Prompt Injection対策として外部コンテンツをtrusted instructionとして扱わないための制御:
 - 適用対象外または例外の理由、残るリスク、代替制御、承認者:
 
+# Harness Minimalism / ETCSLV
+
+<!-- ハーネスを追加または変更したPRでは、台帳の該当項目と今回の判定を記録する。詳細は docs/ai-development-harness-inventory.md を参照する。 -->
+
+- ハーネスの追加・変更:
+- 対象ハーネス / 台帳ID:
+- ETCSLV分類:
+- 解決する失敗モードと発火条件:
+- 入力 / Context:
+- 出力 / State変更:
+- 決定論的判定へ移せるか:
+- 実行コスト / 運用負荷:
+- 重複する仕組み:
+- 安全上必須か:
+- 判定（KEEP / STRENGTHEN / SIMPLIFY / REMOVE_CANDIDATE）:
+- 削除・再評価条件:
+- 関連Issue / 正本文書:
+
 # Review Evidence Contract
 
 P0 / P1、および `BLOCKING` 候補のP2は、以下を根拠付きで記録する。再現可能な問題は、可能な限り修正前に失敗し修正後に成功するテストまたは再現手順を残す。実行再現が困難な場合は決定的な静的根拠を記録する。
