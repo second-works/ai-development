@@ -30,7 +30,12 @@ for needle in \
   'deployment-release-design.md' \
   'acceptance-verification.md' \
   'Issue #30' \
-  '一問一答形式を固定しない'; do
+  '一問一答形式を固定しない' \
+  '反証レビュー（既存Plan Reviewの一部）' \
+  'この計画が失敗するとしたら、主な原因は何か。' \
+  '同じ目的を、より単純な代替案で達成できないか。' \
+  '採用案に不利な証拠、比較対象、既存手法を見落としていないか。' \
+  '期待する結果を先取りしていないか'; do
   assert_contains "$doc" "$needle"
 done
 
