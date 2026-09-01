@@ -65,7 +65,7 @@ require_ledger_fields() {
     fi
   done
 
-  if ! grep -Eq -- '^- \\*\\*関連Issue / 根拠レコード\\*\\*：.*#[0-9]+' <<< "$section"; then
+  if ! grep -F -- "- **関連Issue / 根拠レコード**：" <<< "$section" | grep -Eq "#[0-9]+"; then
     printf 'missing ledger Issue reference: %s: #<number>\\n' "$id" >&2
     failures=1
   fi
