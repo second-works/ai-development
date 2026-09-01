@@ -26,8 +26,69 @@ require_section_marker() {
   fi
 }
 
+require_ledger_fields() {
+  local id="$1"
+  local section
+  local marker
+  local markers=(
+    "ETCSLV分類"
+    "解決する失敗モード"
+    "発火条件"
+    "入力 / Context"
+    "出力 / State変更"
+    "決定論的判定可能か"
+    "実行コスト / 運用負荷"
+    "重複する仕組み"
+    "安全上必須か"
+    "判定"
+    "削除・再評価条件"
+    "関連Issue / 根拠レコード"
+  )
+
+  section="$(awk -v id="$id" '
+    index($0, "### " id " ") == 1 { found=1; next }
+    found && /^### / { exit }
+    found && /^## / { exit }
+    found { print }
+  ' "$ROOT/docs/ai-development-harness-inventory.md")"
+
+  if [[ -z "$section" ]]; then
+    printf 'missing ledger section: %s\\n' "$id" >&2
+    failures=1
+    return
+  fi
+
+  for marker in "${markers[@]}"; do
+    if ! grep -Fq -- "$marker" <<< "$section"; then
+      printf 'missing ledger field: %s: %s\\n' "$id" "$marker" >&2
+      failures=1
+    fi
+  done
+
+  if ! grep -Fq -- "#56" <<< "$section"; then
+    printf 'missing ledger evidence record: %s: #56\\n' "$id" >&2
+    failures=1
+  fi
+}
+
 require_marker "docs/ai-development-harness-inventory.md" "## Harness Minimalism"
 require_marker "docs/ai-development-harness-inventory.md" "ETCSLV"
+require_ledger_fields "E-01"
+require_ledger_fields "E-02"
+require_ledger_fields "E-03"
+require_ledger_fields "E-04"
+require_ledger_fields "T-01"
+require_ledger_fields "T-02"
+require_ledger_fields "C-01"
+require_ledger_fields "C-02"
+require_ledger_fields "S-01"
+require_ledger_fields "S-02"
+require_ledger_fields "S-03"
+require_ledger_fields "L-01"
+require_ledger_fields "L-02"
+require_ledger_fields "V-01"
+require_ledger_fields "V-02"
+require_ledger_fields "V-03"
 require_marker "docs/ai-development-harness-inventory.md" "解決する失敗モード"
 require_marker "docs/ai-development-harness-inventory.md" "発火条件"
 require_marker "docs/ai-development-harness-inventory.md" "入力 / Context"
