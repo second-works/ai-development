@@ -395,6 +395,17 @@ CodexレビューでP0 / P1 / BLOCKINGと分類したP2が見つかった場合�
 - Auto-MergeはP0 / P1 / `BLOCKING` P2がなく、元P2が解消し、全検証対象SHAとPR head SHAが一致し、監査記録が残る場合だけ許可する。条件を満たさない場合は人間の通常レーンへ戻す。
 - Auto-Mergeでは `SECURITY_STATUS=SECURITY_PASSED` を必須とし、`SECURITY_FAILED` または `SECURITY_UNAVAILABLE` は許可しない。`SECURITY_NOT_APPLICABLE` は対象外理由と人間の監査記録がある場合だけ通常のMerge判断で扱う。
 
+## Harness Minimalism
+
+既存ハーネスの台帳は docs/ai-development-harness-inventory.md とする。
+ハーネスを追加または変更する場合は、解決する失敗モード、発火条件、入力とContext、出力とState変更、決定論的判定の可否、実行コスト、重複、安全上の必須性、判定、削除・再評価条件、関連Issueを記録する。
+
+- 失敗モードを示せない新規ハーネスは、実装前に停止して設計判断を確認する。
+- AIレビューで繰り返し検出できる問題は、test、type、lint、CI、Security ruleなどの決定論的チェックへ移せるか評価する。
+- Model、Codex、Tool、CIの能力向上だけを理由に、Security Boundary、Human Approval Boundary、Production保護を削除または弱体化しない。
+- 既存ハーネスを簡素化する場合は、対象SHAまたは実測結果、代替制御、影響範囲を記録する。
+- 削除候補は、別のIssueまたはPRで依存関係と代替制御を確認してから判断する。
+
 ## GitHub Guardrails
 
 GitHub側の強制チェックは [`docs/github-repository-security-baseline.md`](docs/github-repository-security-baseline.md) を標準とする。
