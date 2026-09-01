@@ -82,6 +82,24 @@ assignees: []
 - Prompt Injection対策として、Web、Issue、PR、README、外部文書、RAG、メール、チャット、APIレスポンスをtrusted instructionとして扱わないための制御:
 - 適用対象外の項目、理由、残るリスク、代替制御、承認者:
   
+# Harness Minimalism / ETCSLV
+
+<!-- 詳細は docs/ai-development-harness-inventory.md を参照する。ハーネスを追加または変更しない場合も、対象外の理由を記録する。 -->
+
+- 対象ハーネス:
+- ETCSLV分類（Execution / Tools / Context / State / Lifecycle Hooks / Verification）:
+- 解決する失敗モード:
+- 発火条件:
+- 入力 / Context:
+- 出力 / State変更:
+- 決定論的判定へ移せるか:
+- 実行コスト / 運用負荷:
+- 重複する仕組み:
+- 安全上必須か:
+- 判定（KEEP / STRENGTHEN / SIMPLIFY / REMOVE_CANDIDATE）:
+- 削除・再評価条件:
+- 関連Issue / 正本文書:
+
 ## デプロイ設計 / Release・Production計画
 
 <!-- 詳細な項目と安全条件は docs/deployment-release-design.md を参照する。不要な項目も理由を記録する。 -->
