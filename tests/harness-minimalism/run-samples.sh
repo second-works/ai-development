@@ -26,10 +26,29 @@ require_section_marker() {
   fi
 }
 
+extract_field_value() {
+  local section="$1"
+  local prefix="$2"
+  awk -v prefix="$prefix" '
+    {
+      line=$0
+      sub(/^[[:space:]]+/, "", line)
+      if (index(line, prefix) == 1) {
+        value=substr(line, length(prefix) + 1)
+        sub(/[[:space:]]+$/, "", value)
+        print value
+        exit
+      }
+    }
+  ' <<< "$section"
+}
+
 require_ledger_fields() {
   local id="$1"
   local section
   local marker
+  local field_value
+  local normalized_value
   local markers=(
     "ETCSLV分類"
     "解決する失敗モード"
@@ -59,18 +78,38 @@ require_ledger_fields() {
   fi
 
   for marker in "${markers[@]}"; do
-    local prefix="- **${marker}**："
-    local field_line
-    local field_value
-    field_line="$(grep -F -- "$prefix" <<< "$section" | head -n 1 || true)"
-    field_value="${field_line#"$prefix"}"
-    if [[ -z "$field_line" ]] || ! grep -q '[^[:space:]]' <<< "$field_value"; then
+    field_value="$(extract_field_value "$section" "- **${marker}**：")"
+    if [[ -z "$field_value" ]] || ! grep -q '[^[:space:]]' <<< "$field_value"; then
       printf 'missing or empty ledger field: %s: %s\\n' "$id" "$marker" >&2
       failures=1
+      continue
     fi
+
+    case "$marker" in
+      "ETCSLV分類")
+        case "$field_value" in
+          Execution|Tools|Context|State|"Lifecycle Hooks"|Verification) ;;
+          *)
+            printf 'invalid ETCSLV classification: %s: %s\\n' "$id" "$field_value" >&2
+            failures=1
+            ;;
+        esac
+        ;;
+      "判定")
+        normalized_value="${field_value%。}"
+        case "$normalized_value" in
+          KEEP|STRENGTHEN|SIMPLIFY|REMOVE_CANDIDATE) ;;
+          *)
+            printf 'invalid ledger judgment: %s: %s\\n' "$id" "$field_value" >&2
+            failures=1
+            ;;
+        esac
+        ;;
+    esac
   done
 
-  if ! grep -F -- "- **関連Issue / 正本文書**：" <<< "$section" | grep -Eq "#[0-9]+"; then
+  field_value="$(extract_field_value "$section" "- **関連Issue / 正本文書**：")"
+  if ! grep -Eq '#[0-9]+' <<< "$field_value"; then
     printf 'missing ledger Issue reference: %s: #<number>\\n' "$id" >&2
     failures=1
   fi
@@ -78,20 +117,36 @@ require_ledger_fields() {
 
 require_marker "docs/ai-development-harness-inventory.md" "## Harness Minimalism"
 require_marker "docs/ai-development-harness-inventory.md" "ETCSLV"
-ledger_ids=()
-while IFS= read -r id; do
-  [[ -n "$id" ]] && ledger_ids+=("$id")
+ledger_headings=()
+while IFS= read -r heading; do
+  ledger_headings+=("$heading")
 done < <(awk '
   /^## 台帳$/ { in_ledger=1; next }
   in_ledger && /^## / { exit }
-  in_ledger && /^### [^ ]+ / { print $2 }
+  in_ledger && /^### / { print substr($0, 5) }
 ' "$ROOT/docs/ai-development-harness-inventory.md")
 
-if (( ${#ledger_ids[@]} == 0 )); then
+if (( ${#ledger_headings[@]} == 0 )); then
   printf 'no ledger records found\\n' >&2
   failures=1
 else
-  duplicate_ids="$(printf '%s\n' "${ledger_ids[@]}" | sort | uniq -d)"
+  ledger_ids=()
+  for heading in "${ledger_headings[@]}"; do
+    id="${heading%% *}"
+    name="${heading#* }"
+    if [[ -z "$heading" || "$heading" == "$id" || -z "$id" || -z "$name" ]]; then
+      printf 'ledger heading must include an ID and name: ### %s\\n' "$heading" >&2
+      failures=1
+      continue
+    fi
+    if [[ ! "$id" =~ ^[A-Z]+-[0-9]+[a-z]*$ ]]; then
+      printf 'invalid ledger ID: %s\\n' "$id" >&2
+      failures=1
+    fi
+    ledger_ids+=("$id")
+  done
+
+  duplicate_ids="$(printf '%s\\n' "${ledger_ids[@]}" | sort | uniq -d)"
   if [[ -n "$duplicate_ids" ]]; then
     printf 'duplicate ledger IDs: %s\\n' "$duplicate_ids" >&2
     failures=1
@@ -101,6 +156,7 @@ else
     require_ledger_fields "$id"
   done
 fi
+
 require_marker "docs/ai-development-harness-inventory.md" "解決する失敗モード"
 require_marker "docs/ai-development-harness-inventory.md" "発火条件"
 require_marker "docs/ai-development-harness-inventory.md" "入力 / Context"
