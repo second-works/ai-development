@@ -118,7 +118,9 @@ Plan vs Realityは、実利用検証の結果をProduct Acceptedの記録とし�
 
 - [ ] `Implementation Done`、`Deployed`、`Product Accepted` を別状態として記録した
 - [ ] 計画時に検収計画を定義した
+- [ ] 設計判断の失敗仮説と、誤りと判断する観測を定義した
 - [ ] 実利用シナリオを実行し、計画時の成功条件と照合した
+- [ ] Plan vs Reality（予測、実績、失敗した前提、不要 / 過剰設計、予期せぬ問題、教訓）を記録した
 - [ ] Health Check / Smoke Testと実利用検証を分けて記録した
 - [ ] `Accepted` / `Not Accepted` / `Conditional` のいずれかで判定した
 - [ ] 親Issueを完了扱いにする場合、`Accepted` または受入条件・期限を明記した許容済み `Conditional` である（`Not Accepted` や未解決の `ACCEPTANCE BLOCKER` を残していない）
