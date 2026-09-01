@@ -182,6 +182,8 @@ else
   for heading in "${ledger_headings[@]}"; do
     id="${heading%% *}"
     name="${heading#* }"
+    name="${name#"${name%%[![:space:]]*}"}"
+    name="${name%"${name##*[![:space:]]}"}"
     if [[ -z "$heading" || "$heading" == "$id" || -z "$id" || -z "$name" ]]; then
       printf 'ledger heading must include an ID and name: ### %s\n' "$heading" >&2
       failures=1
