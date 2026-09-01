@@ -50,7 +50,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 ## 根拠レコード
 
 - **#56**：今回のETCSLV棚卸しの要求、判定基準、受入条件、テスト観点を定義する監査元Issue。
-- **E-01からV-03**：各台帳項目の根拠レコードID。個別の運用事故やレビュー指摘を新たに主張するものではなく、Issue #56の監査条件と各項目の現行正本を追跡するための識別子。
+- **E-01からV-03、およびL-02aからL-02c**：各台帳項目の根拠レコードID。個別の運用事故やレビュー指摘を新たに主張するものではなく、Issue #56の監査条件と各項目の現行正本を追跡するための識別子。
 ## 主要ハーネスの判定
 
 | ID | ハーネス | ETCSLV | 判定 | 正本または参照 |
@@ -67,7 +67,9 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | S-02 | FOLLOW-UPとDesign Decision履歴 | S | KEEP | docs/review-followups.md、Issue |
 | S-03 | Implementation、Deploy、Product Acceptance状態 | S | KEEP | Issue、PR、docs/acceptance-verification.md |
 | L-01 | verify.shとCI | L | KEEP | templates/verification、.github/workflows/ci.yml |
-| L-02 | Security Preflight、CodeQL、Dependabot | L | KEEP | templates/security、docs/github-repository-security-baseline.md |
+| L-02a | Security Preflight | L | KEEP | templates/security、docs/ai-agent-security-boundary.md |
+| L-02b | CodeQL | L | KEEP | GitHub Code Scanning、docs/github-repository-security-baseline.md |
+| L-02c | Dependabot | L | KEEP | GitHub Dependabot、docs/github-repository-security-baseline.md |
 | V-01 | Codex Code Review | V | SIMPLIFY | PRコメント、レビュー履歴 |
 | V-02 | Review Evidence ContractとP2収束 | V | KEEP | AGENTS.md、.agents/skills/pr-review-fix |
 | V-03 | Acceptance Verification | V | KEEP | docs/acceptance-verification.md |
@@ -266,21 +268,53 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **関連Issue / 根拠レコード**：#56、L-01。Issue #56の監査条件とこの項目の判定を追跡する。
 - **関連正本**：templates/verification、.github/workflows/ci.yml。
 
-### L-02 Security Preflight、CodeQL、Dependabot
+### L-02a Security Preflight
 
 - **ETCSLV分類**：Lifecycle Hooks
-- **解決する失敗モード**：秘密情報、依存脆弱性、コード上のセキュリティ問題を通常CIの成功だけで見逃すこと。
-- **発火条件**：PR更新、依存更新、Security workflow実行時。
-- **入力 / Context**：対象SHA、Git管理対象、lockfile、対応言語、GitHub Security設定。
-- **出力 / State変更**：Security結果、Dependabot PR、Code Scanning結果。
-- **決定論的判定可能か**：対応するscannerと環境が利用できる範囲で機械判定する。利用不能は成功扱いにしない。
-- **実行コスト / 運用負荷**：CIとは別の目的であり、Security PreflightとCodeQLも同一検査として扱わない。
-- **重複する仕組み**：上記の実行コスト / 運用負荷欄に記載した比較対象と重複関係を確認する。
-- **安全上必須か**：秘密情報、依存、コードの既知リスクを管理するために必要。
+- **解決する失敗モード**：通常CIの成功だけで、Repository、Secret、Tool権限、外部送信先に関するSecurity Boundaryの逸脱や、利用可能なセキュリティ検査の失敗を見逃すこと。
+- **発火条件**：PR更新時にSecurity workflowまたはPR単位のSecurity Preflightを実行するとき。
+- **入力 / Context**：対象SHA、Git管理対象、workflow、Tool権限、Secretの扱い、外部送信先。
+- **出力 / State変更**：Security Preflightの成功、警告、失敗、未実行の状態。利用不能を成功扱いにしない。
+- **決定論的判定可能か**：workflowの実行状態、対象SHA、許可されたscopeは機械判定できる。利用可否や例外は記録して判断する。
+- **実行コスト / 運用負荷**：PR更新ごとの独立した検査。CIやCodeQL、Dependabotの結果を代用しない。
+- **重複する仕組み**：通常CIとは目的が異なる。CodeQLのコード解析やDependabotの依存検査とは入力と出力が異なるため統合しない。
+- **安全上必須か**：Security Boundary、Least Privilege、Human Approval、Production保護を維持するために必要。
 - **判定**：KEEP。
-- **削除・再評価条件**：対象範囲、exact SHA、失敗時の停止を同等以上に保証するSecurity機構へ移行する場合に再評価する。
-- **関連Issue / 根拠レコード**：#56、L-02。Issue #56の監査条件とこの項目の判定を追跡する。
-- **関連正本**：templates/security、docs/github-repository-security-baseline.md。
+- **削除・再評価条件**：対象SHA、許可範囲、失敗時停止、監査記録を同等以上に保証するSecurity機構へ移行する場合に再評価する。
+- **関連Issue / 根拠レコード**：#56、L-02a。Issue #56の監査条件とこの項目の判定を追跡する。
+- **関連正本**：templates/security、docs/ai-agent-security-boundary.md。
+
+### L-02b CodeQL
+
+- **ETCSLV分類**：Lifecycle Hooks
+- **解決する失敗モード**：コードのデータフロー、Injection、権限処理などの脆弱性を、通常CIやSecurity Preflightの成功だけで見逃すこと。
+- **発火条件**：CodeQLが対象言語とRepositoryで有効化され、PR、push、またはスケジュールの解析を実行するとき。
+- **入力 / Context**：対象SHA、対象言語のソースコード、ビルド設定、CodeQL query suite、解析環境。
+- **出力 / State変更**：Code Scanningの解析結果、アラート、PRへのチェック状態。
+- **決定論的判定可能か**：対象SHA、解析結果、チェック状態は機械判定できる。CodeQLが利用不能または未設定の場合は成功扱いにしない。
+- **実行コスト / 運用負荷**：言語解析と必要なビルドの実行負荷がある。対象言語、解析時間、失敗率を測定して再評価する。
+- **重複する仕組み**：Security Preflightの境界検査やDependabotの依存検査とは検出対象、入力、出力が異なるため統合しない。
+- **安全上必須か**：コード上の既知の脆弱性を検出するために必要。利用不能時の扱いも安全条件として維持する。
+- **判定**：KEEP。
+- **削除・再評価条件**：対象言語、exact SHA、失敗時の停止、解析結果の監査を同等以上に保証するコード解析へ移行する場合に再評価する。
+- **関連Issue / 根拠レコード**：#56、L-02b。Issue #56の監査条件とこの項目の判定を追跡する。
+- **関連正本**：GitHub Code Scanning、docs/github-repository-security-baseline.md。
+
+### L-02c Dependabot
+
+- **ETCSLV分類**：Lifecycle Hooks
+- **解決する失敗モード**：依存パッケージの既知脆弱性や更新漏れを、アプリケーションCIやCodeQLの成功だけで見逃すこと。
+- **発火条件**：Dependency Graphがmanifestまたはlockfileを解析し、Dependabot alertまたは更新PRを生成するとき。
+- **入力 / Context**：対象Repository、manifest、lockfile、Dependency Graph、脆弱性データ、更新ポリシー。
+- **出力 / State変更**：Dependabot alert、更新PR、依存更新のレビュー対象。
+- **決定論的判定可能か**：対象manifest、alert、更新PR、更新元の脆弱性情報は機械確認できる。Dependency Graphや脆弱性データが利用不能な状態は成功扱いにしない。
+- **実行コスト / 運用負荷**：依存解析と更新PRのレビュー負荷がある。alert件数、更新PR数、対応時間を測定して再評価する。
+- **重複する仕組み**：Security Preflightの境界検査やCodeQLのソースコード解析とは対象と出力が異なるため統合しない。
+- **安全上必須か**：依存由来の既知脆弱性を管理するために必要。自動更新PRの採用は人間レビューとCIを経る。
+- **判定**：KEEP。
+- **削除・再評価条件**：Dependency Graph、脆弱性情報、更新PR、レビュー記録を同等以上に保証する依存管理機構へ移行する場合に再評価する。
+- **関連Issue / 根拠レコード**：#56、L-02c。Issue #56の監査条件とこの項目の判定を追跡する。
+- **関連正本**：GitHub Dependabot、docs/github-repository-security-baseline.md。
 
 ### V-01 Codex Code Review
 
