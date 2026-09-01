@@ -45,6 +45,7 @@ assert_contains "$doc" 'Plan vs Reality'
 assert_contains "$doc" '失敗した前提:'
 assert_contains "$doc" '不要または過剰だった設計:'
 assert_contains "$doc" '次の計画へ反映する教訓:'
+assert_contains "$doc" '失敗観測または価値なし条件が実利用で成立した場合'
 
 assert_contains "$flow" 'acceptance-verification.md'
 assert_contains "$flow" 'Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオ'
