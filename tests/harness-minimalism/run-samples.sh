@@ -65,10 +65,20 @@ require_ledger_fields() {
   )
 
   section="$(awk -v id="$id" '
-    index($0, "### " id " ") == 1 { found=1; next }
-    found && /^### / { exit }
-    found && /^## / { exit }
-    found { print }
+    function normalize_atx(line) {
+      if (line ~ /^(### | ### |  ### |   ### |## | ## |  ## |   ## )/) {
+        sub(/^ */, "", line)
+        return line
+      }
+      return ""
+    }
+    {
+      line=normalize_atx($0)
+      if (index(line, "### " id " ") == 1) { found=1; next }
+      if (found && line ~ /^### /) { exit }
+      if (found && line ~ /^## /) { exit }
+      if (found) { print }
+    }
   ' "$ROOT/docs/ai-development-harness-inventory.md")"
 
   if [[ -z "$section" ]]; then
@@ -121,9 +131,19 @@ ledger_headings=()
 while IFS= read -r heading; do
   ledger_headings+=("$heading")
 done < <(awk '
-  /^## 台帳$/ { in_ledger=1; next }
-  in_ledger && /^## / { exit }
-  in_ledger && /^### / { print substr($0, 5) }
+  function normalize_atx(line) {
+    if (line ~ /^(### | ### |  ### |   ### |## | ## |  ## |   ## )/) {
+      sub(/^ */, "", line)
+      return line
+    }
+    return ""
+  }
+  {
+    line=normalize_atx($0)
+    if (line == "## 台帳") { in_ledger=1; next }
+    if (in_ledger && line ~ /^## /) { exit }
+    if (in_ledger && line ~ /^### /) { print substr(line, 5) }
+  }
 ' "$ROOT/docs/ai-development-harness-inventory.md")
 
 if (( ${#ledger_headings[@]} == 0 )); then
