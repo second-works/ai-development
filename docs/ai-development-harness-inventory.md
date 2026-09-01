@@ -60,6 +60,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | E-03 | Design DecisionとEscalation | E | KEEP | Issueテンプレート、AGENTS.md |
 | E-04 | Safe Auto-Fix / Auto-Merge | E | KEEP | docs/safe-auto-fix-auto-merge.md |
 | E-05 | Child Issue Quality Gate | E | KEEP | AGENTS.md、docs/issue-quality-check.md |
+| E-06 | Deployment Design / Release Gate | E | KEEP | docs/deployment-release-design.md、.github/workflows |
 | T-01 | CodexとSkills | T | SIMPLIFY | AGENTS.md、.agents/skills |
 | T-02 | GitHub Actionsと外部Tool | T | KEEP | .github/workflows、AI Agent Security Boundary |
 | C-01 | 正本文書とIssue / PR Context | C | STRENGTHEN | AGENTS.md、docs、Issue / PRテンプレート |
@@ -151,6 +152,21 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：KEEP。
 - **削除・再評価条件**：目的、範囲、完了判定、テスト可能性、レビュー可能性、依存関係を同等以上に確認し、点数と停止条件を再現可能に記録できる仕組みへ置換する場合に再評価する。
 - **関連Issue / 正本文書**：#56、E-05。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、docs/issue-quality-check.md、Issueテンプレート。
+
+### E-06 Deployment Design / Release Gate
+
+- **ETCSLV分類**：Execution
+- **解決する失敗モード**：実装PRの完了を本番投入可能と誤認し、Production runtime、永続データ、Secrets、Release判定、Deploy後確認、Monitoring、Rollback、人間承認の設計や前提条件を確認しないまま本番投入すること。
+- **発火条件**：本番投入経路を設計するとき、Release Candidateを作成するとき、またはProduction Deployの可否を判定するとき。
+- **入力 / Context**：対象環境、runtime、Container、Persistent data、Deployment method、commit SHAやartifact identity、Secrets / 外部サービス、backup、migration、Health Check、Smoke Test、Monitoring、Rollback、CI、Security Check、GitHub Environment、人間承認。
+- **出力 / State変更**：実装完了と本番投入可能状態の分離、Release判定、Deploy可否、Post-deploy Health Check、Monitoring開始、Rollback判断、人間承認の記録。
+- **決定論的判定可能か**：対象SHA、CI・Security結果、backup成功、Health Check結果、必要な項目の記録有無は機械確認できる。Release判定、設計選択、人間承認はレビューで確認する。
+- **実行コスト / 運用負荷**：本番投入経路の設計とRelease前後の確認が必要。runtime、データ、backup、migration、Health Check、Rollbackを記録する負荷はあるが、本番障害や復旧不能な変更を防ぐためのゲートである。
+- **重複する仕組み**：S-03はImplementation、Deploy、Product Acceptanceの状態を分離し、V-03はDeploy後の実利用検証と検収を担う。E-06は本番投入前の設計、Release判定、backup・migration・Rollback、人間承認を担い、これらの状態管理や検収を代替しない。
+- **安全上必須か**：Production保護、永続データの安全性、Secretsの扱い、Rollback可能性、人間承認を維持するために必要。
+- **判定**：KEEP。
+- **削除・再評価条件**：対象環境、データ、Release判定、backup・migration、Health Check、Monitoring、Rollback、人間承認を同等以上に記録・検証できる独立したRelease機構へ置換する場合に再評価する。
+- **関連Issue / 正本文書**：#56、E-06。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/deployment-release-design.md、.github/workflows、templates/verification。
 
 ### T-01 CodexとSkills
 
