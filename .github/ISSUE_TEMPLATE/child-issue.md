@@ -55,6 +55,8 @@ path/to/protected/**
 - Issue acceptance status:
 - Product Acceptance result:
 - Product Acceptance conditions / deadline / follow-up Issue:
+- Product Acceptance target artifact:
+- Current Deploy target artifact:
 - Current head SHA:
 - Expected SHA:
 - Verification status（local / CI / Security / Review）:
