@@ -71,7 +71,7 @@ if ! grep -Fq -- 'ACCEPTED' "$DOC" || ! grep -Fq -- 'CONDITIONAL' "$DOC" || ! gr
   exit 1
 fi
 
-if ! grep -Fq -- 'conditions`が1件以上' "$DOC" || ! grep -Fq -- 'due_at`と`follow_up_issue`が設定済み' "$DOC" || ! grep -Fq -- 'blockers`が空' "$DOC"; then
+if ! grep -Fq -- 'issue.acceptance_status=SATISFIED' "$DOC" || ! grep -Fq -- 'conditions`が1件以上' "$DOC" || ! grep -Fq -- 'due_at`と`follow_up_issue`が設定済み' "$DOC" || ! grep -Fq -- 'blockers`が空' "$DOC"; then
   printf 'Conditional completion must require conditions, deadline, follow-up, and no blockers\\n' >&2
   exit 1
 fi
