@@ -20,7 +20,7 @@ require_marker() {
 }
 
 require_marker "$DOC" "# Structured Current State"
-require_marker "$DOC" "schema_version: 2"
+require_marker "$DOC" "schema_version: 3"
 require_marker "$DOC" "Versioning and migration"
 require_marker "$DOC" "v1 State"
 require_marker "$DOC" "issue.acceptance_status=SATISFIED"
@@ -33,6 +33,12 @@ require_marker "$DOC" 'acceptance.conditions'
 require_marker "$DOC" 'acceptance.due_at'
 require_marker "$DOC" 'acceptance.follow_up_issue'
 require_marker "$DOC" 'acceptance.blockers'
+require_marker "$DOC" 'acceptance.target'
+require_marker "$DOC" 'deployment.target'
+require_marker "$DOC" "COMMIT_SHA"
+require_marker "$DOC" "IMAGE_DIGEST"
+require_marker "$DOC" "Acceptance対象artifact"
+require_marker "$DOC" "現行Deploy target"
 require_marker "$DOC" 'ACCEPTED'
 require_marker "$DOC" 'NOT_ACCEPTED'
 require_marker "$DOC" 'CONDITIONAL'
@@ -94,8 +100,8 @@ if grep -Fq -- '- `CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`で�
   exit 1
 fi
 
-if ! grep -Fq -- '- `execution.phase=COMPLETED`かつ`acceptance.result=CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない' "$DOC"; then
-  printf 'Conditional completion validation must be limited to COMPLETED\\n' >&2
+if ! grep -Fq -- '- `execution.phase=COMPLETED`かつ`acceptance.result=CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない' "$DOC";  || ! grep -Fq -- 'acceptance.target`と`deployment.target`がともに設定済みで`kind`と`identifier`が一致する' "$DOC"; then
+  printf 'Conditional completion validation must require the matching deploy target\\n' >&2
   exit 1
 fi
 
@@ -114,8 +120,8 @@ if ! grep -Fq -- 'issue.acceptance_status=SATISFIED' "$DOC" || ! grep -Fq -- 'co
   exit 1
 fi
 
-if grep -Fq -- 'schema_version: 1' "$DOC"; then
-  printf 'Current State schema must be version 2 after adding acceptance fields\\n' >&2
+if grep -Fq -- 'schema_version: 1' "$DOC" || grep -Fq -- 'schema_version: 2' "$DOC"; then
+  printf 'Current State schema must be version 3 after adding acceptance target fields\\n' >&2
   exit 1
 fi
 
