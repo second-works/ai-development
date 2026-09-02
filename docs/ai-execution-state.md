@@ -114,8 +114,9 @@ PLAN_READY
 - `stop_reason`が設定されているのに自動的に次工程へ進む
 - `pr.head_sha`と`pr.expected_sha`が異なる
 - head SHAが変わったのに、旧SHAのverificationを`PASSED`のまま再利用する
-- `READY_FOR_HUMAN_MERGE`なのにlocal / CI / reviewのいずれかが`PASSED`でない、またはsecurityが`PASSED`でなく`approval.security_exception=APPROVED`でもない
+- `READY_FOR_HUMAN_MERGE`なのにlocal / CI / reviewのいずれかが`PASSED`でない、またはsecurityが`PASSED`でなく、`UNAVAILABLE`かつ`approval.security_exception=APPROVED`でもない
 - `READY_FOR_HUMAN_MERGE`なのにP0、P1、またはBLOCKING P2が残っている
+- `security=FAILED`なのに`approval.security_exception=APPROVED`でREADYへ進む
 - `security=UNAVAILABLE`のまま`approval.security_exception=APPROVED`を記録せずREADYへ進む
 - `approval.human_approval_required=true`のまま自動Mergeする
 
@@ -141,7 +142,7 @@ State更新は全履歴の再生成や無制限な追記ではなく、許可さ
 2. 更新対象をこのschemaで定義されたfieldに限定する。未知のfield、自由な履歴配列、chain-of-thought、推論全文は追加しない。
 3. GitHubの最新観測を取得し、Stateの`pr.head_sha`および`expected_sha`と照合する。
 4. head SHAが変わった場合は、旧SHAに紐付くlocal / CI / security / reviewを現headの成功結果として扱わず、verificationを`NOT_RUN`へ戻す。新しいSHAを`expected_sha`へ設定する。
-5. CI、Security、Reviewは同じ`expected_sha`を対象に、別々の結果として更新する。Securityが未実行なら成功扱いにせず、利用不能の場合は`security=UNAVAILABLE`と`approval.security_exception=PENDING`を記録する。人間の明示判断後だけ`APPROVED`へ更新できる。
+5. CI、Security、Reviewは同じ`expected_sha`を対象に、別々の結果として更新する。Securityが未実行なら成功扱いにせず、利用不能の場合は`security=UNAVAILABLE`と`approval.security_exception=PENDING`を記録する。人間の明示判断後だけ`APPROVED`へ更新できる。Securityが`FAILED`になった場合は例外承認を適用せず、`stop_reason=SECURITY_FAILED`として停止する。
 6. 指摘はSeverityだけでなく、既存のReview Evidence Contractに従うP2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `DISMISS`）を件数と証拠参照で更新する。証拠参照は定義済みの`evidence`フィールドへ保存する。
 7. `updated_at`を更新し、必要な根拠は定義済みの`evidence.issue_url`、`pr_url`、`review_url`、`ci_url`、`security_url`、`commit_sha`へ保持する。秘密情報は保存しない。
 8. 保存後にenum、必須field、SHA一致、停止条件を検証する。
