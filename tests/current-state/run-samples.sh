@@ -35,7 +35,7 @@ require_marker "$DOC" 'P2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `D
 require_marker "$DOC" "merge_allowed"
 require_marker "$DOC" "最新観測を確認してStateを更新"
 require_marker "$DOC" "旧SHAに紐付くlocal / CI / security / review"
-require_marker "$DOC" "chain-of-thought、推論全文、全会話ログ、秘密情報はCurrent Stateへ保存しない"
+require_marker "$DOC" "chain-of-thoughtや推論全文、全会話ログ、秘密情報はCurrent Stateへ保存しない"
 
 if grep -Eq '^[[:space:]]*merge_allowed:' "$DOC"; then
   printf 'merge_allowed must not be persisted as a State field\n' >&2
