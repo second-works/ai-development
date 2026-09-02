@@ -130,7 +130,7 @@ PLAN_READY
 
 適用しない工程は、対象外理由を証拠参照とともに記録し、工程を成功扱いに変換しない。レビュー指摘がなければ`REVIEW → READY_FOR_HUMAN_MERGE`、BLOCKING指摘があれば`REVIEW → FIX`、修正後は必ず`REVERIFY`へ戻る。
 
-`ACCEPTANCE`では`acceptance.result=NOT_RUN`または`RUNNING`の間は`next_action=RUN_ACCEPTANCE`とする。`ACCEPTED`なら`acceptance.conditions`、`acceptance.due_at`、`acceptance.follow_up_issue`が空またはnullで、`acceptance.blockers`が空の場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。`CONDITIONAL`は`conditions`が1件以上、`due_at`と`follow_up_issue`が設定済み、`blockers`が空の場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。いずれかの条件を満たさないConditionalは`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED`として停止する。`NOT_ACCEPTED`なら`stop_reason=ACCEPTANCE_NOT_ACCEPTED`として停止する。
+`ACCEPTANCE`では`acceptance.result=NOT_RUN`または`RUNNING`の間は`next_action=RUN_ACCEPTANCE`とする。`ACCEPTED`なら`acceptance.conditions`、`acceptance.due_at`、`acceptance.follow_up_issue`が空またはnullで、`acceptance.blockers`が空の場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。`CONDITIONAL`は`issue.acceptance_status=SATISFIED`で、`conditions`が1件以上、`due_at`と`follow_up_issue`が設定済み、`blockers`が空の場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。いずれかの条件を満たさないConditionalは`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED`として停止する。`NOT_ACCEPTED`なら`stop_reason=ACCEPTANCE_NOT_ACCEPTED`として停止する。
 
 次の組合せは不正または停止状態である。
 
@@ -146,7 +146,7 @@ PLAN_READY
 - `READY_FOR_HUMAN_MERGE`なのに`issue.acceptance_status=SATISFIED`でない
 - `COMPLETED`なのに`acceptance.result`が`ACCEPTED`または`CONDITIONAL`でない、または`next_action=COMPLETE`でない
 - `COMPLETED`なのに`acceptance.blockers`が空でない
-- `CONDITIONAL`なのに`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない
+- `CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない
 - `ACCEPTANCE`で`acceptance.result=NOT_ACCEPTED`なのに`stop_reason=ACCEPTANCE_NOT_ACCEPTED`でない
 - `READY_FOR_HUMAN_MERGE`なのに`issue.acceptance_status=SATISFIED`でない
 - `COMPLETED`なのに`acceptance.result`が`ACCEPTED`または`CONDITIONAL`でない、または`next_action=COMPLETE`でない
