@@ -44,6 +44,16 @@
 これは防御的なチェックをすべて禁止するものではない。信頼境界での入力検証や、外部システム由来の異常を扱う処理は省略せず、型で保証できる責務との境界を明確にする。特定言語の機能に限定せず、Generic、Python、Node.jsなどへ適用できる一般原則として扱う。
 
 
+## Structured Current State
+
+長時間・複数ラウンドのAI実装を中断・再開する場合は、[docs/ai-execution-state.md](docs/ai-execution-state.md)のCurrent State契約を使用する。
+
+- Stateは定義済みschemaとenumで保持し、Issue / PR / head SHA / expected SHA、検証結果、レビューラウンド、P2分類、停止理由、次アクションを表現する。
+- GitHub上の最新Issue / PR / branch / head SHA / CI / Security / Reviewを再取得し、Stateと矛盾する古い観測は再利用しない。
+- head SHAが変わった場合、旧SHAのlocal / CI / Security / Review成功結果を現headへ適用せず、現headを新しい検証対象として再検証する。
+- `merge_allowed`のような派生値を手書き保存せず、既存のCI / Security / Review / Human Approval条件から人間が判断する。
+- chain-of-thought、推論全文、全会話ログ、秘密情報をCurrent Stateへ保存しない。
+
 ## GitHub上の言語
 
 人間が読むGitHub上の文章は、原則として日本語で記述する。
