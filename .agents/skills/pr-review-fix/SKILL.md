@@ -14,7 +14,7 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 
 レビュー修正の開始時と各trust boundaryの終了時は、[Structured Current State](../../../docs/ai-execution-state.md)を構築または復元する。
 
-- schema v2の`schema_version`、Issue番号、PR番号、head branch、`head_sha`、`expected_sha`、Issue受入状態、Product Acceptance結果と終端アクションを保持する。`READY_FOR_HUMAN_MERGE`は`issue.acceptance_status=SATISFIED`の場合だけ許可し、Conditionalは条件・期限・追跡Issueが設定済みで未解決BLOCKERがない場合だけ完了扱いにする。
+- schema v3の`schema_version`、Issue番号、PR番号、head branch、`head_sha`、`expected_sha`、Issue受入状態、Product Acceptance結果と終端アクション、Acceptance対象artifact、現行Deploy targetを保持する。`READY_FOR_HUMAN_MERGE`は`issue.acceptance_status=SATISFIED`の場合だけ許可し、Acceptance対象artifactと現行Deploy targetが一致する`CONDITIONAL`だけを完了扱いにする。
 - `execution.phase`、`execution.round`、`next_action`、`stop_reason`は定義済みenumだけを使う。停止条件成立時は`next_action=STOP`とし、自動的に次工程へ進まない。
 - local verify、CI、Security、Reviewは、同じ`expected_sha`に対する別々の結果として更新する。head SHAが変わったら旧結果を再利用せず、現headを新しい検証対象にする。
 - P2は`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`へ分類し、件数と必要な証拠参照を更新する。非BLOCKING P2だけで追加修正ループへ戻さない。
