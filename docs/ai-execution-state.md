@@ -20,6 +20,9 @@ issue:
   number: 123
   acceptance_status: IN_PROGRESS
 
+acceptance:
+  result: NOT_RUN
+
 execution:
   phase: IMPLEMENT
   round: 0
@@ -69,10 +72,11 @@ updated_at: null
 | `schema_version` | integer | 現行は `1` |
 | `issue.number` | integer | 1以上のIssue番号 |
 | `issue.acceptance_status` | enum | `NOT_STARTED` / `IN_PROGRESS` / `SATISFIED` / `BLOCKED` |
-| `execution.phase` | enum | `PLAN_READY` / `IMPLEMENT` / `LOCAL_VERIFY` / `PR_OPEN` / `CI_SECURITY` / `REVIEW` / `FIX` / `REVERIFY` / `READY_FOR_HUMAN_MERGE` / `MERGED` / `DEPLOY` / `ACCEPTANCE` |
+| `acceptance.result` | enum | `NOT_RUN` / `RUNNING` / `ACCEPTED` / `NOT_ACCEPTED` / `CONDITIONAL` |
+| `execution.phase` | enum | `PLAN_READY` / `IMPLEMENT` / `LOCAL_VERIFY` / `PR_OPEN` / `CI_SECURITY` / `REVIEW` / `FIX` / `REVERIFY` / `READY_FOR_HUMAN_MERGE` / `MERGED` / `DEPLOY` / `ACCEPTANCE` / `COMPLETED` |
 | `execution.round` | integer | 0以上。初回レビューは0 |
-| `execution.next_action` | enum | `PLAN` / `IMPLEMENT` / `RUN_VERIFY` / `OPEN_PR` / `RUN_CI_SECURITY` / `REQUEST_REVIEW` / `FIX_BLOCKING` / `REVERIFY` / `WAIT_FOR_HUMAN_MERGE` / `DEPLOY` / `RUN_ACCEPTANCE` / `STOP` |
-| `execution.stop_reason` | enumまたはnull | `DESIGN_DECISION` / `HUMAN_APPROVAL` / `SHA_MISMATCH` / `VERIFY_FAILED` / `CI_FAILED` / `SECURITY_FAILED` / `BLOCKING_FINDING` / `ROUND_LIMIT` / `OUT_OF_SCOPE`。停止していない場合はnull |
+| `execution.next_action` | enum | `PLAN` / `IMPLEMENT` / `RUN_VERIFY` / `OPEN_PR` / `RUN_CI_SECURITY` / `REQUEST_REVIEW` / `FIX_BLOCKING` / `REVERIFY` / `WAIT_FOR_HUMAN_MERGE` / `DEPLOY` / `RUN_ACCEPTANCE` / `COMPLETE` / `STOP` |
+| `execution.stop_reason` | enumまたはnull | `DESIGN_DECISION` / `HUMAN_APPROVAL` / `SHA_MISMATCH` / `VERIFY_FAILED` / `CI_FAILED` / `SECURITY_FAILED` / `BLOCKING_FINDING` / `ACCEPTANCE_NOT_ACCEPTED` / `ROUND_LIMIT` / `OUT_OF_SCOPE`。停止していない場合はnull |
 | `pr.number` | integerまたはnull | PR未作成時はnull |
 | `pr.head_branch` | stringまたはnull | 対象PRのhead branch。default branchは不可 |
 | `pr.head_sha` | SHA文字列またはnull | GitHubで観測した現在head |
@@ -104,9 +108,12 @@ PLAN_READY
 → MERGED
 → DEPLOY
 → ACCEPTANCE
+→ COMPLETED
 ```
 
 適用しない工程は、対象外理由を証拠参照とともに記録し、工程を成功扱いに変換しない。レビュー指摘がなければ`REVIEW → READY_FOR_HUMAN_MERGE`、BLOCKING指摘があれば`REVIEW → FIX`、修正後は必ず`REVERIFY`へ戻る。
+
+`ACCEPTANCE`では`acceptance.result=NOT_RUN`または`RUNNING`の間は`next_action=RUN_ACCEPTANCE`とする。`ACCEPTED`または`CONDITIONAL`なら`COMPLETED`へ遷移し`next_action=COMPLETE`、`NOT_ACCEPTED`なら`stop_reason=ACCEPTANCE_NOT_ACCEPTED`として停止する。
 
 次の組合せは不正または停止状態である。
 
@@ -119,6 +126,9 @@ PLAN_READY
 - `security=FAILED`なのに`approval.security_exception=APPROVED`でREADYへ進む
 - `security=UNAVAILABLE`のまま`approval.security_exception=APPROVED`を記録せずREADYへ進む
 - `approval.human_approval_required=true`のまま自動Mergeする
+- `READY_FOR_HUMAN_MERGE`なのに`issue.acceptance_status=SATISFIED`でない
+- `COMPLETED`なのに`acceptance.result`が`ACCEPTED`または`CONDITIONAL`でない、または`next_action=COMPLETE`でない
+- `ACCEPTANCE`で`acceptance.result=NOT_ACCEPTED`なのに`stop_reason=ACCEPTANCE_NOT_ACCEPTED`でない
 
 `merge_allowed`のように他フィールドから決まる値はStateへ手書き保存しない。Merge可否は、Issue受入条件、同一head SHAの標準検証、CI、利用可能なSecurity、ReviewのBLOCKING判定、およびHuman Approval Boundaryを個別に確認して人間が判断する。
 
@@ -132,6 +142,7 @@ PLAN_READY
 - 標準検証、CI、Securityの失敗または未実行
 - P0 / P1 / BLOCKING P2が残存
 - レビュー修正ラウンド上限に到達
+- Product Acceptanceが`NOT_ACCEPTED`または未完了
 - Issue範囲外の変更が必要
 
 ## State更新契約
@@ -143,9 +154,10 @@ State更新は全履歴の再生成や無制限な追記ではなく、許可さ
 3. GitHubの最新観測を取得し、Stateの`pr.head_sha`および`expected_sha`と照合する。
 4. head SHAが変わった場合は、旧SHAに紐付くlocal / CI / security / reviewを現headの成功結果として扱わず、verificationを`NOT_RUN`へ戻す。新しいSHAを`expected_sha`へ設定する。
 5. CI、Security、Reviewは同じ`expected_sha`を対象に、別々の結果として更新する。Securityが未実行なら成功扱いにせず、利用不能の場合は`security=UNAVAILABLE`と`approval.security_exception=PENDING`を記録する。人間の明示判断後だけ`APPROVED`へ更新できる。Securityが`FAILED`になった場合は例外承認を適用せず、`stop_reason=SECURITY_FAILED`として停止する。
-6. 指摘はSeverityだけでなく、既存のReview Evidence Contractに従うP2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `DISMISS`）を件数と証拠参照で更新する。証拠参照は定義済みの`evidence`フィールドへ保存する。
-7. `updated_at`を更新し、必要な根拠は定義済みの`evidence.issue_url`、`pr_url`、`review_url`、`ci_url`、`security_url`、`commit_sha`へ保持する。秘密情報は保存しない。
-8. 保存後にenum、必須field、SHA一致、停止条件を検証する。
+6. Product Acceptanceの実行結果を`acceptance.result`へ更新する。`ACCEPTED`、`NOT_ACCEPTED`、`CONDITIONAL`を区別し、未実行・実行中は`NOT_RUN`または`RUNNING`とする。
+7. 指摘はSeverityだけでなく、既存のReview Evidence Contractに従うP2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `DISMISS`）を件数と証拠参照で更新する。証拠参照は定義済みの`evidence`フィールドへ保存する。
+8. `updated_at`を更新し、必要な根拠は定義済みの`evidence.issue_url`、`pr_url`、`review_url`、`ci_url`、`security_url`、`commit_sha`へ保持する。秘密情報は保存しない。
+9. 保存後にenum、必須field、SHA一致、停止条件を検証する。
 
 Current StateとGitHub観測が矛盾した場合は、古いStateを正とせず、最新観測を確認してStateを更新する。最新観測自体を取得できない場合は`UNAVAILABLE`または停止状態として記録し、成功扱いにしない。
 
@@ -171,6 +183,6 @@ Current StateとGitHub観測が矛盾した場合は、古いStateを正とせ�
 
 ## 最小化と再評価
 
-Current Stateは長時間タスクの再開に必要な識別子、enum状態、対象SHA、検証結果、レビュー分類、停止理由、次アクション、証拠参照だけを保持する。会話要約、自由文の思考過程、全コメント履歴、秘密情報を追加しない。
+Current Stateは長時間タスクの再開に必要な識別子、enum状態、対象SHA、検証結果、レビュー分類、Product Acceptance結果、停止理由、次アクション、証拠参照だけを保持する。会話要約、自由文の思考過程、全コメント履歴、秘密情報を追加しない。
 
 この契約が既存のGitHub metadataだけで同じ再開性とSHA誤適用防止を証明できるようになった場合、または更新負荷が便益を上回る場合は、Issue化して簡素化・削除を再評価する。
