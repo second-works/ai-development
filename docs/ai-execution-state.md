@@ -104,7 +104,7 @@ updated_at: null
 schema_versionはState構造の互換性を示す。今回のAcceptance field追加によりschemaはv2となる。
 
 - v1を読み込む場合は、そのままv2として扱わず、`acceptance.result=NOT_RUN`、`conditions=[]`、`due_at=null`、`follow_up_issue=null`、`blockers=[]`を補完してschema_versionを2へ移行する。
-- 移行前のv1 Stateは、Acceptance結果を確認するまで`READY_FOR_HUMAN_MERGE`または`COMPLETED`へ遷移させない。
+- v1 Stateを移行した直後の`acceptance.result=NOT_RUN`は、Acceptance未実行を表すだけであり、READY到達を一律に禁止しない。`PLAN_READY`〜`REVERIFY`のStateは、`issue.acceptance_status=SATISFIED`と既存のCI / Security / Review条件を満たす場合に限り`READY_FOR_HUMAN_MERGE`へ進める。Product Acceptance結果は従来どおりDeploy後の`ACCEPTANCE`で更新し、`COMPLETED`へ進めるにはv2のAcceptance完了条件を満たす。
 - v2への移行後は、v2の必須field、enum、SHA一致、停止条件を検証する。
 - v1へ書き戻したり、v1の検証結果をv2のAcceptance完了結果として再利用したりしない。
 
