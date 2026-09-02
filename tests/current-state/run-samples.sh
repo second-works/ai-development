@@ -22,6 +22,9 @@ require_marker() {
 require_marker "$DOC" "# Structured Current State"
 require_marker "$DOC" "schema_version: 2"
 require_marker "$DOC" "Versioning and migration"
+require_marker "$DOC" "v1 State"
+require_marker "$DOC" "issue.acceptance_status=SATISFIED"
+require_marker "$DOC" "Product Acceptance結果は従来どおりDeploy後"
 require_marker "$DOC" "execution:"
 require_marker "$DOC" "acceptance:"
 require_marker "$DOC" "result: NOT_RUN"
@@ -60,6 +63,11 @@ require_marker "$DOC" "merge_allowed"
 require_marker "$DOC" "最新観測を確認してStateを更新"
 require_marker "$DOC" "旧SHAに紐付くlocal / CI / security / review"
 require_marker "$DOC" "chain-of-thoughtや推論全文、全会話ログはCurrent Stateへ保存しない"
+
+if grep -Fq -- '移行前のv1 Stateは、Acceptance結果を確認するまで' "$DOC"; then
+  printf 'v1 migration must not deadlock before READY_FOR_HUMAN_MERGE\\n' >&2
+  exit 1
+fi
 
 if ! grep -Fq -- 'READY_FOR_HUMAN_MERGE' "$DOC" || ! grep -Fq -- 'issue.acceptance_status=SATISFIED' "$DOC"; then
   printf 'READY_FOR_HUMAN_MERGE must require SATISFIED acceptance status\n' >&2
