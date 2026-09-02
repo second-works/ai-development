@@ -15,7 +15,7 @@ Structured Current Stateは、長時間・複数ラウンドのAI実装を中断
 StateはYAMLまたは同等の構造化データとして保持する。値を自由文で代用せず、次のenumと制約を使用する。
 
 ```yaml
-schema_version: 2
+schema_version: 3
 issue:
   number: 123
   acceptance_status: IN_PROGRESS
@@ -26,6 +26,14 @@ acceptance:
   due_at: null
   follow_up_issue: null
   blockers: []
+  target:
+    kind: null
+    identifier: null
+
+deployment:
+  target:
+    kind: null
+    identifier: null
 
 execution:
   phase: IMPLEMENT
@@ -73,7 +81,7 @@ updated_at: null
 
 | Field | 型 | 許可値・制約 |
 | --- | --- | --- |
-| `schema_version` | integer | 現行は `2`。v1からの移行は後述の移行規則に従う |
+| `schema_version` | integer | 現行は `3`。v1/v2からの移行は後述の移行規則に従う |
 | `issue.number` | integer | 1以上のIssue番号 |
 | `issue.acceptance_status` | enum | `NOT_STARTED` / `IN_PROGRESS` / `SATISFIED` / `BLOCKED` |
 | `acceptance.result` | enum | `NOT_RUN` / `RUNNING` / `ACCEPTED` / `NOT_ACCEPTED` / `CONDITIONAL` |
@@ -81,6 +89,8 @@ updated_at: null
 | `acceptance.due_at` | RFC 3339 timestampまたはnull | `CONDITIONAL`の期限。条件がない場合はnull |
 | `acceptance.follow_up_issue` | stringまたはnull | `CONDITIONAL`を追跡するIssue URLまたはIssue番号。条件がない場合はnull |
 | `acceptance.blockers` | array of strings | 未解決の`ACCEPTANCE BLOCKER`。完了時は空配列 |
+| `acceptance.target.kind` / `deployment.target.kind` | enumまたはnull | `RELEASE` / `COMMIT_SHA` / `TAG` / `IMAGE_DIGEST`; 対象未確定時はnull |
+| `acceptance.target.identifier` / `deployment.target.identifier` | stringまたはnull | 対象artifactの一意識別子。`kind`が設定される場合は空でない値を必須とする |
 | `execution.phase` | enum | `PLAN_READY` / `IMPLEMENT` / `LOCAL_VERIFY` / `PR_OPEN` / `CI_SECURITY` / `REVIEW` / `FIX` / `REVERIFY` / `READY_FOR_HUMAN_MERGE` / `MERGED` / `DEPLOY` / `ACCEPTANCE` / `COMPLETED` |
 | `execution.round` | integer | 0以上。初回レビューは0 |
 | `execution.next_action` | enum | `PLAN` / `IMPLEMENT` / `RUN_VERIFY` / `OPEN_PR` / `RUN_CI_SECURITY` / `REQUEST_REVIEW` / `FIX_BLOCKING` / `REVERIFY` / `WAIT_FOR_HUMAN_MERGE` / `DEPLOY` / `RUN_ACCEPTANCE` / `COMPLETE` / `STOP` |
@@ -101,11 +111,12 @@ updated_at: null
 
 ## Versioning and migration
 
-schema_versionはState構造の互換性を示す。今回のAcceptance field追加によりschemaはv2となる。
+schema_versionはState構造の互換性を示す。今回のAcceptance targetとDeploy target追加によりschemaはv3となる。
 
-- v1を読み込む場合は、そのままv2として扱わず、`acceptance.result=NOT_RUN`、`conditions=[]`、`due_at=null`、`follow_up_issue=null`、`blockers=[]`を補完してschema_versionを2へ移行する。
-- v1 Stateを移行した直後の`acceptance.result=NOT_RUN`は、Acceptance未実行を表すだけであり、READY到達を一律に禁止しない。`PLAN_READY`〜`REVERIFY`のStateは、`issue.acceptance_status=SATISFIED`と既存のCI / Security / Review条件を満たす場合に限り`READY_FOR_HUMAN_MERGE`へ進める。Product Acceptance結果は従来どおりDeploy後の`ACCEPTANCE`で更新し、`COMPLETED`へ進めるにはv2のAcceptance完了条件を満たす。
-- v2への移行後は、v2の必須field、enum、SHA一致、停止条件を検証する。
+- v1を読み込む場合は、そのままv3として扱わず、`acceptance.result=NOT_RUN`、`conditions=[]`、`due_at=null`、`follow_up_issue=null`、`blockers=[]`、`acceptance.target={kind:null,identifier:null}`、`deployment.target={kind:null,identifier:null}`を補完してschema_versionを3へ移行する。
+- v1またはv2 Stateを移行した直後の`acceptance.result=NOT_RUN`は、Acceptance未実行を表すだけであり、READY到達を一律に禁止しない。`PLAN_READY`〜`REVERIFY`のStateは、`issue.acceptance_status=SATISFIED`と既存のCI / Security / Review条件を満たす場合に限り`READY_FOR_HUMAN_MERGE`へ進める。Product Acceptance結果は従来どおりDeploy後の`ACCEPTANCE`で更新し、`COMPLETED`へ進めるにはv3のAcceptance完了条件とAcceptance対象artifact / 現行Deploy targetの一致を満たす。
+- v2 Stateを読み込む場合は、`acceptance.target={kind:null,identifier:null}`と`deployment.target={kind:null,identifier:null}`を補完してschema_versionを3へ移行する。
+- v3への移行後は、v3の必須field、enum、SHA一致、Acceptance対象artifactと現行Deploy targetの一致、停止条件を検証する。
 - v1へ書き戻したり、v1の検証結果をv2のAcceptance完了結果として再利用したりしない。
 
 ## 状態遷移
@@ -130,7 +141,7 @@ PLAN_READY
 
 適用しない工程は、対象外理由を証拠参照とともに記録し、工程を成功扱いに変換しない。レビュー指摘がなければ`REVIEW → READY_FOR_HUMAN_MERGE`、BLOCKING指摘があれば`REVIEW → FIX`、修正後は必ず`REVERIFY`へ戻る。
 
-`ACCEPTANCE`では`acceptance.result=NOT_RUN`または`RUNNING`の間は`next_action=RUN_ACCEPTANCE`とする。`ACCEPTED`なら`acceptance.conditions`、`acceptance.due_at`、`acceptance.follow_up_issue`が空またはnullで、`acceptance.blockers`が空の場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。`CONDITIONAL`は`issue.acceptance_status=SATISFIED`で、`conditions`が1件以上、`due_at`と`follow_up_issue`が設定済み、`blockers`が空の場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。いずれかの条件を満たさないConditionalは`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED`として停止する。`NOT_ACCEPTED`なら`stop_reason=ACCEPTANCE_NOT_ACCEPTED`として停止する。
+`ACCEPTANCE`では`acceptance.result=NOT_RUN`または`RUNNING`の間は`next_action=RUN_ACCEPTANCE`とする。`ACCEPTED`なら`acceptance.conditions`、`acceptance.due_at`、`acceptance.follow_up_issue`が空またはnullで、`acceptance.blockers`が空、かつ`acceptance.target`と`deployment.target`がともに設定済みで`kind`と`identifier`が一致する場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。`CONDITIONAL`は`issue.acceptance_status=SATISFIED`で、`conditions`が1件以上、`due_at`と`follow_up_issue`が設定済み、`blockers`が空、かつ`acceptance.target`と`deployment.target`がともに設定済みで`kind`と`identifier`が一致する場合だけ`COMPLETED`へ遷移し`next_action=COMPLETE`とする。いずれかの完了条件を満たさないConditionalは`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED`として停止する。`NOT_ACCEPTED`なら`stop_reason=ACCEPTANCE_NOT_ACCEPTED`として停止する。
 
 次の組合せは不正または停止状態である。
 
@@ -146,13 +157,14 @@ PLAN_READY
 - `READY_FOR_HUMAN_MERGE`なのに`issue.acceptance_status=SATISFIED`でない
 - `COMPLETED`なのに`acceptance.result`が`ACCEPTED`または`CONDITIONAL`でない、または`next_action=COMPLETE`でない
 - `COMPLETED`なのに`acceptance.blockers`が空でない
+- `execution.phase=COMPLETED`なのに`acceptance.target`または`deployment.target`が未設定、または両者の`kind` / `identifier`が一致しない
 - `execution.phase=COMPLETED`かつ`acceptance.result=CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない
 - `ACCEPTANCE`で`acceptance.result=NOT_ACCEPTED`なのに`stop_reason=ACCEPTANCE_NOT_ACCEPTED`でない
 - `READY_FOR_HUMAN_MERGE`なのに`issue.acceptance_status=SATISFIED`でない
 - `COMPLETED`なのに`acceptance.result`が`ACCEPTED`または`CONDITIONAL`でない、または`next_action=COMPLETE`でない
 - `ACCEPTANCE`で`acceptance.result=NOT_ACCEPTED`なのに`stop_reason=ACCEPTANCE_NOT_ACCEPTED`でない
 
-`merge_allowed`のように他フィールドから決まる値はStateへ手書き保存しない。Merge可否は、Issue受入条件、同一head SHAの標準検証、CI、利用可能なSecurity、ReviewのBLOCKING判定、およびHuman Approval Boundaryを個別に確認して人間が判断する。
+`evidence.commit_sha`はCI / Security / Review等の証拠であり、Deploy対象artifact識別子の代用にしない。`merge_allowed`のように他フィールドから決まる値はStateへ手書き保存しない。Merge可否は、Issue受入条件、同一head SHAの標準検証、CI、利用可能なSecurity、ReviewのBLOCKING判定、およびHuman Approval Boundaryを個別に確認して人間が判断する。
 
 ### 停止状態
 
@@ -176,10 +188,10 @@ State更新は全履歴の再生成や無制限な追記ではなく、許可さ
 3. GitHubの最新観測を取得し、Stateの`pr.head_sha`および`expected_sha`と照合する。
 4. head SHAが変わった場合は、旧SHAに紐付くlocal / CI / security / reviewを現headの成功結果として扱わず、verificationを`NOT_RUN`へ戻す。新しいSHAを`expected_sha`へ設定する。
 5. CI、Security、Reviewは同じ`expected_sha`を対象に、別々の結果として更新する。Securityが未実行なら成功扱いにせず、利用不能の場合は`security=UNAVAILABLE`と`approval.security_exception=PENDING`を記録する。人間の明示判断後だけ`APPROVED`へ更新できる。Securityが`FAILED`になった場合は例外承認を適用せず、`stop_reason=SECURITY_FAILED`として停止する。
-6. Product Acceptanceの実行結果を`acceptance.result`へ更新する。`ACCEPTED`、`NOT_ACCEPTED`、`CONDITIONAL`を区別し、未実行・実行中は`NOT_RUN`または`RUNNING`とする。`CONDITIONAL`の場合は`conditions`、`due_at`、`follow_up_issue`、`blockers`を実際の受入状態に合わせて記録する。条件・期限・追跡Issueが未設定、または`blockers`が残る未解決ConditionalもStateへ保持でき、`next_action=STOP`と`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED`で停止する。全条件が揃い`blockers`が空の場合だけ、状態遷移で定義した完了条件を満たす。
+6. Deploy後は実際のDeploy記録から`deployment.target`を更新し、6. Product Acceptanceの実行結果を`acceptance.result`へ更新する。`ACCEPTED`、`NOT_ACCEPTED`、`CONDITIONAL`を区別し、未実行・実行中は`NOT_RUN`または`RUNNING`とする。`CONDITIONAL`の場合は`conditions`、`due_at`、`follow_up_issue`、`blockers`を実際の受入状態に合わせて記録する。条件・期限・追跡Issueが未設定、または`blockers`が残る未解決ConditionalもStateへ保持でき、`next_action=STOP`と`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED`で停止する。全条件が揃い`blockers`が空の場合だけ、状態遷移で定義した完了条件を満たす。
 7. 指摘はSeverityだけでなく、既存のReview Evidence Contractに従うP2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `DISMISS`）を件数と証拠参照で更新する。証拠参照は定義済みの`evidence`フィールドへ保存する。
 8. `updated_at`を更新し、必要な根拠は定義済みの`evidence.issue_url`、`pr_url`、`review_url`、`ci_url`、`security_url`、`commit_sha`へ保持する。秘密情報は保存しない。
-9. 保存後にenum、必須field、SHA一致、停止条件を検証する。
+9. 保存後にenum、必須field、SHA一致、Acceptance対象artifactと現行Deploy targetの一致、停止条件を検証する。
 
 Current StateとGitHub観測が矛盾した場合は、古いStateを正とせず、最新観測を確認してStateを更新する。最新観測自体を取得できない場合は`UNAVAILABLE`または停止状態として記録し、成功扱いにしない。
 
@@ -205,6 +217,6 @@ Current StateとGitHub観測が矛盾した場合は、古いStateを正とせ�
 
 ## 最小化と再評価
 
-Current Stateは長時間タスクの再開に必要な識別子、enum状態、対象SHA、検証結果、レビュー分類、Product Acceptance結果、Conditionalの条件・期限・追跡Issue・未解決BLOCKER、停止理由、次アクション、証拠参照だけを保持する。会話要約、自由文の思考過程、全コメント履歴、秘密情報を追加しない。
+Current Stateは長時間タスクの再開に必要な識別子、enum状態、対象SHA、検証結果、レビュー分類、Product Acceptance結果、Acceptance対象artifact、Deploy対象artifact、Conditionalの条件・期限・追跡Issue・未解決BLOCKER、停止理由、次アクション、証拠参照だけを保持する。
 
 この契約が既存のGitHub metadataだけで同じ再開性とSHA誤適用防止を証明できるようになった場合、または更新負荷が便益を上回る場合は、Issue化して簡素化・削除を再評価する。
