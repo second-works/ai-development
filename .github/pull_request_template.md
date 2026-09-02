@@ -6,7 +6,9 @@ Closes #
 
 <!-- 正本とenumは docs/ai-execution-state.md を参照する。State全文を手入力せず、現在の要約と対象SHAだけを更新する。 -->
 
-- Current phase:
+- Current phase: `PLAN_READY / IMPLEMENT / LOCAL_VERIFY / PR_OPEN / CI_SECURITY / REVIEW / FIX / REVERIFY / READY_FOR_HUMAN_MERGE / MERGED / DEPLOY / ACCEPTANCE / COMPLETED`
+- Issue acceptance status:
+- Product Acceptance result:
 - Current head SHA:
 - Expected SHA:
 - Verification status（local / CI / Security / Review）:
