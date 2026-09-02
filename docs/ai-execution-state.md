@@ -164,7 +164,7 @@ PLAN_READY
 - 標準検証、CI、Securityの失敗または未実行
 - P0 / P1 / BLOCKING P2が残存
 - レビュー修正ラウンド上限に到達
-- Product Acceptanceが`NOT_ACCEPTED`、未完了、または未解決Conditional
+- Product Acceptanceが`NOT_ACCEPTED`または未解決Conditional
 - Issue範囲外の変更が必要
 
 ## State更新契約
