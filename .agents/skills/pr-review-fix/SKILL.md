@@ -10,6 +10,18 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 レビューの目的は「指摘を0件にすること」ではない。
 完了条件は、**Issueの受入条件を満たし、CI/securityが成功し、今回のPRに起因するBLOCKINGが残っていないこと**。
 
+## Structured Current State
+
+レビュー修正の開始時と各trust boundaryの終了時は、[Structured Current State](../../../docs/ai-execution-state.md)を構築または復元する。
+
+- `schema_version`、Issue番号、PR番号、head branch、`head_sha`、`expected_sha`を保持する。
+- `execution.phase`、`execution.round`、`next_action`、`stop_reason`は定義済みenumだけを使う。停止条件成立時は`next_action=STOP`とし、自動的に次工程へ進まない。
+- local verify、CI、Security、Reviewは、同じ`expected_sha`に対する別々の結果として更新する。head SHAが変わったら旧結果を再利用せず、現headを新しい検証対象にする。
+- P2は`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`へ分類し、件数と必要な証拠参照を更新する。非BLOCKING P2だけで追加修正ループへ戻さない。
+- StateとGitHubの最新観測が矛盾した場合は、GitHub観測を確認してStateを更新する。観測できない結果は成功扱いにしない。
+- `merge_allowed`を手書き保存せず、既存のCI / Security / Review / Human Approval条件から人間が判断する。
+- chain-of-thought、推論全文、全会話ログ、秘密情報はStateへ保存しない。
+
 ## 絶対ルール
 
 - `@codex review` はレビュー専用。
