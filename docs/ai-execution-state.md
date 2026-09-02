@@ -176,7 +176,7 @@ State更新は全履歴の再生成や無制限な追記ではなく、許可さ
 3. GitHubの最新観測を取得し、Stateの`pr.head_sha`および`expected_sha`と照合する。
 4. head SHAが変わった場合は、旧SHAに紐付くlocal / CI / security / reviewを現headの成功結果として扱わず、verificationを`NOT_RUN`へ戻す。新しいSHAを`expected_sha`へ設定する。
 5. CI、Security、Reviewは同じ`expected_sha`を対象に、別々の結果として更新する。Securityが未実行なら成功扱いにせず、利用不能の場合は`security=UNAVAILABLE`と`approval.security_exception=PENDING`を記録する。人間の明示判断後だけ`APPROVED`へ更新できる。Securityが`FAILED`になった場合は例外承認を適用せず、`stop_reason=SECURITY_FAILED`として停止する。
-6. Product Acceptanceの実行結果を`acceptance.result`へ更新する。`ACCEPTED`、`NOT_ACCEPTED`、`CONDITIONAL`を区別し、未実行・実行中は`NOT_RUN`または`RUNNING`とする。`CONDITIONAL`の場合は`conditions`、`due_at`、`follow_up_issue`を設定し、`blockers`が空であることを確認する。
+6. Product Acceptanceの実行結果を`acceptance.result`へ更新する。`ACCEPTED`、`NOT_ACCEPTED`、`CONDITIONAL`を区別し、未実行・実行中は`NOT_RUN`または`RUNNING`とする。`CONDITIONAL`の場合は`conditions`、`due_at`、`follow_up_issue`、`blockers`を実際の受入状態に合わせて記録する。条件・期限・追跡Issueが未設定、または`blockers`が残る未解決ConditionalもStateへ保持でき、`next_action=STOP`と`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED`で停止する。全条件が揃い`blockers`が空の場合だけ、状態遷移で定義した完了条件を満たす。
 7. 指摘はSeverityだけでなく、既存のReview Evidence Contractに従うP2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `DISMISS`）を件数と証拠参照で更新する。証拠参照は定義済みの`evidence`フィールドへ保存する。
 8. `updated_at`を更新し、必要な根拠は定義済みの`evidence.issue_url`、`pr_url`、`review_url`、`ci_url`、`security_url`、`commit_sha`へ保持する。秘密情報は保存しない。
 9. 保存後にenum、必須field、SHA一致、停止条件を検証する。
