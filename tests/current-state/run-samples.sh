@@ -100,7 +100,7 @@ if grep -Fq -- '- `CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`で�
   exit 1
 fi
 
-if ! grep -Fq -- '- `execution.phase=COMPLETED`かつ`acceptance.result=CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない' "$DOC";  || ! grep -Fq -- 'acceptance.target`と`deployment.target`がともに設定済みで`kind`と`identifier`が一致する' "$DOC"; then
+if ! grep -Fq -- '- `execution.phase=COMPLETED`かつ`acceptance.result=CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない' "$DOC" || ! grep -Fq -- 'acceptance.target`と`deployment.target`がともに設定済みで`kind`と`identifier`が一致する' "$DOC"; then
   printf 'Conditional completion validation must require the matching deploy target\\n' >&2
   exit 1
 fi
