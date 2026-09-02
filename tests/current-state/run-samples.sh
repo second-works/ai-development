@@ -107,6 +107,7 @@ fi
 if ! grep -Fq -- '次の差分を同一更新で適用する' "$DOC" || ! grep -Fq -- 'execution.stop_reason=null' "$DOC" || ! grep -Fq -- 'acceptance.conditions=[]' "$DOC" || ! grep -Fq -- 'acceptance.blockers=[]' "$DOC"; then
   printf 're-entry to acceptance must clear stop and stale conditional fields\n' >&2
   exit 1
+fi
 
 if ! grep -Fq -- 'Deployの正本' "$DOC" || ! grep -Fq -- '保存済み`deployment.target`を再取得した現行targetで更新・比較' "$DOC" || { ! grep -Fq -- '完了判定直前' "$DOC" && ! grep -Fq -- '`COMPLETED`へ進む直前' "$DOC"; }; then
   printf 'resume and completion must refresh the current deployment target\n' >&2
