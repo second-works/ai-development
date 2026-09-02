@@ -31,9 +31,9 @@ require_marker "$DOC" "READY_FOR_HUMAN_MERGE"
 require_marker "$DOC" "DESIGN_DECISION"
 require_marker "$DOC" "SHA_MISMATCH"
 require_marker "$DOC" "FIX_BLOCKING"
-require_marker "$DOC" "`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`"
+require_marker "$DOC" '`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`'
 require_marker "$DOC" "merge_allowed"
-require_marker "$DOC" "GitHub観測を確認してStateを更新"
+require_marker "$DOC" "最新観測を確認してStateを更新"
 require_marker "$DOC" "旧SHAに紐付くlocal / CI / security / review"
 require_marker "$DOC" "chain-of-thought、推論全文、全会話ログ、秘密情報はCurrent Stateへ保存しない"
 
