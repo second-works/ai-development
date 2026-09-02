@@ -79,6 +79,16 @@ if ! grep -Fq -- 'Product Acceptanceが`NOT_ACCEPTED`または未解決Condition
   exit 1
 fi
 
+if grep -Fq -- '`CONDITIONAL`の場合は`conditions`、`due_at`、`follow_up_issue`を設定し、`blockers`が空であることを確認する。' "$DOC"; then
+  printf 'unresolved Conditional states must remain representable\\n' >&2
+  exit 1
+fi
+
+if ! grep -Fq -- '未解決ConditionalもStateへ保持でき' "$DOC" || ! grep -Fq -- 'next_action=STOP`と`stop_reason=ACCEPTANCE_CONDITION_UNRESOLVED' "$DOC"; then
+  printf 'unresolved Conditional states must be persistable and stoppable\\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq -- 'READY_FOR_HUMAN_MERGE' "$DOC" || ! grep -Fq -- 'issue.acceptance_status=SATISFIED' "$DOC"; then
   printf 'READY_FOR_HUMAN_MERGE must require SATISFIED acceptance status\n' >&2
   exit 1
