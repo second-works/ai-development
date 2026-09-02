@@ -104,7 +104,7 @@ AIエージェントや開発Toolを追加または変更するIssueでは、doc
 
 長時間・複数ラウンドにまたがる実装では、[docs/ai-execution-state.md](ai-execution-state.md)の型付きCurrent Stateを、既存フローの現在状態を参照する契約として使用する。
 
-- `execution.phase`と`execution.next_action`は定義済みenumを使い、停止条件成立時は`stop_reason`を記録して停止する。
+- `execution.phase`と`execution.next_action`は定義済みenumを使い、`acceptance.result`と`COMPLETED` / `COMPLETE`を含めてAcceptance完了を表現する。停止条件成立時は`stop_reason`を記録して停止する。`READY_FOR_HUMAN_MERGE`には`issue.acceptance_status=SATISFIED`を要求する。
 - Issue / PR / branch / head SHA / expected SHAと、local / CI / Security / Reviewの結果を同一SHAへ結び付ける。
 - head SHA変更時は旧検証結果を再利用せず、現headへ検証をやり直す。
 - `merge_allowed`をStateへ手書きせず、既存のCI、Security、Review、Human Approval Boundaryの条件から人間がMerge可否を判断する。
