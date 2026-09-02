@@ -20,14 +20,20 @@ require_marker() {
 }
 
 require_marker "$DOC" "# Structured Current State"
-require_marker "$DOC" "schema_version: 1"
+require_marker "$DOC" "schema_version: 2"
+require_marker "$DOC" "Versioning and migration"
 require_marker "$DOC" "execution:"
 require_marker "$DOC" "acceptance:"
 require_marker "$DOC" "result: NOT_RUN"
 require_marker "$DOC" 'acceptance.result'
+require_marker "$DOC" 'acceptance.conditions'
+require_marker "$DOC" 'acceptance.due_at'
+require_marker "$DOC" 'acceptance.follow_up_issue'
+require_marker "$DOC" 'acceptance.blockers'
 require_marker "$DOC" 'ACCEPTED'
 require_marker "$DOC" 'NOT_ACCEPTED'
 require_marker "$DOC" 'CONDITIONAL'
+require_marker "$DOC" 'ACCEPTANCE_CONDITION_UNRESOLVED'
 require_marker "$DOC" "pr:"
 require_marker "$DOC" "verification:"
 require_marker "$DOC" "review:"
@@ -62,6 +68,16 @@ fi
 
 if ! grep -Fq -- 'ACCEPTED' "$DOC" || ! grep -Fq -- 'CONDITIONAL' "$DOC" || ! grep -Fq -- 'next_action=COMPLETE' "$DOC"; then
   printf 'completed Acceptance must have a result and terminal action\n' >&2
+  exit 1
+fi
+
+if ! grep -Fq -- 'conditions`が1件以上' "$DOC" || ! grep -Fq -- 'due_at`と`follow_up_issue`が設定済み' "$DOC" || ! grep -Fq -- 'blockers`が空' "$DOC"; then
+  printf 'Conditional completion must require conditions, deadline, follow-up, and no blockers\\n' >&2
+  exit 1
+fi
+
+if grep -Fq -- 'schema_version: 1' "$DOC"; then
+  printf 'Current State schema must be version 2 after adding acceptance fields\\n' >&2
   exit 1
 fi
 
