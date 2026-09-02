@@ -146,7 +146,7 @@ PLAN_READY
 - `READY_FOR_HUMAN_MERGE`なのに`issue.acceptance_status=SATISFIED`でない
 - `COMPLETED`なのに`acceptance.result`が`ACCEPTED`または`CONDITIONAL`でない、または`next_action=COMPLETE`でない
 - `COMPLETED`なのに`acceptance.blockers`が空でない
-- `CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない
+- `execution.phase=COMPLETED`かつ`acceptance.result=CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない
 - `ACCEPTANCE`で`acceptance.result=NOT_ACCEPTED`なのに`stop_reason=ACCEPTANCE_NOT_ACCEPTED`でない
 - `READY_FOR_HUMAN_MERGE`なのに`issue.acceptance_status=SATISFIED`でない
 - `COMPLETED`なのに`acceptance.result`が`ACCEPTED`または`CONDITIONAL`でない、または`next_action=COMPLETE`でない
