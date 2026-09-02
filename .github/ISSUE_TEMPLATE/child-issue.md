@@ -51,7 +51,12 @@ path/to/protected/**
 
 <!-- Current Stateの正本とenumは docs/ai-execution-state.md を参照する。全文を転記せず、実装時点の要約だけを記録する。 -->
 
-- Current phase: `PLAN_READY / IMPLEMENT / LOCAL_VERIFY / PR_OPEN / CI_SECURITY / REVIEW / FIX / REVERIFY / READY_FOR_HUMAN_MERGE / MERGED / DEPLOY / ACCEPTANCE`
+- Current phase: `PLAN_READY / IMPLEMENT / LOCAL_VERIFY / PR_OPEN / CI_SECURITY / REVIEW / FIX / REVERIFY / READY_FOR_HUMAN_MERGE / MERGED / DEPLOY / ACCEPTANCE / COMPLETED`
+- Issue acceptance status:
+- Product Acceptance result:
+- Product Acceptance conditions / deadline / follow-up Issue:
+- Product Acceptance target artifact:
+- Current Deploy target artifact:
 - Current head SHA:
 - Expected SHA:
 - Verification status（local / CI / Security / Review）:

@@ -155,6 +155,9 @@ require_ledger_fields() {
 
 require_marker "docs/ai-development-harness-inventory.md" "## Harness Minimalism"
 require_marker "docs/ai-development-harness-inventory.md" "ETCSLV"
+require_marker "docs/ai-development-harness-inventory.md" "schema v3に従ったphase"
+require_marker "docs/ai-development-harness-inventory.md" "Acceptance対象artifact"
+require_marker "docs/ai-development-harness-inventory.md" "現行Deploy target"
 ledger_headings=()
 while IFS= read -r heading; do
   ledger_headings+=("$heading")

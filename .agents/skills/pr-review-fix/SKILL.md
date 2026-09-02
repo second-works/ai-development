@@ -14,7 +14,7 @@ description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead bran
 
 レビュー修正の開始時と各trust boundaryの終了時は、[Structured Current State](../../../docs/ai-execution-state.md)を構築または復元する。
 
-- `schema_version`、Issue番号、PR番号、head branch、`head_sha`、`expected_sha`を保持する。
+- schema v3の`schema_version`、Issue番号、PR番号、head branch、`head_sha`、`expected_sha`、Issue受入状態、Product Acceptance結果と終端アクション、Acceptance対象artifact、現行Deploy targetを保持する。`READY_FOR_HUMAN_MERGE`は`issue.acceptance_status=SATISFIED`の場合だけ許可し、Acceptance対象artifactと現行Deploy targetが一致する`CONDITIONAL`だけを完了扱いにする。 再開時と`COMPLETED`直前はDeployの正本から現行targetを再取得し、`ACCEPTED`を含むtarget未設定・不一致は`next_action=STOP`、`stop_reason=ACCEPTANCE_TARGET_MISMATCH`として停止してAcceptanceを再実行する。 再検収へ戻す際は停止理由をnullにし、Acceptance結果を`NOT_RUN`へ戻し、Conditional専用項目を初期化してから`next_action=RUN_ACCEPTANCE`へ進める。
 - `execution.phase`、`execution.round`、`next_action`、`stop_reason`は定義済みenumだけを使う。停止条件成立時は`next_action=STOP`とし、自動的に次工程へ進まない。
 - local verify、CI、Security、Reviewは、同じ`expected_sha`に対する別々の結果として更新する。head SHAが変わったら旧結果を再利用せず、現headを新しい検証対象にする。
 - P2は`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`へ分類し、件数と必要な証拠参照を更新する。非BLOCKING P2だけで追加修正ループへ戻さない。
