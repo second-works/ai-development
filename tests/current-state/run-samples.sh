@@ -32,7 +32,7 @@ require_marker "$DOC" "evidence:"
 require_marker "$DOC" "evidence.issue_url"
 require_marker "$DOC" "人間の明示判断後だけ"
 require_marker "$DOC" "security=FAILED"
-require_marker "$DOC" "UNAVAILABLEかつ`approval.security_exception=APPROVED`"
+require_marker "$DOC" 'UNAVAILABLEかつ`approval.security_exception=APPROVED`でもない'
 require_marker "$DOC" "stop_reason=SECURITY_FAILED"
 require_marker "$DOC" "PLAN_READY"
 require_marker "$DOC" "READY_FOR_HUMAN_MERGE"
