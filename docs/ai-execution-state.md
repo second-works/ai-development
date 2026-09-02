@@ -49,6 +49,15 @@ review:
 approval:
   design_decision_required: false
   human_approval_required: false
+  security_exception: NOT_APPLICABLE
+
+evidence:
+  issue_url: null
+  pr_url: null
+  ci_url: null
+  security_url: null
+  review_url: null
+  commit_sha: null
 
 updated_at: null
 ```
@@ -72,6 +81,8 @@ updated_at: null
 | `review.p0`等 | integer | 0以上。P2は4分類ごとに集計 |
 | `approval.design_decision_required` | boolean | 重要設計判断の承認待ちならtrue |
 | `approval.human_approval_required` | boolean | Human Approval Boundaryで人間判断待ちならtrue |
+| `approval.security_exception` | enum | `NOT_APPLICABLE` / `PENDING` / `APPROVED`。Securityが利用不能な場合の人間による明示例外判断を表す |
+| `evidence` | object | `issue_url` / `pr_url` / `ci_url` / `security_url` / `review_url` / `commit_sha`を持つ。各値はstringまたはnull |
 | `updated_at` | RFC 3339 timestampまたはnull | State更新時刻。外部観測時刻と混同しない |
 
 フィールドを追加する場合は、`schema_version`を更新し、許可値・更新規則・後方互換性をこの文書へ先に追加する。未定義のフィールドやenum値はStateへ保存しない。
@@ -103,8 +114,9 @@ PLAN_READY
 - `stop_reason`が設定されているのに自動的に次工程へ進む
 - `pr.head_sha`と`pr.expected_sha`が異なる
 - head SHAが変わったのに、旧SHAのverificationを`PASSED`のまま再利用する
-- `READY_FOR_HUMAN_MERGE`なのにlocal / CI / security / reviewのいずれかが`PASSED`でない
+- `READY_FOR_HUMAN_MERGE`なのにlocal / CI / reviewのいずれかが`PASSED`でない、またはsecurityが`PASSED`でなく`approval.security_exception=APPROVED`でもない
 - `READY_FOR_HUMAN_MERGE`なのにP0、P1、またはBLOCKING P2が残っている
+- `security=UNAVAILABLE`のまま`approval.security_exception=APPROVED`を記録せずREADYへ進む
 - `approval.human_approval_required=true`のまま自動Mergeする
 
 `merge_allowed`のように他フィールドから決まる値はStateへ手書き保存しない。Merge可否は、Issue受入条件、同一head SHAの標準検証、CI、利用可能なSecurity、ReviewのBLOCKING判定、およびHuman Approval Boundaryを個別に確認して人間が判断する。
@@ -129,9 +141,9 @@ State更新は全履歴の再生成や無制限な追記ではなく、許可さ
 2. 更新対象をこのschemaで定義されたfieldに限定する。未知のfield、自由な履歴配列、chain-of-thought、推論全文は追加しない。
 3. GitHubの最新観測を取得し、Stateの`pr.head_sha`および`expected_sha`と照合する。
 4. head SHAが変わった場合は、旧SHAに紐付くlocal / CI / security / reviewを現headの成功結果として扱わず、verificationを`NOT_RUN`へ戻す。新しいSHAを`expected_sha`へ設定する。
-5. CI、Security、Reviewは同じ`expected_sha`を対象に、別々の結果として更新する。Securityが未実行または利用不能なら成功扱いにしない。
-6. 指摘はSeverityだけでなく、既存のReview Evidence Contractに従うP2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `DISMISS`）を件数と証拠参照で更新する。
-7. `updated_at`を更新し、必要な根拠はIssue / PR / Review / CI URL、commit SHAなどの参照として保持する。秘密情報は保存しない。
+5. CI、Security、Reviewは同じ`expected_sha`を対象に、別々の結果として更新する。Securityが未実行なら成功扱いにせず、利用不能の場合は`security=UNAVAILABLE`と`approval.security_exception=PENDING`を記録する。人間の明示判断後だけ`APPROVED`へ更新できる。
+6. 指摘はSeverityだけでなく、既存のReview Evidence Contractに従うP2分類（`BLOCKING` / `IN-SCOPE FIX` / `FOLLOW-UP` / `DISMISS`）を件数と証拠参照で更新する。証拠参照は定義済みの`evidence`フィールドへ保存する。
+7. `updated_at`を更新し、必要な根拠は定義済みの`evidence.issue_url`、`pr_url`、`review_url`、`ci_url`、`security_url`、`commit_sha`へ保持する。秘密情報は保存しない。
 8. 保存後にenum、必須field、SHA一致、停止条件を検証する。
 
 Current StateとGitHub観測が矛盾した場合は、古いStateを正とせず、最新観測を確認してStateを更新する。最新観測自体を取得できない場合は`UNAVAILABLE`または停止状態として記録し、成功扱いにしない。
