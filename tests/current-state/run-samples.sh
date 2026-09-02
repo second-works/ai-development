@@ -22,7 +22,7 @@ require_marker() {
 require_marker "$DOC" "# Structured Current State"
 require_marker "$DOC" "schema_version: 3"
 require_marker "$DOC" "Versioning and migration"
-require_marker "$DOC" "v1 State"
+require_marker "$DOC" "v1またはv2 State"
 require_marker "$DOC" "issue.acceptance_status=SATISFIED"
 require_marker "$DOC" "Product Acceptance結果は従来どおりDeploy後"
 require_marker "$DOC" "execution:"
