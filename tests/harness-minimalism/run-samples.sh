@@ -307,6 +307,8 @@ require_marker ".github/pull_request_template.md" "# Harness Minimalism / ETCSLV
 require_marker ".github/pull_request_template.md" "対象ハーネス / 台帳ID:"
 require_marker ".github/pull_request_template.md" "削除・再評価条件:"
 
+bash "$ROOT/tests/current-state/run-samples.sh" "$ROOT"
+
 if (( failures != 0 )); then
   exit 1
 fi

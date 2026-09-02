@@ -99,6 +99,17 @@ AIエージェントや開発Toolを追加または変更するIssueでは、doc
 - 既存のSecurity Boundary、Human Approval Boundary、Production保護をコストだけで弱めない。
 - 判定を変更した場合は、CI、Security、レビュー、実利用検証のどの境界を再確認するか決める。
 
+
+### 4.3 Structured Current State
+
+長時間・複数ラウンドにまたがる実装では、[docs/ai-execution-state.md](ai-execution-state.md)の型付きCurrent Stateを、既存フローの現在状態を参照する契約として使用する。
+
+- `execution.phase`と`execution.next_action`は定義済みenumを使い、停止条件成立時は`stop_reason`を記録して停止する。
+- Issue / PR / branch / head SHA / expected SHAと、local / CI / Security / Reviewの結果を同一SHAへ結び付ける。
+- head SHA変更時は旧検証結果を再利用せず、現headへ検証をやり直す。
+- `merge_allowed`をStateへ手書きせず、既存のCI、Security、Review、Human Approval Boundaryの条件から人間がMerge可否を判断する。
+- chain-of-thought、推論全文、全会話ログはStateへ保存しない。
+
 ## 5. Codex実装
 
 Codexには原則として子Issueを1件ずつ渡す。

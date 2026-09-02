@@ -71,6 +71,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | S-01 | Issue、PR、head SHA | S | KEEP | PR、Git履歴、CI結果 |
 | S-02 | FOLLOW-UPとDesign Decision履歴 | S | KEEP | docs/review-followups.md、Issue |
 | S-03 | Implementation、Deploy、Product Acceptance状態 | S | KEEP | Issue、PR、docs/acceptance-verification.md |
+| S-04 | Structured Current State契約 | S | STRENGTHEN | docs/ai-execution-state.md、AGENTS.md、pr-review-fix Skill、Issue / PRテンプレート |
 | L-01 | verify.shとCI | L | KEEP | templates/verification、.github/workflows/ci.yml |
 | L-02a | Security Preflight | L | KEEP | templates/security、docs/ai-agent-security-boundary.md |
 | L-02b | CodeQL | L | KEEP | GitHub Code Scanning、docs/github-repository-security-baseline.md |
@@ -320,6 +321,21 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：KEEP。
 - **削除・再評価条件**：状態遷移を同等以上に表現できる構造化Stateへ移行する場合に再評価する。
 - **関連Issue / 正本文書**：#56、S-03。Issue #56の監査条件とこの項目の判定を追跡する。 正本：Issue、PR、docs/acceptance-verification.md。
+
+### S-04 Structured Current State契約
+
+- **ETCSLV分類**：State
+- **解決する失敗モード**：長時間タスクの再開時に現在のIssue / PR / SHA / 検証 / レビュー状態を誤認し、古い観測や検証結果を現headへ誤適用すること。
+- **発火条件**：複数工程、複数レビューラウンド、中断再開、commit / push、CI / Security待機、Review、Merge判断のとき。
+- **入力 / Context**：固定ルール、Current State、Issue、PR、branch、最新head SHA、local / CI / Security / Review結果、必要な証拠参照。
+- **出力 / State変更**：schemaに従ったphase、next action、stop reason、対象SHA、検証状態、レビューラウンド、P2分類の差分更新。
+- **決定論的判定可能か**：schema必須field、enum、SHA一致、検証結果、停止条件の一部は機械判定できる。Issue受入条件とレビュー因果は確認が必要。
+- **実行コスト / 運用負荷**：全文履歴の再読と重複転記を減らし、必要な識別子・enum・証拠参照だけを更新する。Stateと最新GitHub観測の照合は各trust boundaryで必要。
+- **重複する仕組み**：S-01はIssue / PR / SHAと検証結果の紐付け、S-02はFOLLOW-UPとDesign Decisionの継続履歴、S-03はImplementation / Deploy / Acceptanceの分離を担う。S-04はそれらを置き換えず、再開時の型付きStateと更新契約を担う。
+- **安全上必須か**：古いSHAの検証誤適用、停止条件の見落とし、chain-of-thoughtの永続化を防ぐために重要。
+- **判定**：STRENGTHEN。
+- **削除・再評価条件**：GitHub metadataと既存正本文書だけで、同じ再開性、SHA照合、停止、最小化を追跡可能に証明できる場合に再評価する。
+- **関連Issue / 正本文書**：#59、S-04。Issue #59のCurrent State契約を追跡する。 正本：docs/ai-execution-state.md、AGENTS.md、.agents/skills/pr-review-fix/SKILL.md、Issue / PRテンプレート。
 
 ### L-01 verify.shとCI
 

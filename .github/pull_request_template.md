@@ -2,6 +2,18 @@
 
 Closes #
 
+# Current State
+
+<!-- 正本とenumは docs/ai-execution-state.md を参照する。State全文を手入力せず、現在の要約と対象SHAだけを更新する。 -->
+
+- Current phase:
+- Current head SHA:
+- Expected SHA:
+- Verification status（local / CI / Security / Review）:
+- Review round / blocking finding status:
+- Stop reason:
+- Next action:
+
 # 変更内容
 
 - 
