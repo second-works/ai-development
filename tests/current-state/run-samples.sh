@@ -89,6 +89,16 @@ if ! grep -Fq -- '未解決ConditionalもStateへ保持でき' "$DOC" || ! grep 
   exit 1
 fi
 
+if grep -Fq -- '- `CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない' "$DOC"; then
+  printf 'unresolved Conditional invalid-state rule must be phase-scoped\\n' >&2
+  exit 1
+fi
+
+if ! grep -Fq -- '- `execution.phase=COMPLETED`かつ`acceptance.result=CONDITIONAL`なのに`issue.acceptance_status=SATISFIED`でない、`conditions`、`due_at`、`follow_up_issue`のいずれかが未設定、または`blockers`が空でない' "$DOC"; then
+  printf 'Conditional completion validation must be limited to COMPLETED\\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq -- 'READY_FOR_HUMAN_MERGE' "$DOC" || ! grep -Fq -- 'issue.acceptance_status=SATISFIED' "$DOC"; then
   printf 'READY_FOR_HUMAN_MERGE must require SATISFIED acceptance status\n' >&2
   exit 1
