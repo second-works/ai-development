@@ -104,7 +104,7 @@ AIエージェントや開発Toolを追加または変更するIssueでは、doc
 
 長時間・複数ラウンドにまたがる実装では、[docs/ai-execution-state.md](ai-execution-state.md)の型付きCurrent Stateを、既存フローの現在状態を参照する契約として使用する。
 
-- schema v3の`execution.phase`と`execution.next_action`は定義済みenumを使い、`acceptance.result`と`COMPLETED` / `COMPLETE`を含めてAcceptance完了を表現する。`CONDITIONAL`はAcceptance対象artifactと現行Deploy targetが一致し、条件・期限・追跡Issueが設定済みで未解決BLOCKERがない場合だけ完了扱いにし、それ以外は停止する。`READY_FOR_HUMAN_MERGE`には`issue.acceptance_status=SATISFIED`を要求する。
+- schema v3の`execution.phase`と`execution.next_action`は定義済みenumを使い、`acceptance.result`と`COMPLETED` / `COMPLETE`を含めてAcceptance完了を表現する。`CONDITIONAL`はAcceptance対象artifactと現行Deploy targetが一致し、条件・期限・追跡Issueが設定済みで未解決BLOCKERがない場合だけ完了扱いにし、それ以外は停止する。`READY_FOR_HUMAN_MERGE`には`issue.acceptance_status=SATISFIED`を要求する。 再開時と`COMPLETED`直前はDeployの正本から現行targetを再取得し、`ACCEPTED`を含むtarget未設定・不一致は`next_action=STOP`、`stop_reason=ACCEPTANCE_TARGET_MISMATCH`として停止してAcceptanceを再実行する。
 - Issue / PR / branch / head SHA / expected SHAと、local / CI / Security / Reviewの結果を同一SHAへ結び付ける。
 - head SHA変更時は旧検証結果を再利用せず、現headへ検証をやり直す。
 - `merge_allowed`をStateへ手書きせず、既存のCI、Security、Review、Human Approval Boundaryの条件から人間がMerge可否を判断する。
