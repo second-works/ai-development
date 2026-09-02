@@ -22,6 +22,12 @@ require_marker() {
 require_marker "$DOC" "# Structured Current State"
 require_marker "$DOC" "schema_version: 1"
 require_marker "$DOC" "execution:"
+require_marker "$DOC" "acceptance:"
+require_marker "$DOC" "result: NOT_RUN"
+require_marker "$DOC" 'acceptance.result'
+require_marker "$DOC" 'ACCEPTED'
+require_marker "$DOC" 'NOT_ACCEPTED'
+require_marker "$DOC" 'CONDITIONAL'
 require_marker "$DOC" "pr:"
 require_marker "$DOC" "verification:"
 require_marker "$DOC" "review:"
@@ -36,6 +42,10 @@ require_marker "$DOC" '`UNAVAILABLE`かつ`approval.security_exception=APPROVED`
 require_marker "$DOC" "stop_reason=SECURITY_FAILED"
 require_marker "$DOC" "PLAN_READY"
 require_marker "$DOC" "READY_FOR_HUMAN_MERGE"
+require_marker "$DOC" "COMPLETED"
+require_marker "$DOC" "COMPLETE"
+require_marker "$DOC" "ACCEPTANCE_NOT_ACCEPTED"
+require_marker "$DOC" 'issue.acceptance_status=SATISFIED'
 require_marker "$DOC" "DESIGN_DECISION"
 require_marker "$DOC" "SHA_MISMATCH"
 require_marker "$DOC" "FIX_BLOCKING"
@@ -44,6 +54,16 @@ require_marker "$DOC" "merge_allowed"
 require_marker "$DOC" "最新観測を確認してStateを更新"
 require_marker "$DOC" "旧SHAに紐付くlocal / CI / security / review"
 require_marker "$DOC" "chain-of-thoughtや推論全文、全会話ログはCurrent Stateへ保存しない"
+
+if ! grep -Fq -- 'READY_FOR_HUMAN_MERGE' "$DOC" || ! grep -Fq -- 'issue.acceptance_status=SATISFIED' "$DOC"; then
+  printf 'READY_FOR_HUMAN_MERGE must require SATISFIED acceptance status\n' >&2
+  exit 1
+fi
+
+if ! grep -Fq -- 'ACCEPTED' "$DOC" || ! grep -Fq -- 'CONDITIONAL' "$DOC" || ! grep -Fq -- 'next_action=COMPLETE' "$DOC"; then
+  printf 'completed Acceptance must have a result and terminal action\n' >&2
+  exit 1
+fi
 
 if grep -Eq '^[[:space:]]*merge_allowed:' "$DOC"; then
   printf 'merge_allowed must not be persisted as a State field\n' >&2
