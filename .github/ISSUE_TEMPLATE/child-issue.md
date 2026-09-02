@@ -47,6 +47,18 @@ path/to/protected/**
 - [ ] 秘密情報を含まない
 - [ ] PRが作成されている
 
+# Current State
+
+<!-- Current Stateの正本とenumは docs/ai-execution-state.md を参照する。全文を転記せず、実装時点の要約だけを記録する。 -->
+
+- Current phase: `PLAN_READY / IMPLEMENT / LOCAL_VERIFY / PR_OPEN / CI_SECURITY / REVIEW / FIX / REVERIFY / READY_FOR_HUMAN_MERGE / MERGED / DEPLOY / ACCEPTANCE`
+- Current head SHA:
+- Expected SHA:
+- Verification status（local / CI / Security / Review）:
+- Review round / blocking finding status:
+- Stop reason:
+- Next action:
+
 # Agent Security Boundary
 
 <!-- 詳細は docs/ai-agent-security-boundary.md を参照する。 -->
