@@ -49,7 +49,7 @@
 長時間・複数ラウンドのAI実装を中断・再開する場合は、[docs/ai-execution-state.md](docs/ai-execution-state.md)のCurrent State契約を使用する。
 
 - Stateは定義済みschemaとenumで保持し、Issue / PR / head SHA / expected SHA、Issue受入状態、Product Acceptance結果と終端アクション、Acceptance対象artifact、現行Deploy target、検証結果、レビューラウンド、P2分類、停止理由、次アクションを表現する。
-- `READY_FOR_HUMAN_MERGE`へ進めるには `issue.acceptance_status=SATISFIED` を要求する。schema v3の`ACCEPTANCE`は、Acceptance対象artifactと現行Deploy targetが一致し、`ACCEPTED`、または条件・期限・追跡Issueが設定済みで未解決BLOCKERのない`CONDITIONAL`だけを`COMPLETED` / `COMPLETE`として記録する。条件未達や対象不一致のConditionalは停止する。 再開時と`COMPLETED`直前はDeployの正本から現行targetを再取得し、`ACCEPTED`を含むtarget未設定・不一致は`next_action=STOP`、`stop_reason=ACCEPTANCE_TARGET_MISMATCH`として停止してAcceptanceを再実行する。
+- `READY_FOR_HUMAN_MERGE`へ進めるには `issue.acceptance_status=SATISFIED` を要求する。schema v3の`ACCEPTANCE`は、Acceptance対象artifactと現行Deploy targetが一致し、`ACCEPTED`、または条件・期限・追跡Issueが設定済みで未解決BLOCKERのない`CONDITIONAL`だけを`COMPLETED` / `COMPLETE`として記録する。条件未達や対象不一致のConditionalは停止する。 再開時と`COMPLETED`直前はDeployの正本から現行targetを再取得し、`ACCEPTED`を含むtarget未設定・不一致は`next_action=STOP`、`stop_reason=ACCEPTANCE_TARGET_MISMATCH`として停止してAcceptanceを再実行する。 再検収へ戻す際は停止理由をnullにし、Acceptance結果を`NOT_RUN`へ戻し、Conditional専用項目を初期化してから`next_action=RUN_ACCEPTANCE`へ進める。
 - GitHub上の最新Issue / PR / branch / head SHA / CI / Security / Reviewを再取得し、Stateと矛盾する古い観測は再利用しない。
 - head SHAが変わった場合、旧SHAのlocal / CI / Security / Review成功結果を現headへ適用せず、現headを新しい検証対象として再検証する。
 - `merge_allowed`のような派生値を手書き保存せず、既存のCI / Security / Review / Human Approval条件から人間が判断する。
