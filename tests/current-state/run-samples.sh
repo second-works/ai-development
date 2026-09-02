@@ -95,7 +95,7 @@ if grep -Fq -- '`CONDITIONAL`の場合は`conditions`、`due_at`、`follow_up_is
 fi
 
 
-if ! grep -Fq -- 'targetが未設定・不一致なら、`next_action=STOP`と`stop_reason=ACCEPTANCE_TARGET_MISMATCH`' "$DOC" || ! grep -Fq -- 'Acceptanceを再実行するまで`COMPLETED`へ進めない' "$DOC"; then
+if ! grep -Fq -- 'stop_reason=ACCEPTANCE_TARGET_MISMATCH' "$DOC" || ! grep -Fq -- 'next_action=STOP' "$DOC" || ! grep -Fq -- 'Acceptanceを再実行するまで`COMPLETED`へ進めない' "$DOC"; then
   printf 'Acceptance target mismatch must be an explicit stoppable state\n' >&2
   exit 1
 fi
