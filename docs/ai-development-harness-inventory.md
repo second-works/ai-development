@@ -328,7 +328,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **解決する失敗モード**：長時間タスクの再開時に現在のIssue / PR / SHA / 検証 / レビュー状態を誤認し、古い観測や検証結果を現headへ誤適用すること。
 - **発火条件**：複数工程、複数レビューラウンド、中断再開、commit / push、CI / Security待機、Review、Merge判断、Product Acceptance完了のとき。
 - **入力 / Context**：固定ルール、Current State、Issue、PR、branch、最新head SHA、local / CI / Security / Review結果、必要な証拠参照。
-- **出力 / State変更**：schemaに従ったphase、next action、Product Acceptance結果と終端アクション、stop reason、対象SHA、検証状態、レビューラウンド、P2分類の差分更新。
+- **出力 / State変更**：schema v2に従ったphase、next action、Product Acceptance結果と終端アクション、Conditionalの条件・期限・追跡Issue・未解決BLOCKER、stop reason、対象SHA、検証状態、レビューラウンド、P2分類の差分更新。
 - **決定論的判定可能か**：schema必須field、enum、SHA一致、検証結果、停止条件の一部は機械判定できる。Issue受入条件とレビュー因果は確認が必要。
 - **実行コスト / 運用負荷**：全文履歴の再読と重複転記を減らし、必要な識別子・enum・証拠参照だけを更新する。Stateと最新GitHub観測の照合は各trust boundaryで必要。
 - **重複する仕組み**：S-01はIssue / PR / SHAと検証結果の紐付け、S-02はFOLLOW-UPとDesign Decisionの継続履歴、S-03はImplementation / Deploy / Acceptanceの分離を担う。S-04はそれらを置き換えず、再開時の型付きStateと更新契約を担う。
