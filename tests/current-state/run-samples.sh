@@ -44,6 +44,10 @@ require_marker "$DOC" 'NOT_ACCEPTED'
 require_marker "$DOC" 'CONDITIONAL'
 require_marker "$DOC" 'ACCEPTANCE_CONDITION_UNRESOLVED'
 require_marker "$DOC" 'ACCEPTANCE_TARGET_MISMATCH'
+require_marker "$DOC" '再検収へ戻す場合は'
+require_marker "$DOC" 'execution.stop_reason=null'
+require_marker "$DOC" 'acceptance.conditions=[]'
+require_marker "$DOC" 'Conditional専用項目の初期化'
 require_marker "$DOC" 'Deployの正本'
 require_marker "$DOC" '`COMPLETED`へ進む直前'
 require_marker "$DOC" '再開時'
@@ -99,6 +103,10 @@ if ! grep -Fq -- 'stop_reason=ACCEPTANCE_TARGET_MISMATCH' "$DOC" || ! grep -Fq -
   printf 'Acceptance target mismatch must be an explicit stoppable state\n' >&2
   exit 1
 fi
+
+if ! grep -Fq -- '次の差分を同一更新で適用する' "$DOC" || ! grep -Fq -- 'execution.stop_reason=null' "$DOC" || ! grep -Fq -- 'acceptance.conditions=[]' "$DOC" || ! grep -Fq -- 'acceptance.blockers=[]' "$DOC"; then
+  printf 're-entry to acceptance must clear stop and stale conditional fields\n' >&2
+  exit 1
 
 if ! grep -Fq -- 'Deployの正本' "$DOC" || ! grep -Fq -- '保存済み`deployment.target`を再取得した現行targetで更新・比較' "$DOC" || { ! grep -Fq -- '完了判定直前' "$DOC" && ! grep -Fq -- '`COMPLETED`へ進む直前' "$DOC"; }; then
   printf 'resume and completion must refresh the current deployment target\n' >&2
