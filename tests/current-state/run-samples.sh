@@ -69,6 +69,16 @@ if grep -Fq -- '移行前のv1 Stateは、Acceptance結果を確認するまで'
   exit 1
 fi
 
+if grep -Fq -- 'Product Acceptanceが`NOT_ACCEPTED`、未完了、または未解決Conditional' "$DOC"; then
+  printf 'unfinished Acceptance states must remain executable\\n' >&2
+  exit 1
+fi
+
+if ! grep -Fq -- 'Product Acceptanceが`NOT_ACCEPTED`または未解決Conditional' "$DOC" || ! grep -Fq -- '`ACCEPTANCE`では`acceptance.result=NOT_RUN`または`RUNNING`の間は`next_action=RUN_ACCEPTANCE`とする' "$DOC"; then
+  printf 'Acceptance stop conditions must not conflict with executable states\\n' >&2
+  exit 1
+fi
+
 if ! grep -Fq -- 'READY_FOR_HUMAN_MERGE' "$DOC" || ! grep -Fq -- 'issue.acceptance_status=SATISFIED' "$DOC"; then
   printf 'READY_FOR_HUMAN_MERGE must require SATISFIED acceptance status\n' >&2
   exit 1
