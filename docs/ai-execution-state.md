@@ -18,7 +18,7 @@ StateはYAMLまたは同等の構造化データとして保持する。値を�
 schema_version: 1
 issue:
   number: 123
-  acceptance_status: in_progress
+  acceptance_status: IN_PROGRESS
 
 execution:
   phase: IMPLEMENT
