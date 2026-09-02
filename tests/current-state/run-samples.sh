@@ -82,7 +82,11 @@ require_marker "$SKILL" "merge_allowed"
 require_marker "$AGENTS" "## Structured Current State"
 require_marker "$FLOW" "### 4.3 Structured Current State"
 require_marker "$CHILD_TEMPLATE" "# Current State"
+require_marker "$CHILD_TEMPLATE" "Issue acceptance status:"
+require_marker "$CHILD_TEMPLATE" "Product Acceptance result:"
 require_marker "$PR_TEMPLATE" "# Current State"
+require_marker "$PR_TEMPLATE" "Issue acceptance status:"
+require_marker "$PR_TEMPLATE" "Product Acceptance result:"
 require_marker "$INVENTORY" "| S-04 | Structured Current State契約 | S | STRENGTHEN |"
 
 printf 'Structured Current State contract: PASS\n'
