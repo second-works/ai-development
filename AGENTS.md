@@ -48,7 +48,8 @@
 
 長時間・複数ラウンドのAI実装を中断・再開する場合は、[docs/ai-execution-state.md](docs/ai-execution-state.md)のCurrent State契約を使用する。
 
-- Stateは定義済みschemaとenumで保持し、Issue / PR / head SHA / expected SHA、検証結果、レビューラウンド、P2分類、停止理由、次アクションを表現する。
+- Stateは定義済みschemaとenumで保持し、Issue / PR / head SHA / expected SHA、Issue受入状態、Product Acceptance結果と終端アクション、検証結果、レビューラウンド、P2分類、停止理由、次アクションを表現する。
+- `READY_FOR_HUMAN_MERGE`へ進めるには `issue.acceptance_status=SATISFIED` を要求し、`ACCEPTANCE`の完了結果は`COMPLETED`と`COMPLETE`で記録する。
 - GitHub上の最新Issue / PR / branch / head SHA / CI / Security / Reviewを再取得し、Stateと矛盾する古い観測は再利用しない。
 - head SHAが変わった場合、旧SHAのlocal / CI / Security / Review成功結果を現headへ適用せず、現headを新しい検証対象として再検証する。
 - `merge_allowed`のような派生値を手書き保存せず、既存のCI / Security / Review / Human Approval条件から人間が判断する。
