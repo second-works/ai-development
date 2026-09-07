@@ -225,4 +225,56 @@ set -e
   exit 1
 }
 
+timeout_output="$WORK_DIR/read-timeout.json"
+python3 - "$SCRIPT" "$timeout_output" <<'PY'
+import importlib.util
+import json
+import sys
+
+script_path, output_path = sys.argv[1:]
+spec = importlib.util.spec_from_file_location("github_state_observer", script_path)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+
+
+class TimeoutResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def read(self):
+        raise TimeoutError("simulated body read timeout")
+
+
+class TimeoutOpener:
+    def open(self, request, timeout):
+        return TimeoutResponse()
+
+
+transport = module.GitHubTransport(None)
+transport.opener = TimeoutOpener()
+module.GitHubTransport = lambda token: transport
+status = module.main([
+    "--repository", "example/demo",
+    "--issue", "64",
+    "--output", output_path,
+])
+assert status == 3
+with open(output_path, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"] == {
+    "status": "UNAVAILABLE",
+    "usable_for_state_update": False,
+    "errors": [{
+        "operation": "issue",
+        "kind": "NETWORK_ERROR",
+        "detail": "GitHub request timed out",
+    }],
+}
+PY
+
 echo "GitHub State observation samples: PASS"

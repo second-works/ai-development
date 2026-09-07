@@ -140,6 +140,8 @@ class GitHubTransport:
             raise
         except urllib.error.HTTPError as error:
             raise CollectionError(operation, "HTTP_ERROR", f"GitHub returned HTTP {error.code}", error.code) from error
+        except TimeoutError as error:
+            raise CollectionError(operation, "NETWORK_ERROR", "GitHub request timed out") from error
         except urllib.error.URLError as error:
             raise CollectionError(operation, "NETWORK_ERROR", "GitHub request could not be completed") from error
 
