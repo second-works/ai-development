@@ -30,6 +30,17 @@
 - 実装とテストが完了したらPRを作成して、そのIssueの作業を終了する。
 - warning / deprecationはテスト成功と別に評価し、V1を止めない場合でも必要に応じて後続メンテナンスIssueへ記録する。
 
+## Adaptive Development Flow / Risk Tier
+
+Issue化前、実装開始時、PR提出前および差分の影響変更時は [docs/adaptive-development-flow.md](docs/adaptive-development-flow.md) に従ってRisk Tierを判定し、Issue / PRへTierと理由を記録する。
+
+- 有効値は `LOW / MEDIUM / HIGH`、既定値はMEDIUM。混在時は最大Tierを使用する。
+- 安全影響不明、認証・認可・Secrets・権限・Production・破壊的変更・Gate自体の変更はHIGHとする。
+- LOWは実行動作・API・依存関係・workflow・安全ルールを変えない文言や表示だけの変更に限定する。
+- Tierで説明量と追加検証を調整し、必須情報は維持する。標準検証・CI・Security・Codex Review・Human Merge判断・適用対象AcceptanceをTierによって省略しない。
+- LOWはAuto-Mergeの許可ではない。既存Safety GateとHuman Approval Boundaryを維持する。
+- 承認済み設計内の作業は継続し、未承認の重要判断だけを既存Design Decision Escalationで停止する。
+
 ## Design / State Modeling
 
 型・スキーマ・状態設計で保証できる制約は、プロンプトやレビューだけに依存せず、コード構造そのもので保証する。

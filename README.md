@@ -40,6 +40,8 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 テンプレートから生成したプロジェクトは、[`templates/verification/verify.sh`](templates/verification/verify.sh) を `scripts/verify.sh` として配置し、ローカル・Agent・GitHub Actionsで同じ標準検証入口を使用します。検証は lint → type check → test → build の順に進み、対象外工程は理由付きで明示され、失敗時は後続工程へ進みません。
 
+変更のRisk Tier（`LOW / MEDIUM / HIGH`）に応じて説明量と追加検証を調整します。[Adaptive Development Flow](docs/adaptive-development-flow.md) に判定条件と記入例をまとめています。標準検証・CI・Security・Codex Review・Human Merge判断・適用対象Acceptanceは維持します。
+
 ## 主要ファイル
 
 - `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール

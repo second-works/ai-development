@@ -39,6 +39,14 @@
 
 
 
+## 2.1 Risk Tierの記入
+
+新規プロジェクトでは `docs/adaptive-development-flow.md` も配置する。Child IssueとPRのRisk Tier欄に `LOW / MEDIUM / HIGH` の今回値と理由を記入し、詳細は [正本文書](adaptive-development-flow.md) を参照する。
+
+既定MEDIUM、混在は最大Tier、安全影響不明・Gate変更はHIGH。LOWは実行動作・API・依存・workflow・安全ルールに影響しない文言や表示だけの変更に限定する。LOWの目的・範囲・根拠・テスト証拠は一段落で記録でき、対象外欄は理由をまとめて参照できる。必須情報を空欄にしてよいという意味ではない。
+
+MEDIUMでは影響と通常テスト、HIGHでは安全境界・復旧・必要な承認と追加検証を記す。標準検証・CI・Security・Codex Review・Human Merge判断・適用対象Acceptanceは省略しない。Issue化前、実装開始時、PR提出前、影響変更時に再判定する。
+
 ## 3. AGENTS.md
 
 ### 目的

@@ -20,6 +20,14 @@ GitHub上の実装完了と本番投入可能な状態は分けて扱う。Relea
 
 実装・Deployの完了と、利用者が当初の目的を達成したことも分けて扱う。実利用検証、検収計画、判定、発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) を正本とする。
 
+## 1.1 Adaptive Development Flow
+
+変更のリスクは [Risk Tier正本文書](adaptive-development-flow.md) の `LOW / MEDIUM / HIGH` で判定する。既定値MEDIUM、混在は最大Tier、安全影響不明やGate変更はHIGH。LOWは実行動作・API・依存・workflow・安全ルールを変えない文言や表示だけに限定する。
+
+LOWは目的・範囲・理由・テスト証拠を簡潔に、MEDIUMは通常の影響と6観点のテスト条件を、HIGHは安全境界・復旧方針・承認状態・追加検証を記録する。Issue化前、実装開始時、PR提出前と影響変更時に再判定する。
+
+標準検証・CI・Security・Codex Review・Human Merge判断・適用対象Acceptanceは全Tierで維持する。LOWからskipやAuto-Mergeの許可を推定しない。既存正本での理由付き対象外・例外はTierとは別に判断する。
+
 ## 2. ChatGPTの役割
 
 ChatGPTは開発マネージャー兼設計担当として使う。

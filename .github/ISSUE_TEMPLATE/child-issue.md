@@ -47,6 +47,16 @@ path/to/protected/**
 - [ ] 秘密情報を含まない
 - [ ] PRが作成されている
 
+# Risk Tier
+
+[判定順・既定値・例外](../../docs/adaptive-development-flow.md)を参照する。LOWでも必須Gateを省略しない。
+
+- Risk Tier（LOW / MEDIUM / HIGH）:
+- 判定理由・影響範囲:
+- Tierに応じた追加検証・必要な承認（該当しない場合は理由）:
+- 再判定（実装開始 / PR提出 / 影響変更時）:
+
+
 # Current State
 
 <!-- Current Stateの正本とenumは docs/ai-execution-state.md を参照する。全文を転記せず、実装時点の要約だけを記録する。 -->
