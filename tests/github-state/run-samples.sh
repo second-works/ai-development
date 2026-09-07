@@ -384,6 +384,51 @@ assert data["collection"]["errors"] == [{
     "kind": "INVALID_JSON",
     "detail": "GitHub response was not JSON",
 }]
+
+fixture_directory = Path(output_dir) / "lone-surrogate-fixture"
+fixture_directory.mkdir()
+(fixture_directory / "issue.json").write_text(
+    '{"number":64,"state":"open","html_url":"\\ud800"}', encoding="utf-8"
+)
+fixture_output = str(Path(output_dir) / "lone-surrogate-fixture.json")
+status = module.main([
+    "--repository", "example/demo",
+    "--issue", "64",
+    "--fixture-dir", str(fixture_directory),
+    "--output", fixture_output,
+])
+assert status == 3
+with open(fixture_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"]["errors"][0]["kind"] == "INVALID_JSON"
+
+assert module.json.dumps({"value": "café"}, ensure_ascii=True).isascii()
+
+class FailingWriter:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def write(self, value):
+        raise OSError("simulated output failure")
+
+
+write_failure_output = str(Path(output_dir) / "write-failure.json")
+original_fdopen = module.os.fdopen
+module.os.fdopen = lambda fd, mode, encoding: FailingWriter()
+try:
+    status = module.main([
+        "--repository", "example/demo",
+        "--issue", "64",
+        "--fixture-dir", str(Path(script_path).parent.parent / "tests" / "github-state" / "fixtures" / "no-pr"),
+        "--output", write_failure_output,
+    ])
+finally:
+    module.os.fdopen = original_fdopen
+assert status == 4
+assert not Path(write_failure_output).exists()
 PY
 
 echo "GitHub State observation samples: PASS"

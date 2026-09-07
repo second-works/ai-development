@@ -194,7 +194,8 @@ class FixtureTransport:
             raise CollectionError(operation, "FIXTURE_MISSING", f"fixture is missing: {filename}")
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as error:
+            reject_invalid_unicode(payload)
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise CollectionError(operation, "INVALID_JSON", f"fixture is not JSON: {filename}") from error
         if isinstance(payload, dict) and "fixture_error" in payload:
             error = payload["fixture_error"]
@@ -468,18 +469,31 @@ def collect(args: argparse.Namespace, captured_at: str) -> Tuple[Dict[str, Any],
 
 
 def write_output(observation: Mapping[str, Any], output: str) -> None:
-    rendered = json.dumps(observation, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    rendered = json.dumps(observation, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
     if output == "-":
         sys.stdout.write(rendered)
         return
     path = Path(output)
+    created = False
+    file_descriptor: Optional[int] = None
     try:
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-        with os.fdopen(os.open(path, flags, 0o600), "w", encoding="utf-8") as destination:
+        file_descriptor = os.open(path, flags, 0o600)
+        created = True
+        destination = os.fdopen(file_descriptor, "w", encoding="utf-8")
+        file_descriptor = None
+        with destination:
             destination.write(rendered)
     except FileExistsError as error:
         raise CollectionError("output", "OUTPUT_EXISTS", "refusing to overwrite an existing observation") from error
     except OSError as error:
+        if file_descriptor is not None:
+            os.close(file_descriptor)
+        if created:
+            try:
+                path.unlink()
+            except OSError:
+                pass
         raise CollectionError("output", "OUTPUT_WRITE_FAILED", "could not write observation output") from error
 
 
