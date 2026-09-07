@@ -307,6 +307,22 @@ class InvalidUtf8Opener:
         return InvalidUtf8Response()
 
 
+class LoneSurrogateResponse:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def read(self):
+        return b'{"number":64,"state":"open","html_url":"\\ud800"}'
+
+
+class LoneSurrogateOpener:
+    def open(self, request, timeout):
+        return LoneSurrogateResponse()
+
+
 for filename, read_error in [
     ("read-timeout.json", TimeoutError("simulated body read timeout")),
     ("read-incomplete.json", http.client.IncompleteRead(b"partial", 10)),
@@ -340,6 +356,26 @@ status = module.main([
 ])
 assert status == 3
 with open(utf8_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"]["status"] == "UNAVAILABLE"
+assert data["collection"]["usable_for_state_update"] is False
+assert data["collection"]["errors"] == [{
+    "operation": "issue",
+    "kind": "INVALID_JSON",
+    "detail": "GitHub response was not JSON",
+}]
+
+surrogate_output = str(Path(output_dir) / "lone-surrogate.json")
+transport = transport_class(None)
+transport.opener = LoneSurrogateOpener()
+module.GitHubTransport = lambda token: transport
+status = module.main([
+    "--repository", "example/demo",
+    "--issue", "64",
+    "--output", surrogate_output,
+])
+assert status == 3
+with open(surrogate_output, encoding="utf-8") as source:
     data = json.load(source)
 assert data["collection"]["status"] == "UNAVAILABLE"
 assert data["collection"]["usable_for_state_update"] is False

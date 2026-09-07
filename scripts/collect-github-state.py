@@ -101,6 +101,19 @@ def source_url(path: str, query: Optional[Mapping[str, str]] = None) -> str:
     return f"{API_BASE}{path}" + (f"?{encoded}" if encoded else "")
 
 
+def reject_invalid_unicode(value: Any) -> None:
+    if isinstance(value, str):
+        if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+            raise UnicodeDecodeError("utf-8", b"", 0, 1, "JSON string contained a surrogate code point")
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            reject_invalid_unicode(key)
+            reject_invalid_unicode(item)
+    elif isinstance(value, list):
+        for item in value:
+            reject_invalid_unicode(item)
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, message, headers, new_url):  # type: ignore[no-untyped-def]
         return None
@@ -134,6 +147,7 @@ class GitHubTransport:
                 try:
                     raw = response.read().decode("utf-8")
                     payload = json.loads(raw)
+                    reject_invalid_unicode(payload)
                 except (UnicodeDecodeError, json.JSONDecodeError) as error:
                     raise CollectionError(operation, "INVALID_JSON", "GitHub response was not JSON") from error
                 return Response(payload=payload, source_url=url, next_url=parse_next_link(response.headers.get("Link")))
