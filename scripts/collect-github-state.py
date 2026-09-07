@@ -131,8 +131,8 @@ class GitHubTransport:
         request = urllib.request.Request(url, headers=headers, method="GET")
         try:
             with self.opener.open(request, timeout=20) as response:
-                raw = response.read().decode("utf-8")
                 try:
+                    raw = response.read().decode("utf-8")
                     payload = json.loads(raw)
                 except (UnicodeDecodeError, json.JSONDecodeError) as error:
                     raise CollectionError(operation, "INVALID_JSON", "GitHub response was not JSON") from error

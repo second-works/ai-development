@@ -291,6 +291,22 @@ class TimeoutOpener:
         return TimeoutResponse(self.read_error)
 
 
+class InvalidUtf8Response:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return False
+
+    def read(self):
+        return b"\\xff"
+
+
+class InvalidUtf8Opener:
+    def open(self, request, timeout):
+        return InvalidUtf8Response()
+
+
 for filename, read_error in [
     ("read-timeout.json", TimeoutError("simulated body read timeout")),
     ("read-incomplete.json", http.client.IncompleteRead(b"partial", 10)),
@@ -312,6 +328,26 @@ for filename, read_error in [
     assert data["collection"]["usable_for_state_update"] is False
     assert data["collection"]["errors"][0]["operation"] == "issue"
     assert data["collection"]["errors"][0]["kind"] == "NETWORK_ERROR"
+
+utf8_output = str(Path(output_dir) / "invalid-utf8.json")
+transport = transport_class(None)
+transport.opener = InvalidUtf8Opener()
+module.GitHubTransport = lambda token: transport
+status = module.main([
+    "--repository", "example/demo",
+    "--issue", "64",
+    "--output", utf8_output,
+])
+assert status == 3
+with open(utf8_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"]["status"] == "UNAVAILABLE"
+assert data["collection"]["usable_for_state_update"] is False
+assert data["collection"]["errors"] == [{
+    "operation": "issue",
+    "kind": "INVALID_JSON",
+    "detail": "GitHub response was not JSON",
+}]
 PY
 
 echo "GitHub State observation samples: PASS"
