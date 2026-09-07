@@ -20,6 +20,8 @@ GITHUB_TOKEN=not-a-real-token python3 "$SCRIPT" \
 
 python3 -c '
 import json
+import os
+import stat
 import sys
 
 data = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -30,8 +32,13 @@ assert data["head_consistency"]["status"] == "MATCH"
 assert data["head_consistency"]["initial_head_sha"] == "a" * 40
 assert data["head_consistency"]["initial_source_url"] == "fixture://pr-initial.json"
 assert data["head_consistency"]["final_source_url"] == "fixture://pr-final.json"
+assert data["pull_request"]["state"] == "closed"
+assert data["pull_request"]["merged"] is True
+assert data["pull_request"]["source_url"] == "fixture://pr-final.json"
+assert stat.S_IMODE(os.stat(sys.argv[1]).st_mode) == 0o600
 assert len(data["workflow_runs"]["source_urls"]) == 2
-assert [run["id"] for run in data["workflow_runs"]["other_runs"]] == [101]
+assert [run["id"] for run in data["workflow_runs"]["other_runs"]] == [101, 103]
+assert data["workflow_runs"]["other_runs"][1]["conclusion"] == "startup_failure"
 assert [run["id"] for run in data["workflow_runs"]["security_named_runs"]] == [102]
 assert data["workflow_runs"]["nonmatching_head_runs"] == []
 assert data["workflow_runs"]["target_head_evidence_status"] == "OBSERVED"
@@ -44,6 +51,21 @@ assert data["review_comments"]["target_head_evidence_status"] == "OBSERVED"
 assert "body" not in data["review_comments"]["same_head"][0]
 assert "not-a-real-token" not in open(sys.argv[1], encoding="utf-8").read()
 ' "$happy_output"
+
+set +e
+python3 "$SCRIPT" \
+  --repository example/demo \
+  --issue 64 \
+  --pr 12 \
+  --fixture-dir "$FIXTURES/happy" \
+  --observed-at 2026-09-07T00:00:00Z \
+  --output "$happy_output" >/dev/null 2>&1
+existing_output_status=$?
+set -e
+[[ "$existing_output_status" -eq 4 ]] || {
+  printf 'existing output must produce exit 4, got %s\n' "$existing_output_status" >&2
+  exit 1
+}
 
 head_changed_output="$WORK_DIR/head-changed.json"
 set +e

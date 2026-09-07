@@ -31,7 +31,7 @@ REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 ISSUE_STATES = {"open", "closed"}
 WORKFLOW_STATUSES = {"queued", "in_progress", "completed", "waiting", "requested", "pending"}
-WORKFLOW_CONCLUSIONS = {"action_required", "cancelled", "failure", "neutral", "success", "skipped", "stale", "timed_out"}
+WORKFLOW_CONCLUSIONS = {"action_required", "cancelled", "failure", "neutral", "startup_failure", "success", "skipped", "stale", "timed_out"}
 REVIEW_STATES = {"APPROVED", "CHANGES_REQUESTED", "COMMENTED", "DISMISSED", "PENDING"}
 
 
@@ -423,6 +423,7 @@ def collect(args: argparse.Namespace, captured_at: str) -> Tuple[Dict[str, Any],
         require_number("pr-final", final_pr, args.pr)
         require_enum("pr-final", "state", final_pr.get("state"), ISSUE_STATES)
         final_head = require_head_sha("pr-final", final_pr)
+        observation["pull_request"] = {"observation_status": "OBSERVED", **normalize_pr(final_pr, final_response.source_url)}
         observation["head_consistency"]["final_head_sha"] = final_head
         observation["head_consistency"]["final_source_url"] = final_response.source_url
         if final_head != initial_head:
@@ -452,7 +453,8 @@ def write_output(observation: Mapping[str, Any], output: str) -> None:
         return
     path = Path(output)
     try:
-        with path.open("x", encoding="utf-8") as destination:
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+        with os.fdopen(os.open(path, flags, 0o600), "w", encoding="utf-8") as destination:
             destination.write(rendered)
     except FileExistsError as error:
         raise CollectionError("output", "OUTPUT_EXISTS", "refusing to overwrite an existing observation") from error

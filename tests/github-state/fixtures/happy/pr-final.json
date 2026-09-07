@@ -1,7 +1,7 @@
 {
   "number": 12,
-  "state": "open",
-  "merged": false,
+  "state": "closed",
+  "merged": true,
   "head": {
     "ref": "issue-64-github-state-observer",
     "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
