@@ -123,6 +123,7 @@ python3 scripts/collect-github-state.py \
 
 - `--issue`は必須、`--pr`は任意である。PRを指定した場合だけ、初回と最終のhead SHA、workflow run、review、review commentを取得する。PRを指定しない成功artifactはIssue観測だけを表し、CIやSecurityの成功を意味しない。
 - GitHub APIへの要求は`GET`だけで、送信先は`https://api.github.com`に固定する。pagination先も同じHTTPS hostだけを受け入れ、redirectは追跡しない。private repositoryでは、任意の`GITHUB_TOKEN`（または`--token-env`で指定した環境変数）を読み取り用に使える。token、review本文、comment本文、chain-of-thoughtはartifactへ保存しない。
+- `--observed-at`はfixtureを使う再現テスト専用であり、`--fixture-dir`なしのlive API取得では指定を拒否する。live artifactの観測時刻は実行時のUTC時刻から記録し、任意の過去・未来時刻を観測時刻として保存しない。
 - artifactには観測時刻、repository、Issue / PR番号、各API source URL、対象head SHA、Securityという名前のworkflow runとそれ以外のworkflow runを分けて保存する。対象headに一致するworkflow / review / review commentが0件なら、それぞれの`target_head_evidence_status=NOT_OBSERVED`とする。これはendpoint取得の失敗でも`PASSED`でもない。PRを指定しなかった場合は`NOT_APPLICABLE`とする。
 - 初回と最終のhead SHAが異なる場合、または取得・JSON解析・identity確認・既知enumの確認に失敗した場合は`collection.status=UNAVAILABLE`、`usable_for_state_update=false`、exit code 3とする。最終PR metadataをartifactへ反映する。出力先に既存artifactがある場合は上書きせずexit code 4とする。新規artifactは所有者だけが読めるmode `0600`で作成する。workflow runのstatus / conclusion、Issue / PR state、review stateに未知値があれば`UNKNOWN_ENUM`として停止し、成功やapprovalを推定しない。
 - Stateを更新する担当者はartifactのsourceとtarget SHAを確認してからschema v3へ必要な事実だけを転記する。収集script単独でCurrent Stateを更新したり、Deploy targetやAcceptanceを確定したりしない。

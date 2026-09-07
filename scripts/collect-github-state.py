@@ -470,12 +470,15 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
     parser.add_argument("--output", required=True, help="New JSON output path, or - for stdout")
     parser.add_argument("--token-env", default="GITHUB_TOKEN", type=environment_name, help="Optional environment variable holding a GitHub read token")
     parser.add_argument("--fixture-dir", type=Path, help="Offline fixture directory for tests; no network or token is used")
-    parser.add_argument("--observed-at", help="RFC 3339 timestamp for reproducible fixture output")
+    parser.add_argument("--observed-at", help="RFC 3339 timestamp for reproducible fixture output; requires --fixture-dir")
     return parser.parse_args(argv)
 
 
 def main(argv: List[str]) -> int:
     args = parse_args(argv)
+    if args.observed_at is not None and args.fixture_dir is None:
+        print("argument error: --observed-at requires --fixture-dir", file=sys.stderr)
+        return 2
     try:
         captured_at = observed_at(args.observed_at)
     except argparse.ArgumentTypeError as error:

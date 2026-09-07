@@ -207,4 +207,22 @@ set -e
   exit 1
 }
 
+live_observed_at_output="$WORK_DIR/live-observed-at.json"
+set +e
+python3 "$SCRIPT" \
+  --repository example/demo \
+  --issue 64 \
+  --observed-at 2026-09-07T00:00:00Z \
+  --output "$live_observed_at_output" >/dev/null 2>&1
+live_observed_at_status=$?
+set -e
+[[ "$live_observed_at_status" -eq 2 ]] || {
+  printf 'live --observed-at must be rejected, got %s\n' "$live_observed_at_status" >&2
+  exit 1
+}
+[[ ! -e "$live_observed_at_output" ]] || {
+  printf 'live --observed-at must fail before creating an artifact\n' >&2
+  exit 1
+}
+
 echo "GitHub State observation samples: PASS"
