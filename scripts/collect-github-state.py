@@ -9,6 +9,7 @@ GitHub.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import re
@@ -133,7 +134,7 @@ class GitHubTransport:
                 raw = response.read().decode("utf-8")
                 try:
                     payload = json.loads(raw)
-                except json.JSONDecodeError as error:
+                except (UnicodeDecodeError, json.JSONDecodeError) as error:
                     raise CollectionError(operation, "INVALID_JSON", "GitHub response was not JSON") from error
                 return Response(payload=payload, source_url=url, next_url=parse_next_link(response.headers.get("Link")))
         except CollectionError:
@@ -143,6 +144,8 @@ class GitHubTransport:
         except TimeoutError as error:
             raise CollectionError(operation, "NETWORK_ERROR", "GitHub request timed out") from error
         except urllib.error.URLError as error:
+            raise CollectionError(operation, "NETWORK_ERROR", "GitHub request could not be completed") from error
+        except (http.client.HTTPException, OSError) as error:
             raise CollectionError(operation, "NETWORK_ERROR", "GitHub request could not be completed") from error
 
 

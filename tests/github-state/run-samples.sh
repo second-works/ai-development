@@ -225,21 +225,26 @@ set -e
   exit 1
 }
 
-timeout_output="$WORK_DIR/read-timeout.json"
-python3 - "$SCRIPT" "$timeout_output" <<'PY'
+python3 - "$SCRIPT" "$WORK_DIR" <<'PY'
+import http.client
 import importlib.util
 import json
+from pathlib import Path
 import sys
 
-script_path, output_path = sys.argv[1:]
+script_path, output_dir = sys.argv[1:]
 spec = importlib.util.spec_from_file_location("github_state_observer", script_path)
 module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 sys.modules[spec.name] = module
 spec.loader.exec_module(module)
+transport_class = module.GitHubTransport
 
 
 class TimeoutResponse:
+    def __init__(self, read_error):
+        self.read_error = read_error
+
     def __enter__(self):
         return self
 
@@ -247,34 +252,38 @@ class TimeoutResponse:
         return False
 
     def read(self):
-        raise TimeoutError("simulated body read timeout")
+        raise self.read_error
 
 
 class TimeoutOpener:
+    def __init__(self, read_error):
+        self.read_error = read_error
+
     def open(self, request, timeout):
-        return TimeoutResponse()
+        return TimeoutResponse(self.read_error)
 
 
-transport = module.GitHubTransport(None)
-transport.opener = TimeoutOpener()
-module.GitHubTransport = lambda token: transport
-status = module.main([
-    "--repository", "example/demo",
-    "--issue", "64",
-    "--output", output_path,
-])
-assert status == 3
-with open(output_path, encoding="utf-8") as source:
-    data = json.load(source)
-assert data["collection"] == {
-    "status": "UNAVAILABLE",
-    "usable_for_state_update": False,
-    "errors": [{
-        "operation": "issue",
-        "kind": "NETWORK_ERROR",
-        "detail": "GitHub request timed out",
-    }],
-}
+for filename, read_error in [
+    ("read-timeout.json", TimeoutError("simulated body read timeout")),
+    ("read-incomplete.json", http.client.IncompleteRead(b"partial", 10)),
+    ("read-reset.json", ConnectionResetError("simulated body read reset")),
+]:
+    output_path = str(Path(output_dir) / filename)
+    transport = transport_class(None)
+    transport.opener = TimeoutOpener(read_error)
+    module.GitHubTransport = lambda token: transport
+    status = module.main([
+        "--repository", "example/demo",
+        "--issue", "64",
+        "--output", output_path,
+    ])
+    assert status == 3
+    with open(output_path, encoding="utf-8") as source:
+        data = json.load(source)
+    assert data["collection"]["status"] == "UNAVAILABLE"
+    assert data["collection"]["usable_for_state_update"] is False
+    assert data["collection"]["errors"][0]["operation"] == "issue"
+    assert data["collection"]["errors"][0]["kind"] == "NETWORK_ERROR"
 PY
 
 echo "GitHub State observation samples: PASS"
