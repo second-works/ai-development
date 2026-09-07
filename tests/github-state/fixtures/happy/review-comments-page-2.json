@@ -1,0 +1,13 @@
+[
+  {
+    "id": 302,
+    "commit_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "path": "docs/old.md",
+    "line": 8,
+    "side": "RIGHT",
+    "in_reply_to_id": null,
+    "html_url": "https://github.com/example/demo/pull/12#discussion_r302",
+    "body": "Old untrusted body must not be serialized.",
+    "user": { "login": "old-reviewer" }
+  }
+]

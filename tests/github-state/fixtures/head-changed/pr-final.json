@@ -1,0 +1,9 @@
+{
+  "number": 12,
+  "state": "open",
+  "merged": false,
+  "head": { "ref": "feature", "sha": "dddddddddddddddddddddddddddddddddddddddd" },
+  "base": { "sha": "cccccccccccccccccccccccccccccccccccccccc" },
+  "html_url": "https://github.com/example/demo/pull/12",
+  "updated_at": "2026-09-07T00:00:10Z"
+}
