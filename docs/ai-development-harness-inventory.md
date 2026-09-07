@@ -64,6 +64,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | E-07 | RAG Architecture Standard | E | KEEP | AGENTS.md、docs/architecture/rag-guidelines.md、docs/architecture/rag-design.md |
 | E-08 | Test Design / Safe Test Deletion | E | KEEP | AGENTS.md、テスト実装、Issue / PR |
 | E-09 | Parent Issue Completion | E | KEEP | AGENTS.md、親Issue、子Issue、PR |
+| C-03 | Adaptive Development Flow | C | SIMPLIFY | docs/adaptive-development-flow.md |
 | T-01 | CodexとSkills | T | SIMPLIFY | AGENTS.md、.agents/skills |
 | T-02 | GitHub Actionsと外部Tool | T | KEEP | .github/workflows、AI Agent Security Boundary |
 | C-01 | 正本文書とIssue / PR Context | C | STRENGTHEN | AGENTS.md、docs、Issue / PRテンプレート |
@@ -276,6 +277,21 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：SIMPLIFY。
 - **削除・再評価条件**：対象SHA、Issue範囲、指摘の因果を別の追跡可能な記録で保持できる場合に再評価する。
 - **関連Issue / 正本文書**：#56、C-02。Issue #56の監査条件とこの項目の判定を追跡する。 正本：PRテンプレート、Review Evidence Contract。
+
+### C-03 Adaptive Development Flow
+
+- **ETCSLV分類**：Context
+- **解決する失敗モード**：#62の低リスク変更への過剰な記入と、誤ったTierによるGate bypass。基準SHA `9b72ff7743039ee11ac90aa47803989c38978d8c` のテンプレートに対して説明量だけを調整する。
+- **発火条件**：Issue化前、実装開始時、PR提出前、影響が変わる修正時。
+- **入力 / Context**：Issue、実差分、影響境界、承認済みDesign Decision。
+- **出力 / State変更**：Issue / PRへLOW / MEDIUM / HIGHと理由、追加検証・承認状態を記録する。schema v3のphaseやGate結果は変更しない。
+- **決定論的判定可能か**：語彙・参照・判定例の契約をテスト可能。意味上の安全影響は人間とAgentが確認し、今回は自動分類しない。
+- **実行コスト / 運用負荷**：判定と短い根拠の記入が必要。LOWの対象外説明をまとめ、規則全文の再転記を減らす。実利用時間の削減率は未測定。
+- **重複する仕組み**：Plan Review、Design Decision、Security、Reviewと同じリスクを参照するが、承認や検証の合否を代行しない。
+- **安全上必須か**：Tier自体は安全Gateの代替ではない。標準検証・CI・Security・Review・Human Approval・Acceptanceを残すことが代替制御である。
+- **判定**：SIMPLIFY
+- **削除・再評価条件**：記入量が増える、誤分類が反復する場合は#62の実利用記録で再評価。削除時も既存安全境界を維持する。
+- **関連Issue / 正本文書**：#62、#63、docs/adaptive-development-flow.md。影響範囲は文書とChild/PRの今回値欄。再検証は文書契約、CI、Security、現head Reviewと記入例照合。
 
 ### S-01 Issue、PR、head SHA
 

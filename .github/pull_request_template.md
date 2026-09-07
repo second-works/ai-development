@@ -2,6 +2,16 @@
 
 Closes #
 
+# Risk Tier
+
+[判定順・既定値・例外](../docs/adaptive-development-flow.md)を参照する。LOWでも必須Gateを省略しない。
+
+- Risk Tier（LOW / MEDIUM / HIGH）:
+- 判定理由・影響範囲:
+- Tierに応じた追加検証・必要な承認（該当しない場合は理由）:
+- 再判定（実装開始 / PR提出 / 影響変更時）:
+
+
 # Current State
 
 <!-- 正本とenumは docs/ai-execution-state.md を参照する。State全文を手入力せず、現在の要約と対象SHAだけを更新する。 -->
