@@ -193,6 +193,34 @@ assert data["collection"]["errors"] == [{
 }]
 ' "$unknown_enum_output"
 
+issue_is_pr_output="$WORK_DIR/issue-is-pr.json"
+set +e
+python3 "$SCRIPT" \
+  --repository example/demo \
+  --issue 64 \
+  --fixture-dir "$FIXTURES/issue-is-pr" \
+  --observed-at 2026-09-07T00:00:00Z \
+  --output "$issue_is_pr_output"
+issue_is_pr_status=$?
+set -e
+[[ "$issue_is_pr_status" -eq 3 ]] || {
+  printf 'pull request used as issue must produce exit 3, got %s\n' "$issue_is_pr_status" >&2
+  exit 1
+}
+python3 -c '
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+assert data["collection"]["status"] == "UNAVAILABLE"
+assert data["collection"]["usable_for_state_update"] is False
+assert data["collection"]["errors"] == [{
+    "operation": "issue",
+    "kind": "IDENTITY_MISMATCH",
+    "detail": "response was a pull request",
+}]
+' "$issue_is_pr_output"
+
 invalid_argument_output="$WORK_DIR/invalid-argument.json"
 set +e
 python3 "$SCRIPT" \

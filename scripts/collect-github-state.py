@@ -365,6 +365,8 @@ def collect(args: argparse.Namespace, captured_at: str) -> Tuple[Dict[str, Any],
         issue = as_object("issue", issue_response.payload)
         require_number("issue", issue, args.issue)
         require_enum("issue", "state", issue.get("state"), ISSUE_STATES)
+        if "pull_request" in issue:
+            raise CollectionError("issue", "IDENTITY_MISMATCH", "response was a pull request")
         observation["issue"] = {"observation_status": "OBSERVED", **normalize_issue(issue, issue_response.source_url)}
 
         if args.pr is None:
