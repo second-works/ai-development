@@ -50,8 +50,8 @@ assert_contains "$guide" 'NEEDS_DECISION → Design Decision → 計画書更新
 assert_contains "$guide" 'Issue化前にPlan Review（Grilling）を実施'
 assert_contains "$agents" 'docs/plan-review-gate.md'
 assert_contains "$agents" 'PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み'
-assert_contains "$parent" '# Plan Review Gate'
-assert_contains "$parent" '判定: `PASS / NEEDS_DECISION / NOT_APPLICABLE`'
+assert_contains "$parent" '# Plan Review / Design Decision'
+assert_contains "$parent" '- Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`'
 assert_contains "$readme" 'docs/plan-review-gate.md'
 
 guide_setup_line="$(grep -nF 'Plan Review正本文書（`docs/plan-review-gate.md`）を配置' "$guide" | cut -d: -f1)"

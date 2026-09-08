@@ -314,6 +314,7 @@ bash "$ROOT/tests/current-state/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/adaptive-development-flow/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/github-state/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/issue-quality/run-samples.sh" "$ROOT"
+bash "$ROOT/tests/template-simplification/run-samples.sh" "$ROOT"
 
 if (( failures != 0 )); then
   exit 1

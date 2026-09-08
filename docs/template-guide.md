@@ -47,6 +47,18 @@
 
 MEDIUMでは影響と通常テスト、HIGHでは安全境界・復旧・必要な承認と追加検証を記す。標準検証・CI・Security・Codex Review・Human Merge判断・適用対象Acceptanceは省略しない。Issue化前、実装開始時、PR提出前、影響変更時に再判定する。
 
+## 2.2 テンプレートに記入する値
+
+テンプレートは今回の判断・範囲・証拠を記入し、停止条件、安全境界、検収、レビュー収束の詳細は正本文書を参照する。リンクだけで必要な今回値を省略してはならない。
+
+| Tier | テンプレートに記入する値 | 正本参照で不足しない情報 |
+| --- | --- | --- |
+| LOW | 目的、範囲、理由、テスト証拠を一段落で記入する。 | 必須Gate、Security、Review、人間Merge判断。 |
+| MEDIUM | 目的、範囲、影響、6観点のテスト、対象SHAと検証結果を記入する。 | 停止条件、安全境界、検収、レビュー収束の詳細。 |
+| HIGH | MEDIUMに加え、安全境界、復旧、必要な人間承認と追加検証を記入する。 | 正本文書の制約を満たした具体的な承認・例外の根拠。 |
+
+詳細をテンプレートへ再掲せず、[Adaptive Development Flow](adaptive-development-flow.md)、[AI Agent Security Boundary](ai-agent-security-boundary.md)、[Acceptance Verification](acceptance-verification.md)、[Review Follow-ups](review-followups.md)、[Safe Auto-Fix / Auto-Merge](safe-auto-fix-auto-merge.md)を正本として参照する。
+
 ## 3. AGENTS.md
 
 ### 目的
@@ -73,25 +85,9 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 
 ## 4. 親Issueテンプレート
 
-ファイル:
+ファイル: `.github/ISSUE_TEMPLATE/parent-issue.md`
 
-`.github/ISSUE_TEMPLATE/parent-issue.md`
-
-### 目的
-
-プロジェクトや大きな機能全体のロードマップを管理します。
-
-親IssueそのものをCodexへ丸ごと実装させることは原則としません。
-
-親Issueには以下を整理します。
-
-- 目的
-- 背景
-- 実装範囲
-- 子Issue一覧
-- 後続候補
-- 今回やらないこと
-- 全体完了条件
+親Issueはロードマップ、Plan Reviewの結論、採用案、範囲、子Issue、依存関係、検収計画、現在状態だけを記録する。Deployment、安全境界、検収の詳細はそれぞれの正本文書を参照し、今回の承認状態と例外だけを記入する。
 
 ## 4.1 デプロイ設計とRelease / Production計画
 
@@ -125,43 +121,11 @@ Plan Reviewは子Issue品質チェックを置き換えません。Issue化後�
 
 ## 5. 子Issueテンプレート
 
-ファイル:
+ファイル: `.github/ISSUE_TEMPLATE/child-issue.md`
 
-`.github/ISSUE_TEMPLATE/child-issue.md`
+子Issueは目的、変更・非変更範囲、完了条件、依存、Risk Tier、6観点のテスト条件、今回の安全境界と対象SHAを記入する。1子Issue = 1 PRを維持し、MUST不足時は[Issue Quality Check](issue-quality-check.md)に従って停止する。
 
-### 目的
-
-Codexが実際に実装する作業指示書です。
-
-原則:
-
-**1子Issue = 1 PR**
-
-子Issueには最低限以下を記載します。
-
-- 目的
-- 実装内容
-- やらないこと
-- 変更してよい範囲
-- 原則変更しない範囲
-- 完了条件
-- テスト条件
-- 依存Issue
-
-### テスト設計で検討する観点
-
-テスト条件には、正常系だけでなく以下の6観点を具体的に記載します。
-
-1. 正常値 — 期待する値・レスポンスを取得できるか
-2. 値の範囲 — 数値などが仕様上の有効範囲内か
-3. 整合性 — 関連する複数の値・状態が互いに矛盾していないか
-4. 境界値 — 0、最大値、空データなどの境界条件で問題がないか
-5. 異常系 — 想定外の入力・戻り値・失敗時に適切に処理できるか
-6. 回帰テスト — 既知の不具合が再発した場合に検出できるか
-
-テンプレートでは各観点に、入力値・境界・期待値・期待結果などの具体的なテスト条件を記入する欄を設けています。対象外の場合は、各観点の「対象外の場合の理由」に対象外と判断した理由を記載します。
-
-不具合修正Issueでは、可能な限り「修正前の実装では失敗し、修正後の実装では成功する回帰テスト」を追加します。該当しない場合は、Issue本文に理由を記載します。
+詳細なDesign Decision Escalation、Security Boundary、Harness、Current Stateのenum、検収とレビュー収束は正本文書を参照する。テンプレートには今回の例外、承認、停止理由、引き継ぎ先だけを記録する。
 
 ## 6. 子Issue品質チェック
 
@@ -173,44 +137,11 @@ Codexが実際に実装する作業指示書です。
 
 ## 7. Pull Requestテンプレート
 
-ファイル:
+ファイル: `.github/pull_request_template.md`
 
-`.github/pull_request_template.md`
+PRには対応Issue、今回の変更、Risk Tierと安全境界、対象SHA、標準検証・CI・Security・Codex Reviewの結果、残課題だけを記録する。修正時は既存PR branchと修正後SHAを記録し、詳細なP2分類・Evidence・Safe Auto-Fix条件は正本文書を参照する。
 
-### 目的
-
-Codexまたは人間がPRを作成するときの報告形式を統一します。
-
-最低限確認する内容:
-
-- 対応Issue
-- 変更内容
-- ローカルテスト結果
-- GitHub Actions CI結果
-- 注意点
-- 残課題
-
-可能な場合は `Closes #Issue番号` を使い、Merge時にIssueと連動させます。
-
-### Safe Auto-Fix / Auto-Merge
-
-軽微P2の自動修正・Auto-Mergeを採用する場合は、[Safe Auto-Fix / Auto-Mergeレーン標準](safe-auto-fix-auto-merge.md)を正本として参照します。PRにはSafety Gate、検証対象SHA、Securityの適用除外、人間の採用判断、Auto-Merge監査記録を残します。1項目でも条件を満たさない場合は通常レーンへ戻し、テンプレートを配置しただけでAuto-Mergeを有効化してはなりません。
-
-### Codexレビュー後の修正
-
-PRテンプレートには、Review ContextとReview Evidence Contractに加え、修正時の対象PR番号、head branch、修正前後のhead SHAを記録します。P0 / P1およびBLOCKING候補のP2は証拠を記録し、Evidence不足をSeverityだけでBLOCKING扱いにしません。
-
-標準手順は次のとおりです。
-
-1. `@codex review` はレビュー専用として実行する。
-2. P0 / P1 / P2の修正は `@codex address that feedback` を標準手順に使わず、既存PRのhead branchをCodex Desktop / Work等でチェックアウトして行う。
-3. 修正前にPR番号・head branch・head SHAを確認する。
-4. 同じhead branchへcommit / pushし、新しいPRを作らず既存PRを再利用する。
-5. pushした修正コミットSHAを検証対象SHAとして記録し、GitHub上の同じPRのhead branchとhead SHAがそのSHAと一致することを確認する。SHAを確認できない、更新されていない、または一致しない場合は再検証へ進まない。
-6. 記録した検証対象SHAを固定して、更新後のheadをローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証し、各チェックの対象SHAを記録する。
-7. 再検証完了時に、GitHub上のPR head SHAがpushした修正コミットSHAおよび記録した検証対象SHAと一致することを確認する。不一致の場合は完了扱いにせず停止する。
-8. 非BLOCKING P2は四分類と記録後に追加修正ループへ戻さず、通常レーンの最終Mergeは人間が判断する。Safe Auto-Fix / Auto-Mergeは正本文書の条件を満たし、人間が採用を明示した場合だけ例外として扱う。
-
+CI、Security、Reviewは別ゲートであり、最終Mergeは人間が判断する。
 
 ## 8. 標準検証入口とGitHub Actions CIテンプレート
 

@@ -61,25 +61,22 @@ for marker in \
 done
 
 for marker in \
-  '- 変更目的:' \
-  '- 対象ユーザー / 利用者:' \
+  '- 目的・変更内容:' \
   '- Issue受入条件:' \
-  '- 禁止結果:' \
-  '- 変更対象:' \
-  '- 変更しない範囲:' \
-  '- 主な影響先:' \
-  '- 実行済みテスト:' \
-  '- 特に確認する境界・失敗条件:' \
-  '- 未決事項:'; do
+  '- 変更しない範囲 / 主な影響:' \
+  '- 標準検証 / 手動確認:' \
+  '- 対象SHA:' \
+  '- CI:' \
+  '- Security Preflight判定:' \
+  '- Codex Review:'; do
   assert_contains "$PR_FILE" "$marker"
 done
 
 for marker in \
-  'P0 / P1、および `BLOCKING` 候補のP2' \
-  'Issue / 契約 / 安全条件' \
-  '再現可能な問題' \
-  '実行再現が困難な場合は決定的な静的根拠' \
-  '非BLOCKING P2の個別人間承認をMerge条件にしない'; do
+  'Review Evidence Contract' \
+  'P0 / P1 / BLOCKING P2:' \
+  '非BLOCKING P2の分類・Follow-up:' \
+  '修正時のPR番号・head branch・修正後SHA:'; do
   assert_contains "$PR_FILE" "$marker"
 done
 
