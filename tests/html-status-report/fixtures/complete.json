@@ -1,7 +1,7 @@
 {
   "observer_schema_version": 1,
   "observed_at": "2026-09-08T00:00:00Z",
-  "repository": "second-works/ai-development",
+  "repository": "second-works/ai-development 日本語",
   "collection": {"status": "COMPLETE", "usable_for_state_update": true, "errors": []},
   "issue": {"number": 67, "observation_status": "OBSERVED", "state": "open", "source_url": "https://api.github.com/repos/second-works/ai-development/issues/67"},
   "pull_request": {"number": 74, "observation_status": "OBSERVED", "state": "open", "merged": false, "head_sha": "0123456789012345678901234567890123456789"},
@@ -9,5 +9,5 @@
   "workflow_runs": {"security_named_runs": [{"name": "Security", "status": "completed", "conclusion": "success", "head_sha": "0123456789012345678901234567890123456789"}], "other_runs": []},
   "reviews": {"target_head_evidence_status": "OBSERVED", "same_head": [{"id": 1}]},
   "review_comments": {"same_head": []},
-  "interpretation": "OBSERVATION_ONLY"
+  "interpretation": "OBSERVATION_ONLY: this deliberately long fixture text confirms that a human-facing report keeps a long value visible without truncation or network access."
 }
