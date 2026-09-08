@@ -93,7 +93,7 @@ def render(observation: Mapping[str, Any], source_path: Path) -> str:
 
     return f"""<!doctype html>
 <html lang="ja">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>GitHub Status Report</title>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="data:,"><title>GitHub Status Report</title>
 <style>body{{font-family:system-ui,-apple-system,sans-serif;line-height:1.5;margin:0;color:#17202a;background:#f7f9fb}}main{{max-width:1050px;margin:auto;padding:24px}}section{{background:#fff;border:1px solid #d9e1e8;border-radius:8px;padding:18px;margin:16px 0;overflow-wrap:anywhere}}table{{border-collapse:collapse;width:100%;min-width:560px}}th,td{{border:1px solid #d9e1e8;padding:8px;text-align:left;vertical-align:top}}th{{background:#eef3f7}}.scroll{{overflow-x:auto}}code{{font-family:ui-monospace,monospace}}@media(max-width:640px){{main{{padding:12px}}section{{padding:12px}}}}</style>
 </head><body><main>
 <h1>GitHub Status Report</h1><p>ローカルJSONから生成した静的レポートです。外部資産・ネットワーク通信は使用しません。</p>
