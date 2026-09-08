@@ -38,19 +38,28 @@ printf '{"collection":{"status":"COMPLETE"}}' > "$WORK/invalid-schema.json"
 if python3 "$RENDER" "$WORK/invalid-schema.json" --output "$WORK/invalid-schema.html"; then
   exit 1
 fi
-python3 - "$FIXTURES/complete.json" "$WORK/boolean-schema.json" <<'PY'
+python3 - "$FIXTURES/complete.json" "$WORK" <<'PY'
 import json
 import sys
 
-source, destination = sys.argv[1:]
-payload = json.load(open(source, encoding="utf-8"))
-payload["observer_schema_version"] = True
-payload["issue"]["number"] = False
-json.dump(payload, open(destination, "w", encoding="utf-8"))
+source, directory = sys.argv[1:]
+for name, path, value in (
+    ("boolean-version", ("observer_schema_version",), True),
+    ("boolean-issue-number", ("issue", "number"), False),
+    ("boolean-pr-number", ("pull_request", "number"), True),
+):
+    payload = json.load(open(source, encoding="utf-8"))
+    target = payload
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+    json.dump(payload, open(f"{directory}/{name}.json", "w", encoding="utf-8"))
 PY
-if python3 "$RENDER" "$WORK/boolean-schema.json" --output "$WORK/boolean-schema.html"; then
-  exit 1
-fi
+for name in boolean-version boolean-issue-number boolean-pr-number; do
+  if python3 "$RENDER" "$WORK/$name.json" --output "$WORK/$name.html"; then
+    exit 1
+  fi
+done
 if python3 "$RENDER" "$FIXTURES/complete.json" --output "$WORK/report.html"; then
   exit 1
 fi
