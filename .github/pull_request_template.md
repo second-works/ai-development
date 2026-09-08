@@ -14,6 +14,8 @@ Closes #
 # Agent Security Boundary
 
 - Tier（LOW / MEDIUM / HIGH）と理由:
+- 判定理由・影響範囲:
+- 再判定（実装開始 / PR提出 / 影響変更時）:
 - 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL） / LLM Trust Boundary:
 - Read / Write範囲、Human Approval、例外:
 - Sensitive Read Capability × External Write Capability:
