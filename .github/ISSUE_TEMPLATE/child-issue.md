@@ -26,6 +26,7 @@ assignees: []
 - Tier（LOW / MEDIUM / HIGH）:
 - 判定理由・影響範囲:
 - 追加検証・承認、または対象外の理由:
+- 再判定（実装開始 / PR提出 / 影響変更時）:
 
 判定順・例外は [Adaptive Development Flow](../blob/main/docs/adaptive-development-flow.md) を参照する。LOWでも標準検証、CI、Security、Codex Review、人間Merge判断を省略しない。
 
