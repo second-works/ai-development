@@ -57,9 +57,19 @@ assignees: []
 
 詳細は [Harness Minimalism台帳](../blob/main/docs/ai-development-harness-inventory.md) を参照する。追加・変更がなければ「なし」と理由を記録する。
 
+# Harness Minimalism / ETCSLV
+
+- 判定（KEEP / STRENGTHEN / SIMPLIFY / REMOVE_CANDIDATE）:
+
 # Current State
 
 - Current phase / 次アクション:
+- Issue acceptance status:
+- Product Acceptance result:
+- Product Acceptance target artifact:
+- Current Deploy target artifact:
+- Current head SHA / Expected SHA:
+- Verification status（local / CI / Security / Review）:
 - 対象SHAと local / CI / Security / Review:
 - 停止理由（該当時）:
 
