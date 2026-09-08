@@ -60,6 +60,16 @@ for file in .github/ISSUE_TEMPLATE/child-issue.md .github/pull_request_template.
   require "$file" '判定理由・影響範囲:'
   require "$file" '再判定（実装開始 / PR提出 / 影響変更時）:'
 done
+
+# GitHubのIssue / PR本文ではrepository rootを基準にしないため、両templateは
+# 同一repositoryのmain上の正本文書へ解決するリンク形式を使う。
+for file in .github/ISSUE_TEMPLATE/child-issue.md .github/pull_request_template.md; do
+  require "$file" '../blob/main/docs/adaptive-development-flow.md'
+  if grep -Fq -- '../../docs/adaptive-development-flow.md' "$ROOT/$file" || grep -Fq -- '../docs/adaptive-development-flow.md' "$ROOT/$file"; then
+    printf 'invalid GitHub body link: %s\n' "$file" >&2
+    failures=1
+  fi
+done
 require docs/ai-development-harness-inventory.md '### C-03 Adaptive Development Flow'
 require docs/ai-development-harness-inventory.md '| C-03 | Adaptive Development Flow | C | SIMPLIFY |'
 

@@ -4,7 +4,7 @@ Closes #
 
 # Risk Tier
 
-[判定順・既定値・例外](../docs/adaptive-development-flow.md)を参照する。LOWでも必須Gateを省略しない。
+[判定順・既定値・例外](../blob/main/docs/adaptive-development-flow.md)を参照する。LOWでも必須Gateを省略しない。
 
 - Risk Tier（LOW / MEDIUM / HIGH）:
 - 判定理由・影響範囲:
