@@ -39,7 +39,7 @@ assignees: []
 
 テスト責務と検収の詳細は [Acceptance Verification](../blob/main/docs/acceptance-verification.md) を参照する。
 
-# Agent Security Boundary と停止条件
+# Agent Security Boundary（安全境界と停止条件）
 
 - 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）:
 - LLM Trust Boundary:
