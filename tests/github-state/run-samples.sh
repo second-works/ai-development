@@ -425,6 +425,40 @@ with open(token_output, encoding="utf-8") as source:
 assert data["collection"]["errors"][0]["kind"] == "INVALID_TOKEN"
 assert "not-a-real-token" not in open(token_output, encoding="utf-8").read()
 
+class ChangingIssueFixtureTransport(module.FixtureTransport):
+    def __init__(self, directory):
+        super().__init__(directory)
+        self.issue_calls = 0
+
+    def get(self, operation, path, query=None):
+        if operation != "issue":
+            return super().get(operation, path, query)
+        self.issue_calls += 1
+        payload = {
+            "number": 64,
+            "state": "open" if self.issue_calls == 1 else "closed",
+            "html_url": "https://github.com/example/demo/issues/64",
+            "updated_at": f"2026-09-07T00:00:0{self.issue_calls}Z",
+        }
+        return module.Response(payload, f"fixture://issue-{self.issue_calls}.json", None)
+
+
+module.FixtureTransport = ChangingIssueFixtureTransport
+changing_issue_output = str(Path(output_dir) / "changing-issue.json")
+status = module.main([
+    "--repository", "example/demo",
+    "--issue", "64",
+    "--pr", "12",
+    "--fixture-dir", str(Path(script_path).parent.parent / "tests" / "github-state" / "fixtures" / "happy"),
+    "--output", changing_issue_output,
+])
+assert status == 0
+with open(changing_issue_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["issue"]["state"] == "closed"
+assert data["issue"]["updated_at"] == "2026-09-07T00:00:02Z"
+assert data["issue"]["source_url"] == "fixture://issue-2.json"
+
 for operation in ("pr-initial", "pr-final"):
     fixture_directory = Path(output_dir) / f"missing-head-ref-{operation}"
     shutil.copytree(Path(script_path).parent.parent / "tests" / "github-state" / "fixtures" / "happy", fixture_directory)

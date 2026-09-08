@@ -470,6 +470,14 @@ def collect(args: argparse.Namespace, captured_at: str) -> Tuple[Dict[str, Any],
             }
             return observation, 3
 
+        final_issue_response = transport.get("issue", f"{prefix}/issues/{args.issue}")
+        final_issue = as_object("issue", final_issue_response.payload)
+        require_number("issue", final_issue, args.issue)
+        require_enum("issue", "state", final_issue.get("state"), ISSUE_STATES)
+        if "pull_request" in final_issue:
+            raise CollectionError("issue", "IDENTITY_MISMATCH", "response was a pull request")
+        observation["issue"] = {"observation_status": "OBSERVED", **normalize_issue(final_issue, final_issue_response.source_url)}
+
         observation["head_consistency"]["status"] = "MATCH"
         observation["collection"] = {"status": "COMPLETE", "usable_for_state_update": True, "errors": []}
         return observation, 0
