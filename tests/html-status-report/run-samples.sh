@@ -14,10 +14,15 @@ after="$(shasum -a 256 "$FIXTURES/complete.json" | awk '{print $1}')"
 grep -Fq 'GitHub Status Report' "$WORK/report.html"
 grep -Fq '2026-09-08T00:00:00Z' "$WORK/report.html"
 grep -Fq '0123456789012345678901234567890123456789' "$WORK/report.html"
+grep -Fq '日本語' "$WORK/report.html"
+grep -Fq 'deliberately long fixture text' "$WORK/report.html"
 
 python3 "$RENDER" "$FIXTURES/dangerous.json" --output "$WORK/dangerous.html"
 grep -Fq '&lt;script&gt;alert(1)&lt;/script&gt;' "$WORK/dangerous.html"
 if grep -Fq '<script>alert(1)</script>' "$WORK/dangerous.html"; then
+  exit 1
+fi
+if grep -Fq 'href=' "$WORK/dangerous.html"; then
   exit 1
 fi
 if python3 "$RENDER" "$FIXTURES/complete.json" --output "$FIXTURES/complete.json"; then
