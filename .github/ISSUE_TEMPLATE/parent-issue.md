@@ -26,10 +26,12 @@ assignees: []
 - 子Issue（原則 1子Issue = 1 PR）:
 - 依存関係・実装順:
 
-# 安全境界とリリース判断
+# Agent Security Boundary とリリース判断
 
-- 情報分類 / LLM Trust Boundary:
+- 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）:
+- LLM Trust Boundary:
 - Read / Write範囲:
+- Prompt Injection対策:
 - Human Approvalが必要な操作と状態:
 - 対象外・例外、残るリスク、代替制御:
 - Release / Production方針、または対象外の理由:
