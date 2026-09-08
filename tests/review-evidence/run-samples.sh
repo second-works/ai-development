@@ -67,7 +67,7 @@ for marker in \
   '- 標準検証 / 手動確認:' \
   '- 対象SHA:' \
   '- CI:' \
-  '- Security:' \
+  '- Security Preflight判定:' \
   '- Codex Review:'; do
   assert_contains "$PR_FILE" "$marker"
 done
