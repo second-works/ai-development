@@ -17,6 +17,65 @@ class RenderError(Exception):
     """A safe, user-actionable rendering failure."""
 
 
+OBSERVATION_SCHEMA_VERSION = 1
+COLLECTION_STATUSES = {"COMPLETE", "UNAVAILABLE"}
+OBSERVATION_STATUSES = {"OBSERVED", "NOT_OBSERVED"}
+HEAD_STATUSES = {"MATCH", "MISMATCH", "NOT_APPLICABLE"}
+
+
+def require_mapping(root: Mapping[str, Any], name: str) -> Mapping[str, Any]:
+    value = root.get(name)
+    if not isinstance(value, dict):
+        raise RenderError(f"input schema error: {name} must be an object")
+    return value
+
+
+def require_string(root: Mapping[str, Any], name: str) -> str:
+    value = root.get(name)
+    if not isinstance(value, str):
+        raise RenderError(f"input schema error: {name} must be a string")
+    return value
+
+
+def require_enum(root: Mapping[str, Any], name: str, allowed: set[str]) -> None:
+    value = require_string(root, name)
+    if value not in allowed:
+        raise RenderError(f"input schema error: {name} is not supported")
+
+
+def validate_observation(observation: Mapping[str, Any]) -> None:
+    if observation.get("observer_schema_version") != OBSERVATION_SCHEMA_VERSION:
+        raise RenderError("input schema error: observer_schema_version must be 1")
+    require_string(observation, "observed_at")
+    require_string(observation, "repository")
+    require_string(observation, "interpretation")
+
+    collection = require_mapping(observation, "collection")
+    require_enum(collection, "status", COLLECTION_STATUSES)
+    if not isinstance(collection.get("usable_for_state_update"), bool):
+        raise RenderError("input schema error: collection.usable_for_state_update must be boolean")
+    if not isinstance(collection.get("errors"), list):
+        raise RenderError("input schema error: collection.errors must be an array")
+
+    issue = require_mapping(observation, "issue")
+    if not isinstance(issue.get("number"), int):
+        raise RenderError("input schema error: issue.number must be an integer")
+    require_enum(issue, "observation_status", OBSERVATION_STATUSES)
+
+    pull_request = observation.get("pull_request")
+    if pull_request is not None:
+        if not isinstance(pull_request, dict):
+            raise RenderError("input schema error: pull_request must be an object or null")
+        if not isinstance(pull_request.get("number"), int):
+            raise RenderError("input schema error: pull_request.number must be an integer")
+        require_enum(pull_request, "observation_status", OBSERVATION_STATUSES)
+
+    head = require_mapping(observation, "head_consistency")
+    require_enum(head, "status", HEAD_STATUSES)
+    for name in ("workflow_runs", "reviews", "review_comments"):
+        require_mapping(observation, name)
+
+
 def text(value: Any, fallback: str = "未観測") -> str:
     if value is None:
         return fallback
@@ -152,6 +211,7 @@ def main(argv: list[str]) -> int:
         print("input error: JSON root must be an object", file=sys.stderr)
         return 2
     try:
+        validate_observation(observation)
         write_new_output(args.output, render(observation, args.input))
     except RenderError as error:
         print(f"output error: {error}", file=sys.stderr)
