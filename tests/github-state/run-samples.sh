@@ -424,6 +424,41 @@ with open(token_output, encoding="utf-8") as source:
 assert data["collection"]["errors"][0]["kind"] == "INVALID_TOKEN"
 assert "not-a-real-token" not in open(token_output, encoding="utf-8").read()
 
+for operation in ("pr-initial", "pr-final"):
+    fixture_directory = Path(output_dir) / f"missing-head-ref-{operation}"
+    shutil.copytree(Path(script_path).parent.parent / "tests" / "github-state" / "fixtures" / "happy", fixture_directory)
+    fixture_path = fixture_directory / f"{operation}.json"
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    del payload["head"]["ref"]
+    fixture_path.write_text(json.dumps(payload), encoding="utf-8")
+    missing_head_ref_output = str(Path(output_dir) / f"missing-head-ref-{operation}.json")
+    status = module.main([
+        "--repository", "example/demo",
+        "--issue", "64",
+        "--pr", "12",
+        "--fixture-dir", str(fixture_directory),
+        "--output", missing_head_ref_output,
+    ])
+    assert status == 3
+    with open(missing_head_ref_output, encoding="utf-8") as source:
+        data = json.load(source)
+    assert data["collection"]["errors"][0]["operation"] == operation
+    assert data["collection"]["errors"][0]["kind"] == "INVALID_RESPONSE"
+
+token_output = str(Path(output_dir) / "non-ascii-token.json")
+transport = transport_class("not-a-real-token-\u0100")
+module.GitHubTransport = lambda token: transport
+status = module.main([
+    "--repository", "example/demo",
+    "--issue", "64",
+    "--output", token_output,
+])
+assert status == 3
+with open(token_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"]["errors"][0]["kind"] == "INVALID_TOKEN"
+assert "not-a-real-token" not in open(token_output, encoding="utf-8").read()
+
 assert module.json.dumps({"value": "café"}, ensure_ascii=True).isascii()
 
 class FailingWriter:

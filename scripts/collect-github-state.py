@@ -142,8 +142,8 @@ class GitHubTransport:
                 "X-GitHub-Api-Version": API_VERSION,
             }
             if self.token:
-                if any(ord(character) < 0x20 or ord(character) == 0x7F for character in self.token):
-                    raise CollectionError(operation, "INVALID_TOKEN", "GitHub token contained prohibited control characters")
+                if not self.token.isascii() or any(ord(character) < 0x21 or ord(character) > 0x7E for character in self.token):
+                    raise CollectionError(operation, "INVALID_TOKEN", "GitHub token contained prohibited characters")
                 headers["Authorization"] = f"Bearer {self.token}"
             request = urllib.request.Request(url, headers=headers, method="GET")
             with self.opener.open(request, timeout=20) as response:
@@ -236,6 +236,14 @@ def require_head_sha(operation: str, payload: Mapping[str, Any]) -> str:
     if not isinstance(value, str) or not SHA_PATTERN.fullmatch(value):
         raise CollectionError(operation, "INVALID_RESPONSE", "pull request head SHA is missing or invalid")
     return value.lower()
+
+
+def require_head_ref(operation: str, payload: Mapping[str, Any]) -> str:
+    head = payload.get("head")
+    value = head.get("ref") if isinstance(head, dict) else None
+    if not isinstance(value, str) or not value.strip():
+        raise CollectionError(operation, "INVALID_RESPONSE", "pull request head branch is missing or invalid")
+    return value
 
 
 def require_enum(operation: str, field: str, value: Any, allowed: set[str], nullable: bool = False) -> Optional[str]:
@@ -396,6 +404,7 @@ def collect(args: argparse.Namespace, captured_at: str) -> Tuple[Dict[str, Any],
         require_number("pr-initial", initial_pr, args.pr)
         require_enum("pr-initial", "state", initial_pr.get("state"), ISSUE_STATES)
         initial_head = require_head_sha("pr-initial", initial_pr)
+        require_head_ref("pr-initial", initial_pr)
         observation["pull_request"] = {"observation_status": "OBSERVED", **normalize_pr(initial_pr, initial_response.source_url)}
         observation["head_consistency"]["initial_head_sha"] = initial_head
         observation["head_consistency"]["initial_source_url"] = initial_response.source_url
@@ -448,6 +457,7 @@ def collect(args: argparse.Namespace, captured_at: str) -> Tuple[Dict[str, Any],
         require_number("pr-final", final_pr, args.pr)
         require_enum("pr-final", "state", final_pr.get("state"), ISSUE_STATES)
         final_head = require_head_sha("pr-final", final_pr)
+        require_head_ref("pr-final", final_pr)
         observation["pull_request"] = {"observation_status": "OBSERVED", **normalize_pr(final_pr, final_response.source_url)}
         observation["head_consistency"]["final_head_sha"] = final_head
         observation["head_consistency"]["final_source_url"] = final_response.source_url
