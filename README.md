@@ -66,4 +66,5 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 - PR修正は既存PRのhead branchへ反映する
 - PRを品質の関門にする
 - 子Issue品質はMUSTを先に確認し、SHOULDと補助Scoreだけでは停止しない
+- テンプレートは今回値を記入し、停止条件・安全境界・検収・レビュー収束の詳細は正本文書を参照する
 - 人間が仕様とマージを決める
