@@ -42,6 +42,11 @@ CI、Security、Reviewは別々に確認し、対象SHAがPR headと一致する
 
 詳細は [Harness Minimalism台帳](../blob/main/docs/ai-development-harness-inventory.md) を参照する。
 
+# Harness Minimalism / ETCSLV
+
+- 対象ハーネス / 台帳ID:
+- 削除・再評価条件:
+
 # 実利用検証 / Product Acceptance
 
 - Implementation Done / Deployed / Product Accepted:
