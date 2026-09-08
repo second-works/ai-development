@@ -13,7 +13,7 @@ assignees: []
 # Plan Review / Design Decision
 
 - Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`
-- 記録・正本: [Plan Review Gate](../../docs/plan-review-gate.md)
+- 記録・正本: [Plan Review Gate](../blob/main/docs/plan-review-gate.md)
 - 採用案と理由:
 - 未決定事項・決定タイミング:
 
@@ -34,7 +34,7 @@ assignees: []
 - 対象外・例外、残るリスク、代替制御:
 - Release / Production方針、または対象外の理由:
 
-詳細は [AI Agent Security Boundary](../../docs/ai-agent-security-boundary.md) と [Deployment / Release Design](../../docs/deployment-release-design.md) を参照する。Secrets、権限、Security Policy、Production操作は人間承認まで停止する。
+詳細は [AI Agent Security Boundary](../blob/main/docs/ai-agent-security-boundary.md) と [Deployment / Release Design](../blob/main/docs/deployment-release-design.md) を参照する。Secrets、権限、Security Policy、Production操作は人間承認まで停止する。
 
 # 検収計画
 
@@ -43,7 +43,7 @@ assignees: []
 - 検証環境・人間確認:
 - Product Acceptanceの記録先:
 
-検収の正本は [Acceptance Verification](../../docs/acceptance-verification.md)。Implementation、Deploy、Product Acceptedは別状態として記録する。
+検収の正本は [Acceptance Verification](../blob/main/docs/acceptance-verification.md)。Implementation、Deploy、Product Acceptedは別状態として記録する。
 
 # Current State
 
