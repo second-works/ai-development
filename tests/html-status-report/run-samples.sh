@@ -12,6 +12,7 @@ python3 "$RENDER" "$FIXTURES/complete.json" --output "$WORK/report.html"
 after="$(shasum -a 256 "$FIXTURES/complete.json" | awk '{print $1}')"
 [[ "$before" == "$after" ]]
 grep -Fq 'GitHub Status Report' "$WORK/report.html"
+grep -Fq 'complete.json' "$WORK/report.html"
 grep -Fq '2026-09-08T00:00:00Z' "$WORK/report.html"
 grep -Fq '0123456789012345678901234567890123456789' "$WORK/report.html"
 grep -Fq '日本語' "$WORK/report.html"
