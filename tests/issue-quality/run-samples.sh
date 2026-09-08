@@ -25,6 +25,10 @@ require README.md '子Issue品質はMUSTを先に確認'
 require docs/nine-standard-ai-development-flow.md 'Scoreは補助表示であり、MUST不足を打ち消さない'
 require docs/ai-development-harness-inventory.md 'MUST不足時の停止'
 require docs/ai-development-harness-inventory.md 'SHOULD不足時の改善候補'
+if rg -n '5項目|9点以上' "$ROOT/docs/issue-quality-check.md" "$ROOT/docs/ai-development-harness-inventory.md"; then
+  printf 'legacy Issue Quality gate remains\n' >&2
+  failures=1
+fi
 
 (( failures == 0 )) || exit 1
 echo 'Issue Quality MUST/SHOULD contract: PASS'
