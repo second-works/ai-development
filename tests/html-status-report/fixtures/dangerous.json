@@ -1,0 +1,13 @@
+{
+  "observer_schema_version": 1,
+  "observed_at": "<script>alert(1)</script>",
+  "repository": "\"><img src=x onerror=alert(1)>",
+  "collection": {"status": "UNAVAILABLE", "usable_for_state_update": false, "errors": [{"operation": "<script>", "kind": "bad attr", "detail": "javascript:alert(1)"}]},
+  "issue": {"number": 67, "observation_status": "NOT_OBSERVED"},
+  "pull_request": null,
+  "head_consistency": {"status": "MISMATCH"},
+  "workflow_runs": {"security_named_runs": [], "other_runs": []},
+  "reviews": {"same_head": []},
+  "review_comments": {"same_head": []},
+  "interpretation": "<svg/onload=alert(1)>"
+}
