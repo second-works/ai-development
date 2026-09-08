@@ -22,7 +22,8 @@ Closes #
 - 標準検証 / 手動確認:
 - 対象SHA:
 - CI:
-- Security:
+- Security Preflight判定:
+- GitHub Security / Code Scanning判定:
 - Codex Review:
 - 未実行・例外の理由:
 
