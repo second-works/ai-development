@@ -9,10 +9,13 @@ Closes #
 - 変更しない範囲 / 主な影響:
 - 注意点・残課題:
 
-# Risk Tier と安全境界
+# Risk Tier と Agent Security Boundary
 
 - Tier（LOW / MEDIUM / HIGH）と理由:
+- 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL） / LLM Trust Boundary:
 - Read / Write範囲、Human Approval、例外:
+- Sensitive Read Capability × External Write Capability:
+- Prompt Injection対策:
 - Security / Productionへの影響:
 
 詳細は [Adaptive Development Flow](../blob/main/docs/adaptive-development-flow.md) と [AI Agent Security Boundary](../blob/main/docs/ai-agent-security-boundary.md) を参照する。権限、Secrets、Security Policy、Production操作は人間承認まで停止する。
