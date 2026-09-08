@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -134,21 +135,23 @@ class GitHubTransport:
         return self._read(operation, url)
 
     def _read(self, operation: str, url: str) -> Response:
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "User-Agent": USER_AGENT,
-            "X-GitHub-Api-Version": API_VERSION,
-        }
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        request = urllib.request.Request(url, headers=headers, method="GET")
         try:
+            headers = {
+                "Accept": "application/vnd.github+json",
+                "User-Agent": USER_AGENT,
+                "X-GitHub-Api-Version": API_VERSION,
+            }
+            if self.token:
+                if any(ord(character) < 0x20 or ord(character) == 0x7F for character in self.token):
+                    raise CollectionError(operation, "INVALID_TOKEN", "GitHub token contained prohibited control characters")
+                headers["Authorization"] = f"Bearer {self.token}"
+            request = urllib.request.Request(url, headers=headers, method="GET")
             with self.opener.open(request, timeout=20) as response:
                 try:
                     raw = response.read().decode("utf-8")
                     payload = json.loads(raw)
                     reject_invalid_unicode(payload)
-                except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
                     raise CollectionError(operation, "INVALID_JSON", "GitHub response was not JSON") from error
                 return Response(payload=payload, source_url=url, next_url=parse_next_link(response.headers.get("Link")))
         except CollectionError:
@@ -195,7 +198,7 @@ class FixtureTransport:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
             reject_invalid_unicode(payload)
-        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
             raise CollectionError(operation, "INVALID_JSON", f"fixture is not JSON: {filename}") from error
         if isinstance(payload, dict) and "fixture_error" in payload:
             error = payload["fixture_error"]
@@ -474,24 +477,28 @@ def write_output(observation: Mapping[str, Any], output: str) -> None:
         sys.stdout.write(rendered)
         return
     path = Path(output)
-    created = False
-    file_descriptor: Optional[int] = None
+    temporary_path: Optional[Path] = None
     try:
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-        file_descriptor = os.open(path, flags, 0o600)
-        created = True
+        file_descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+        temporary_path = Path(temporary_name)
+        os.fchmod(file_descriptor, 0o600)
         destination = os.fdopen(file_descriptor, "w", encoding="utf-8")
-        file_descriptor = None
         with destination:
             destination.write(rendered)
+        os.link(temporary_path, path)
+        temporary_path.unlink()
+        temporary_path = None
     except FileExistsError as error:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink()
+            except OSError:
+                pass
         raise CollectionError("output", "OUTPUT_EXISTS", "refusing to overwrite an existing observation") from error
     except OSError as error:
-        if file_descriptor is not None:
-            os.close(file_descriptor)
-        if created:
+        if temporary_path is not None:
             try:
-                path.unlink()
+                temporary_path.unlink()
             except OSError:
                 pass
         raise CollectionError("output", "OUTPUT_WRITE_FAILED", "could not write observation output") from error
