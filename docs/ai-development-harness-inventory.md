@@ -65,6 +65,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | E-08 | Test Design / Safe Test Deletion | E | KEEP | AGENTS.md、テスト実装、Issue / PR |
 | E-09 | Parent Issue Completion | E | KEEP | AGENTS.md、親Issue、子Issue、PR |
 | C-03 | Adaptive Development Flow | C | SIMPLIFY | docs/adaptive-development-flow.md |
+| C-04 | Human-facing HTML Status Report | C | SIMPLIFY | scripts/render-status-report.py、docs/html-status-report.md |
 | T-01 | CodexとSkills | T | SIMPLIFY | AGENTS.md、.agents/skills |
 | T-02 | GitHub Actionsと外部Tool | T | KEEP | .github/workflows、AI Agent Security Boundary |
 | C-01 | 正本文書とIssue / PR Context | C | STRENGTHEN | docs/template-guide.md、docs、Issue / PRテンプレート |
@@ -458,6 +459,21 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：KEEP。
 - **削除・再評価条件**：利用者の目的、成功条件、計画と実績の差分を同等に確認できる運用へ移行する場合に再評価する。
 - **関連Issue / 正本文書**：#56、#58、V-03。Issue #56の監査条件とIssue #58のPlan vs Reality記録を追跡する。 正本：docs/acceptance-verification.md。
+
+### C-04 Human-facing HTML Status Report
+
+- **ETCSLV分類**：Context
+- **解決する失敗モード**：観測JSONやMarkdownの正本を人間が読む際に、対象SHA、収集時刻、未観測項目、残作業を見落とすこと。
+- **発火条件**：利用者が既存の観測JSONをローカルで人向けに確認するとき。
+- **入力 / Context**：利用者が指定した既存JSON、入力パス、観測時刻、Issue、PR、Workflow、Reviewの観測項目。
+- **出力 / State変更**：ローカルの静的HTML。正本JSON、GitHub、CI、Security、Review、Acceptance、マージ状態を変更しない。
+- **決定論的判定可能か**：固定JSONからの表示、HTMLエスケープ、入力非変更、出力上書き拒否はfixtureで判定できる。観測内容の意味づけは行わない。
+- **実行コスト / 運用負荷**：Python標準ライブラリだけで単一HTMLを生成する。外部asset、ネットワーク、公開、追跡用の新しいStateは増やさない。
+- **重複する仕組み**：S-04 Structured Current Stateと#64の観測JSONは正本と再開状態を担い、C-04はそれらを変更せず人間向け表示だけを担う。
+- **安全上必須か**：Security Boundary、Human Approval Boundary、Production保護の代替ではない。入力文字列をHTMLとして実行しない表示境界として必要である。
+- **判定**：SIMPLIFY。
+- **削除・再評価条件**：同じ正本参照、オフライン可読性、HTMLエスケープ、入力非変更をより小さい既存表示で満たせる場合に再評価する。
+- **関連Issue / 正本文書**：#67、C-04。正本：scripts/render-status-report.py、docs/html-status-report.md、tests/html-status-report/run-samples.sh。
 
 ## 削除候補と簡素化候補
 
