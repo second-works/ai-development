@@ -38,12 +38,14 @@ assignees: []
 
 テスト責務と検収の詳細は [Acceptance Verification](../blob/main/docs/acceptance-verification.md) を参照する。
 
-# 安全境界と停止条件
+# Agent Security Boundary と停止条件
 
-- 情報分類 / LLM Trust Boundary:
+- 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）:
+- LLM Trust Boundary:
 - Read / Write範囲とLeast Privilege:
 - Human Approvalが必要な操作と状態:
-- 対象外・例外、残るリスク、代替制御:
+- 適用対象外の項目、理由、残るリスク、代替制御、承認者:
+- Prompt Injection対策:
 
 [AI Agent Security Boundary](../blob/main/docs/ai-agent-security-boundary.md) の境界に該当する外部送信、権限拡大、Secrets、Security Policy、Production操作は人間承認まで停止する。事前承認のない重要設計変更は、親IssueのDesign Decisionへエスカレーションして決定まで実装を止める。
 
