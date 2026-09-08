@@ -36,6 +36,8 @@ assignees: []
 - 対象外・例外、残るリスク、代替制御:
 - Release / Production方針、または対象外の理由:
 
+各項目はチェックだけで済ませず、実際の値と制御内容を記入する。
+
 詳細は [AI Agent Security Boundary](../blob/main/docs/ai-agent-security-boundary.md) と [Deployment / Release Design](../blob/main/docs/deployment-release-design.md) を参照する。Secrets、権限、Security Policy、Production操作は人間承認まで停止する。
 
 # 検収計画
