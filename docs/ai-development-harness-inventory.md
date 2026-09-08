@@ -67,7 +67,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | C-03 | Adaptive Development Flow | C | SIMPLIFY | docs/adaptive-development-flow.md |
 | T-01 | CodexとSkills | T | SIMPLIFY | AGENTS.md、.agents/skills |
 | T-02 | GitHub Actionsと外部Tool | T | KEEP | .github/workflows、AI Agent Security Boundary |
-| C-01 | 正本文書とIssue / PR Context | C | STRENGTHEN | AGENTS.md、docs、Issue / PRテンプレート |
+| C-01 | 正本文書とIssue / PR Context | C | STRENGTHEN | docs/template-guide.md、docs、Issue / PRテンプレート |
 | C-02 | Review Context | C | SIMPLIFY | PRテンプレート、Review Evidence Contract |
 | S-01 | Issue、PR、head SHA | S | KEEP | PR、Git履歴、CI結果 |
 | S-02 | FOLLOW-UPとDesign Decision履歴 | S | KEEP | docs/review-followups.md、Issue |
