@@ -73,11 +73,10 @@ for marker in \
 done
 
 for marker in \
-  'P0 / P1、および `BLOCKING` 候補のP2' \
-  'Issue / 契約 / 安全条件' \
-  '再現可能な問題' \
-  '実行再現が困難な場合は決定的な静的根拠' \
-  '非BLOCKING P2の個別人間承認をMerge条件にしない'; do
+  'Review Evidence Contract' \
+  'P0 / P1 / BLOCKING P2:' \
+  '非BLOCKING P2の分類・Follow-up:' \
+  '修正時のPR番号・head branch・修正後SHA:'; do
   assert_contains "$PR_FILE" "$marker"
 done
 
