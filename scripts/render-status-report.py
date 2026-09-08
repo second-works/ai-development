@@ -44,7 +44,7 @@ def require_enum(root: Mapping[str, Any], name: str, allowed: set[str]) -> None:
 
 
 def validate_observation(observation: Mapping[str, Any]) -> None:
-    if observation.get("observer_schema_version") != OBSERVATION_SCHEMA_VERSION:
+    if type(observation.get("observer_schema_version")) is not int or observation.get("observer_schema_version") != OBSERVATION_SCHEMA_VERSION:
         raise RenderError("input schema error: observer_schema_version must be 1")
     require_string(observation, "observed_at")
     require_string(observation, "repository")
@@ -58,7 +58,7 @@ def validate_observation(observation: Mapping[str, Any]) -> None:
         raise RenderError("input schema error: collection.errors must be an array")
 
     issue = require_mapping(observation, "issue")
-    if not isinstance(issue.get("number"), int):
+    if type(issue.get("number")) is not int:
         raise RenderError("input schema error: issue.number must be an integer")
     require_enum(issue, "observation_status", OBSERVATION_STATUSES)
 
@@ -66,7 +66,7 @@ def validate_observation(observation: Mapping[str, Any]) -> None:
     if pull_request is not None:
         if not isinstance(pull_request, dict):
             raise RenderError("input schema error: pull_request must be an object or null")
-        if not isinstance(pull_request.get("number"), int):
+        if type(pull_request.get("number")) is not int:
             raise RenderError("input schema error: pull_request.number must be an integer")
         require_enum(pull_request, "observation_status", OBSERVATION_STATUSES)
 
