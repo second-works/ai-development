@@ -22,6 +22,21 @@ Closes #
 
 詳細は [Adaptive Development Flow](../blob/main/docs/adaptive-development-flow.md) と [AI Agent Security Boundary](../blob/main/docs/ai-agent-security-boundary.md) を参照する。権限、Secrets、Security Policy、Production操作は人間承認まで停止する。
 
+# Current State
+
+- Current phase:
+- Issue acceptance status:
+- Product Acceptance result:
+- Product Acceptance conditions / deadline / follow-up Issue:
+- Product Acceptance target artifact:
+- Current Deploy target artifact:
+- Current head SHA:
+- Expected SHA:
+- Verification status（local / CI / Security / Review）:
+- Review round / blocking finding status:
+- Stop reason:
+- Next action:
+
 # 検証とGitHub観測
 
 - 標準検証 / 手動確認:
