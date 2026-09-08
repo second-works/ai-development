@@ -60,33 +60,13 @@ PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_
 
 親Issueは実装指示ではなくプロジェクト全体のロードマップとして使う。Plan Review GateがPASSまたは理由付きのNOT_APPLICABLEとなった後に作成する。
 
-含める項目：
-
-- 目的
-- 背景
-- 今回実装する範囲
-- 子Issue一覧
-- 後続候補
-- 今回やらないこと
-- 全体完了条件
-- 検収計画（課題、利用者、実利用シナリオ、成功条件、失敗条件、検証環境、人間確認項目）
+テンプレートは今回値（Plan Reviewの結論、採用案、範囲、子Issue、依存、検収計画、現在状態）だけを記入する。安全境界、Release、検収の詳細は各正本文書を参照し、今回の承認・例外・停止理由を残す。
 
 ## 4. 子Issue
 
-子IssueはCodexが実装でき、かつ人間が1 PRとしてレビューできるサイズにする。
+子IssueはCodexが実装でき、かつ人間が1 PRとしてレビューできるサイズにする。テンプレートは今回値（目的、範囲、完了条件、依存、Risk Tier、テスト、対象SHA）を記入し、停止条件、安全境界、Harness、Current State、レビュー収束の詳細は正本文書を参照する。
 
-各子Issueには以下を必ず含める。
-
-- 目的
-- 実装内容
-- やらないこと
-- 変更してよい範囲
-- 原則変更しない範囲
-- 完了条件
-- テスト
-- 依存関係
-
-子IssueはGitHub登録前に `docs/issue-quality-check.md` に従って妥当性チェックを行う。
+子IssueはGitHub登録前に `docs/issue-quality-check.md` に従ってMUSTを確認する。MUST不足時はScoreにかかわらず登録・実装開始を停止する。
 
 ## 4.1 AI Agent Security Boundary確認
 
