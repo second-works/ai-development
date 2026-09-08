@@ -66,5 +66,6 @@ assignees: []
 
 - [ ] 子IssueがすべてMerge / Close済み
 - [ ] 必要な検証・CI・Security・Reviewを確認済み
+- [ ] Product AcceptanceがAccepted、または条件・期限・追跡Issueを記録し未解決ACCEPTANCE BLOCKERがないConditionalである
 - [ ] Product Acceptanceを記録済み
 - [ ] 人間が最終確認済み
