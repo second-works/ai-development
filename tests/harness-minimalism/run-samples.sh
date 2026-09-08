@@ -313,6 +313,7 @@ require_marker ".github/pull_request_template.md" "削除・再評価条件:"
 bash "$ROOT/tests/current-state/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/adaptive-development-flow/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/github-state/run-samples.sh" "$ROOT"
+bash "$ROOT/tests/issue-quality/run-samples.sh" "$ROOT"
 
 if (( failures != 0 )); then
   exit 1
