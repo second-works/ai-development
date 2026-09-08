@@ -1,0 +1,7 @@
+{
+  "fixture_error": {
+    "kind": "HTTP_ERROR",
+    "status": 403,
+    "detail": "fixture access denied"
+  }
+}

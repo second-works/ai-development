@@ -47,6 +47,8 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 - `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール
 - `docs/nine-standard-ai-development-flow.md` — 標準開発フロー
 - `docs/plan-review-gate.md` — 計画書の実装前Plan Review正本文書
+- `docs/ai-execution-state.md` — schema v3のCurrent State契約と読み取り専用GitHub観測の利用手順
+- `scripts/collect-github-state.py` — Issue / PR / head SHA / workflow / reviewをJSONへ読み取り専用で収集する補助script
 - `docs/deployment-release-design.md` — Deployment as Code・Release / Production設計標準
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート

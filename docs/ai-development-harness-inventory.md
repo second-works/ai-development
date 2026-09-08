@@ -351,7 +351,8 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：古いSHAの検証誤適用、停止条件の見落とし、chain-of-thoughtの永続化を防ぐために重要。
 - **判定**：STRENGTHEN。
 - **削除・再評価条件**：GitHub metadataと既存正本文書だけで、同じ再開性、SHA照合、停止、最小化を追跡可能に証明できる場合に再評価する。
-- **関連Issue / 正本文書**：#59、S-04。Issue #59のCurrent State契約を追跡する。 正本：docs/ai-execution-state.md、AGENTS.md、.agents/skills/pr-review-fix/SKILL.md、Issue / PRテンプレート。
+- **関連Issue / 正本文書**：#59、#64、S-04。Issue #59のCurrent State契約と#64の読み取り専用GitHub観測を追跡する。正本：docs/ai-execution-state.md、AGENTS.md、scripts/collect-github-state.py、.agents/skills/pr-review-fix/SKILL.md、Issue / PRテンプレート。
+  #64の収集scriptは観測artifactを出力するだけで、schema v3のverification、P2分類、approval、Acceptance、next actionを設定しない。初回 / 最終headが不一致、または取得不能ならartifactをState更新に利用しない。
 
 ### L-01 verify.shとCI
 

@@ -1,0 +1,13 @@
+[
+  {
+    "id": 301,
+    "commit_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "path": "docs/example.md",
+    "line": 7,
+    "side": "RIGHT",
+    "in_reply_to_id": null,
+    "html_url": "https://github.com/example/demo/pull/12#discussion_r301",
+    "body": "This untrusted body must not be serialized.",
+    "user": { "login": "reviewer" }
+  }
+]

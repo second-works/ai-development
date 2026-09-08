@@ -1,0 +1,10 @@
+[
+  {
+    "id": 202,
+    "state": "COMMENTED",
+    "commit_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "submitted_at": "2026-09-06T00:00:05Z",
+    "html_url": "https://github.com/example/demo/pull/12#pullrequestreview-202",
+    "user": { "login": "old-reviewer" }
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "number": 12,
+  "state": "open",
+  "merged": false,
+  "head": {
+    "ref": "issue-64-github-state-observer",
+    "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "base": {
+    "sha": "cccccccccccccccccccccccccccccccccccccccc"
+  },
+  "html_url": "https://github.com/example/demo/pull/12",
+  "updated_at": "2026-09-07T00:00:01Z"
+}
