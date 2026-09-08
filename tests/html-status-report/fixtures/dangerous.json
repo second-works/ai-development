@@ -1,4 +1,5 @@
 {
+  "observer_schema_version": 1,
   "observed_at": "<script>alert(1)</script>",
   "repository": "\"><img src=x onerror=alert(1)>",
   "collection": {"status": "UNAVAILABLE", "usable_for_state_update": false, "errors": [{"operation": "<script>", "kind": "bad attr", "detail": "javascript:alert(1)"}]},
