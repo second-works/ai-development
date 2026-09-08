@@ -98,7 +98,7 @@ def render(observation: Mapping[str, Any], source_path: Path) -> str:
 </head><body><main>
 <h1>GitHub Status Report</h1><p>ローカルJSONから生成した静的レポートです。外部資産・ネットワーク通信は使用しません。</p>
 <section><h2>正本と収集時点</h2><div class="scroll"><table><tbody>
-{status_row('入力JSON', source_path)}{status_row('正本リポジトリ', observation.get('repository'))}{status_row('観測時刻', observation.get('observed_at'))}{status_row('観測状態', collection.get('status'))}{status_row('State更新に利用可能', collection.get('usable_for_state_update'))}
+{status_row('入力JSON', str(source_path))}{status_row('正本リポジトリ', observation.get('repository'))}{status_row('観測時刻', observation.get('observed_at'))}{status_row('観測状態', collection.get('status'))}{status_row('State更新に利用可能', collection.get('usable_for_state_update'))}
 </tbody></table></div></section>
 <section><h2>対象</h2><div class="scroll"><table><tbody>
 {status_row('Issue番号', issue.get('number'))}{status_row('Issue状態', issue.get('state'))}{status_row('Issue参照', issue.get('source_url'))}{status_row('PR番号', pull_request.get('number'))}{status_row('PR状態', pull_request.get('state'))}{status_row('PRマージ済み', pull_request.get('merged'))}{status_row('対象head SHA', pull_request.get('head_sha'))}{status_row('head整合性', head.get('status'))}
