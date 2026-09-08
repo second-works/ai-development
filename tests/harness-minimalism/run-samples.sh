@@ -158,6 +158,7 @@ require_marker "docs/ai-development-harness-inventory.md" "ETCSLV"
 require_marker "docs/ai-development-harness-inventory.md" "schema v3に従ったphase"
 require_marker "docs/ai-development-harness-inventory.md" "Acceptance対象artifact"
 require_marker "docs/ai-development-harness-inventory.md" "現行Deploy target"
+bash "$ROOT/tests/html-status-report/run-samples.sh" "$ROOT"
 ledger_headings=()
 while IFS= read -r heading; do
   ledger_headings+=("$heading")
