@@ -49,6 +49,13 @@ assignees: []
 
 検収の正本は [Acceptance Verification](../blob/main/docs/acceptance-verification.md)。Implementation、Deploy、Product Acceptedは別状態として記録する。
 
+# Harness Minimalism / ETCSLV
+
+- 解決する失敗モード:
+- 削除・再評価条件:
+
+詳細は [Harness Minimalism台帳](../blob/main/docs/ai-development-harness-inventory.md) を参照する。
+
 # Current State
 
 - Current phase:
