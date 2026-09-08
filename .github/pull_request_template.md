@@ -9,7 +9,9 @@ Closes #
 - 変更しない範囲 / 主な影響:
 - 注意点・残課題:
 
-# Risk Tier と Agent Security Boundary
+# Risk Tier
+
+# Agent Security Boundary
 
 - Tier（LOW / MEDIUM / HIGH）と理由:
 - 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL） / LLM Trust Boundary:
