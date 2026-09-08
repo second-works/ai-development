@@ -402,6 +402,28 @@ with open(fixture_output, encoding="utf-8") as source:
     data = json.load(source)
 assert data["collection"]["errors"][0]["kind"] == "INVALID_JSON"
 
+deep_fixture_directory = Path(output_dir) / "deep-fixture"
+deep_fixture_directory.mkdir()
+(deep_fixture_directory / "issue.json").write_text(
+    '{"number":64,"state":"open","extra":' + ('[' * 1500) + ('0' + (']' * 1500)) + '}', encoding="utf-8"
+)
+deep_output = str(Path(output_dir) / "deep.json")
+status = module.main(["--repository", "example/demo", "--issue", "64", "--fixture-dir", str(deep_fixture_directory), "--output", deep_output])
+assert status == 3
+with open(deep_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"]["errors"][0]["kind"] == "INVALID_JSON"
+
+token_output = str(Path(output_dir) / "invalid-token.json")
+transport = transport_class("not-a-real-token\n")
+module.GitHubTransport = lambda token: transport
+status = module.main(["--repository", "example/demo", "--issue", "64", "--output", token_output])
+assert status == 3
+with open(token_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"]["errors"][0]["kind"] == "INVALID_TOKEN"
+assert "not-a-real-token" not in open(token_output, encoding="utf-8").read()
+
 assert module.json.dumps({"value": "café"}, ensure_ascii=True).isascii()
 
 class FailingWriter:
