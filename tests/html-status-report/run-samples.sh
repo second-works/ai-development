@@ -34,6 +34,10 @@ printf '{invalid' > "$WORK/invalid.json"
 if python3 "$RENDER" "$WORK/invalid.json" --output "$WORK/invalid.html"; then
   exit 1
 fi
+printf '{"collection":{"status":"COMPLETE"}}' > "$WORK/invalid-schema.json"
+if python3 "$RENDER" "$WORK/invalid-schema.json" --output "$WORK/invalid-schema.html"; then
+  exit 1
+fi
 if python3 "$RENDER" "$FIXTURES/complete.json" --output "$WORK/report.html"; then
   exit 1
 fi
