@@ -38,6 +38,19 @@ printf '{"collection":{"status":"COMPLETE"}}' > "$WORK/invalid-schema.json"
 if python3 "$RENDER" "$WORK/invalid-schema.json" --output "$WORK/invalid-schema.html"; then
   exit 1
 fi
+python3 - "$FIXTURES/complete.json" "$WORK/boolean-schema.json" <<'PY'
+import json
+import sys
+
+source, destination = sys.argv[1:]
+payload = json.load(open(source, encoding="utf-8"))
+payload["observer_schema_version"] = True
+payload["issue"]["number"] = False
+json.dump(payload, open(destination, "w", encoding="utf-8"))
+PY
+if python3 "$RENDER" "$WORK/boolean-schema.json" --output "$WORK/boolean-schema.html"; then
+  exit 1
+fi
 if python3 "$RENDER" "$FIXTURES/complete.json" --output "$WORK/report.html"; then
   exit 1
 fi
