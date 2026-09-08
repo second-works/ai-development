@@ -37,7 +37,7 @@ assignees: []
 - 実行する標準検証・手動確認:
 - 既存テストを変更する場合の保証先:
 
-テスト責務と検収の詳細は [Acceptance Verification](../blob/main/docs/acceptance-verification.md) を参照する。
+テスト責務・テスト層・既存テスト変更時の保証先は [Test Design / Safe Test Deletion](../blob/main/AGENTS.md#test-design--safe-test-deletion) を正本として参照する。Deploy後の検収は [Acceptance Verification](../blob/main/docs/acceptance-verification.md) を参照する。
 
 # Agent Security Boundary（安全境界と停止条件）
 
