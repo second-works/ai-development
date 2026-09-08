@@ -257,6 +257,7 @@ python3 - "$SCRIPT" "$WORK_DIR" <<'PY'
 import http.client
 import importlib.util
 import json
+import shutil
 from pathlib import Path
 import sys
 
