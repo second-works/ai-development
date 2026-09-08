@@ -57,7 +57,7 @@ MEDIUMでは影響と通常テスト、HIGHでは安全境界・復旧・必要�
 | MEDIUM | 目的、範囲、影響、6観点のテスト、対象SHAと検証結果を記入する。 | 停止条件、安全境界、検収、レビュー収束の詳細。 |
 | HIGH | MEDIUMに加え、安全境界、復旧、必要な人間承認と追加検証を記入する。 | 正本文書の制約を満たした具体的な承認・例外の根拠。 |
 
-詳細をテンプレートへ再掲せず、[Adaptive Development Flow](adaptive-development-flow.md)、[AI Agent Security Boundary](ai-agent-security-boundary.md)、[Acceptance Verification](acceptance-verification.md)、[Review Follow-ups](review-followups.md)を正本として参照する。
+詳細をテンプレートへ再掲せず、[Adaptive Development Flow](adaptive-development-flow.md)、[AI Agent Security Boundary](ai-agent-security-boundary.md)、[Acceptance Verification](acceptance-verification.md)、[Review Follow-ups](review-followups.md)、[Safe Auto-Fix / Auto-Merge](safe-auto-fix-auto-merge.md)を正本として参照する。
 
 ## 3. AGENTS.md
 
