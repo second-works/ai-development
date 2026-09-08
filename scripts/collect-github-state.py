@@ -478,6 +478,24 @@ def collect(args: argparse.Namespace, captured_at: str) -> Tuple[Dict[str, Any],
             raise CollectionError("issue", "IDENTITY_MISMATCH", "response was a pull request")
         observation["issue"] = {"observation_status": "OBSERVED", **normalize_issue(final_issue, final_issue_response.source_url)}
 
+        verified_final_response = transport.get("pr-final", f"{prefix}/pulls/{args.pr}")
+        verified_final_pr = as_object("pr-final", verified_final_response.payload)
+        require_number("pr-final", verified_final_pr, args.pr)
+        require_enum("pr-final", "state", verified_final_pr.get("state"), ISSUE_STATES)
+        verified_final_head = require_head_sha("pr-final", verified_final_pr)
+        require_head_ref("pr-final", verified_final_pr)
+        observation["pull_request"] = {"observation_status": "OBSERVED", **normalize_pr(verified_final_pr, verified_final_response.source_url)}
+        observation["head_consistency"]["final_head_sha"] = verified_final_head
+        observation["head_consistency"]["final_source_url"] = verified_final_response.source_url
+        if verified_final_head != initial_head:
+            observation["head_consistency"]["status"] = "MISMATCH"
+            observation["collection"] = {
+                "status": "UNAVAILABLE",
+                "usable_for_state_update": False,
+                "errors": [{"operation": "pr-final", "kind": "HEAD_CHANGED_DURING_COLLECTION", "detail": "observed PR head changed during collection"}],
+            }
+            return observation, 3
+
         observation["head_consistency"]["status"] = "MATCH"
         observation["collection"] = {"status": "COMPLETE", "usable_for_state_update": True, "errors": []}
         return observation, 0

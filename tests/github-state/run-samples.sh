@@ -459,6 +459,38 @@ assert data["issue"]["state"] == "closed"
 assert data["issue"]["updated_at"] == "2026-09-07T00:00:02Z"
 assert data["issue"]["source_url"] == "fixture://issue-2.json"
 
+class HeadChangedAfterIssueFixtureTransport(module.FixtureTransport):
+    def __init__(self, directory):
+        super().__init__(directory)
+        self.final_pr_calls = 0
+
+    def get(self, operation, path, query=None):
+        response = super().get(operation, path, query)
+        if operation != "pr-final":
+            return response
+        self.final_pr_calls += 1
+        if self.final_pr_calls == 1:
+            return response
+        payload = dict(response.payload)
+        payload["head"] = dict(payload["head"])
+        payload["head"]["sha"] = "b" * 40
+        return module.Response(payload, response.source_url, response.next_url)
+
+
+module.FixtureTransport = HeadChangedAfterIssueFixtureTransport
+head_changed_after_issue_output = str(Path(output_dir) / "head-changed-after-issue.json")
+status = module.main([
+    "--repository", "example/demo",
+    "--issue", "64",
+    "--pr", "12",
+    "--fixture-dir", str(Path(script_path).parent.parent / "tests" / "github-state" / "fixtures" / "happy"),
+    "--output", head_changed_after_issue_output,
+])
+assert status == 3
+with open(head_changed_after_issue_output, encoding="utf-8") as source:
+    data = json.load(source)
+assert data["collection"]["errors"][0]["kind"] == "HEAD_CHANGED_DURING_COLLECTION"
+
 for operation in ("pr-initial", "pr-final"):
     fixture_directory = Path(output_dir) / f"missing-head-ref-{operation}"
     shutil.copytree(Path(script_path).parent.parent / "tests" / "github-state" / "fixtures" / "happy", fixture_directory)
