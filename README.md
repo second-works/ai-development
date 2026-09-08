@@ -65,4 +65,5 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 - Codex Code ReviewはPR差分をレビューする（レビュー専用）
 - PR修正は既存PRのhead branchへ反映する
 - PRを品質の関門にする
+- 子Issue品質はMUSTを先に確認し、SHOULDと補助Scoreだけでは停止しない
 - 人間が仕様とマージを決める
