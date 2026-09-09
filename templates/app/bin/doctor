@@ -39,6 +39,14 @@ config_value() {
   return 1
 }
 
+config_is_present() {
+  local key="$1"
+  if [[ ${!key+x} == x ]]; then
+    return 0
+  fi
+  [[ -f "$ENV_FILE" ]] && grep -Eq "^[[:space:]]*${key}=" "$ENV_FILE"
+}
+
 failures=0
 check_command() {
   local command_name="$1"
@@ -110,10 +118,16 @@ else
 fi
 
 health_url="$(config_value APP_HEALTHCHECK_URL || true)"
-health_required="$(config_value APP_HEALTHCHECK_REQUIRED || true)"
-health_required="${health_required:-0}"
-expect_running="$(config_value APP_EXPECT_RUNNING || true)"
-expect_running="${expect_running:-0}"
+if config_is_present APP_HEALTHCHECK_REQUIRED; then
+  health_required="$(config_value APP_HEALTHCHECK_REQUIRED || true)"
+else
+  health_required=0
+fi
+if config_is_present APP_EXPECT_RUNNING; then
+  expect_running="$(config_value APP_EXPECT_RUNNING || true)"
+else
+  expect_running=0
+fi
 flags_valid=1
 for flag_name in APP_HEALTHCHECK_REQUIRED APP_EXPECT_RUNNING; do
   if [[ "$flag_name" == "APP_HEALTHCHECK_REQUIRED" ]]; then
@@ -133,7 +147,7 @@ health_port=""
 
 if ((flags_valid)) && [[ -n "$health_url" && "$health_required" == "1" ]]; then
   check_command curl
-  if command -v curl >/dev/null 2>&1 && curl --fail --silent --show-error --max-time 5 "$health_url" >/dev/null; then
+  if command -v curl >/dev/null 2>&1 && curl --fail --silent --max-time 5 "$health_url" >/dev/null 2>/dev/null; then
     printf '[doctor] health status=PASS\n'
     health_succeeded=1
   else
@@ -150,7 +164,9 @@ if ((flags_valid)) && [[ "$expect_running" == "1" && "$health_required" != "1" ]
   printf '[doctor] runtime status=FAIL reason=APP_EXPECT_RUNNING=1 requires APP_HEALTHCHECK_REQUIRED=1\n' >&2
   failures=$((failures + 1))
 elif ((flags_valid)) && [[ "$expect_running" == "1" && "$health_succeeded" == "1" ]]; then
-  if [[ "$health_url" =~ ^https?://([^/@]*@)?[^/:?#]+:([0-9]+)([/?#].*)?$ ]]; then
+  if [[ "$health_url" =~ ^https?://([^/@]*@)?\[[0-9A-Fa-f:.]+\]:([0-9]+)([/?#].*)?$ ]]; then
+    health_port="${BASH_REMATCH[2]}"
+  elif [[ "$health_url" =~ ^https?://([^/@]*@)?[^/:?#]+:([0-9]+)([/?#].*)?$ ]]; then
     health_port="${BASH_REMATCH[2]}"
   elif [[ "$health_url" == https://* ]]; then
     health_port=443
