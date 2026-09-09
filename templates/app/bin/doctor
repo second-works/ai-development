@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
+ROOT_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 ENV_FILE="${APP_ENV_FILE:-${ROOT_DIR}/.env}"
 
 trim() {
@@ -59,7 +59,13 @@ else
   printf '[doctor] config status=PASS path=%s\n' "${ENV_FILE#"$ROOT_DIR"/}"
 fi
 
-check_command git
+required_commands="$(config_value APP_REQUIRED_COMMANDS || true)"
+required_commands="${required_commands:-git}"
+IFS=',' read -r -a command_list <<< "$required_commands"
+for command_name in "${command_list[@]}"; do
+  command_name="$(trim "$command_name")"
+  [[ -n "$command_name" ]] && check_command "$command_name"
+done
 
 if [[ -f package.json ]]; then
   check_command node
