@@ -30,6 +30,10 @@ copy_template "$project_dir"
 
 health_project="$WORK_DIR/health-app"
 copy_template "$health_project"
+(
+  cd "$health_project"
+  ./bin/setup >/dev/null
+)
 health_port="$((18000 + RANDOM % 1000))"
 cat > "$health_project/health_server.py" <<'PY'
 from http.server import BaseHTTPRequestHandler, HTTPServer
