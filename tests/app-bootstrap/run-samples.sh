@@ -73,4 +73,8 @@ if "$APP/bin/doctor" >"$WORK/doctor-missing-command.log" 2>&1; then
 fi
 grep -Fq 'FAIL doctor: required command is unavailable: definitely-missing-command' "$WORK/doctor-missing-command.log"
 
+grep -Fq '新規アプリのDone条件' "$ROOT/AGENTS.md"
+grep -Fq '新規アプリの setup / doctor 契約' "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md"
+grep -Fq 'templates/app-bootstrap/' "$ROOT/docs/template-guide.md"
+
 printf 'app-bootstrap samples: ok\n'
