@@ -75,4 +75,41 @@ done
   ./bin/doctor
 )
 
+secret_output="$WORK_DIR/secret-output.log"
+(
+  cd "$health_project"
+  APP_PORT="$health_port" \
+  APP_HEALTHCHECK_URL="http://user:secret@127.0.0.1:${health_port}/health?token=secret-token" \
+  APP_HEALTHCHECK_REQUIRED=1 \
+  APP_EXPECT_RUNNING=0 \
+  ./bin/doctor
+) >"$secret_output" 2>&1 || true
+if grep -Fq 'secret' "$secret_output" || grep -Fq 'secret-token' "$secret_output"; then
+  exit 1
+fi
+
+if (
+  cd "$health_project"
+  APP_PORT="$((health_port + 1))" \
+  APP_HEALTHCHECK_URL="http://127.0.0.1:${health_port}/health" \
+  APP_HEALTHCHECK_REQUIRED=1 \
+  APP_EXPECT_RUNNING=1 \
+  ./bin/doctor
+); then
+  exit 1
+fi
+
+for invalid_value in true 2; do
+  if (
+    cd "$health_project"
+    APP_PORT="$health_port" \
+    APP_HEALTHCHECK_URL="http://127.0.0.1:${health_port}/health" \
+    APP_HEALTHCHECK_REQUIRED="$invalid_value" \
+    APP_EXPECT_RUNNING=0 \
+    ./bin/doctor
+  ); then
+    exit 1
+  fi
+done
+
 printf 'app setup/doctor template samples passed\n'
