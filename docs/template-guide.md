@@ -59,6 +59,25 @@ MEDIUMでは影響と通常テスト、HIGHでは安全境界・復旧・必要�
 
 詳細をテンプレートへ再掲せず、[Adaptive Development Flow](adaptive-development-flow.md)、[AI Agent Security Boundary](ai-agent-security-boundary.md)、[Acceptance Verification](acceptance-verification.md)、[Review Follow-ups](review-followups.md)、[Safe Auto-Fix / Auto-Merge](safe-auto-fix-auto-merge.md)を正本として参照する。
 
+
+## 2.3 自作アプリの setup / doctor
+
+自作アプリは環境基盤のsetupへ抱え込まず、各リポジトリで再構築・診断できるようにします。新規アプリには `templates/app-bootstrap/` をコピーし、少なくとも次を管理します。
+
+```text
+bin/setup
+bin/setup.app
+bin/doctor
+.env.example
+README.md
+```
+
+clone後に `bin/setup`、続けて `bin/doctor` を実行できる状態を新規アプリのDone条件へ記録します。setupは既存 `.env` を上書きせず、アプリ固有の依存導入だけを `bin/setup.app` に置きます。Docker、Node、Pythonなどの共有runtimeは環境側で管理します。
+
+doctorは必須コマンド・必須ファイル・任意のlocalhost health endpointを確認します。必須項目の不足や、設定済みhealth endpointの失敗はFAIL、health endpointを未設定にした場合はWARNです。設定値をshellとして評価せず、Secretsの内容を表示しません。永続データの場所、実アプリのport、外部endpoint、追加依存は各アプリのREADMEと子Issueで明示してから追加します。
+
+標準雛形の契約は `tests/app-bootstrap/run-samples.sh` とTemplate CIで検証します。実アプリ固有の依存・health要件・実行確認は、そのアプリの `./scripts/verify.sh` と子Issueのテスト条件で保証します。
+
 ## 3. AGENTS.md
 
 ### 目的

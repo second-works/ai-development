@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="$ROOT/.env"
+failures=0
+warnings=0
+
+pass() {
+  printf 'PASS doctor: %s\n' "$1"
+}
+
+warn() {
+  printf 'WARN doctor: %s\n' "$1"
+  warnings=$((warnings + 1))
+}
+
+fail() {
+  printf 'FAIL doctor: %s\n' "$1" >&2
+  failures=$((failures + 1))
+}
+
+setting() {
+  local key="$1"
+  sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1
+}
+
+validate_relative_path() {
+  local path="$1"
+  [[ -n "$path" && "$path" != /* && "$path" != *..* && "$path" =~ ^[A-Za-z0-9._/-]+$ ]]
+}
+
+validate_command_name() {
+  local command_name="$1"
+  [[ -n "$command_name" && "$command_name" =~ ^[A-Za-z0-9._+-]+$ ]]
+}
+
+check_health_url() {
+  local url="$1"
+  local host_port
+  local port
+
+  if [[ ! "$url" =~ ^https?://(127\.0\.0\.1|localhost)(:[0-9]{1,5})?(/.*)?$ ]]; then
+    fail 'health endpoint must be local http(s)'
+    return
+  fi
+
+  host_port="$${url#*://}"
+  host_port="$${host_port%%/*}"
+  if [[ "$host_port" == *:* ]]; then
+    port="$${host_port##*:}"
+    if (( port < 1 || port > 65535 )); then
+      fail 'health endpoint port is outside 1-65535'
+      return
+    fi
+  fi
+
+  if ! command -v curl >/dev/null 2>&1; then
+    fail 'curl is required when APP_HEALTHCHECK_URL is configured'
+    return
+  fi
+
+  if curl --fail --silent --show-error --max-time 2 "$url" >/dev/null; then
+    pass 'local health endpoint'
+  else
+    fail 'local health endpoint is unavailable'
+  fi
+}
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  fail '.env is missing; run bin/setup first'
+else
+  required_commands="$(setting APP_REQUIRED_COMMANDS)"
+  required_files="$(setting APP_REQUIRED_FILES)"
+  health_url="$(setting APP_HEALTHCHECK_URL)"
+
+  for command_name in $required_commands; do
+    if ! validate_command_name "$command_name"; then
+      fail 'APP_REQUIRED_COMMANDS contains an invalid command name'
+    elif command -v "$command_name" >/dev/null 2>&1; then
+      pass "required command: $command_name"
+    else
+      fail "required command is unavailable: $command_name"
+    fi
+  done
+
+  for file_name in $required_files; do
+    if ! validate_relative_path "$file_name"; then
+      fail 'APP_REQUIRED_FILES contains an invalid relative path'
+    elif [[ -e "$ROOT/$file_name" ]]; then
+      pass "required file: $file_name"
+    else
+      fail "required file is missing: $file_name"
+    fi
+  done
+
+  if [[ -z "$health_url" ]]; then
+    warn 'APP_HEALTHCHECK_URL is not configured'
+  else
+    check_health_url "$health_url"
+  fi
+fi
+
+if (( failures > 0 )); then
+  exit 1
+fi
+
+if (( warnings > 0 )); then
+  printf 'PASS doctor: completed with warnings\n'
+else
+  printf 'PASS doctor: completed\n'
+fi

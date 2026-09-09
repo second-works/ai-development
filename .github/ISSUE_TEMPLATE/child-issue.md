@@ -17,6 +17,7 @@ assignees: []
 - 原則変更しない範囲:
 - やらないこと:
 - 完了条件:
+- 新規アプリの setup / doctor 契約（該当する場合）:
 - Parent / Depends on:
 
 > 1子Issue = 1 PR。登録・実装開始前に [Issue Quality Check](../blob/main/docs/issue-quality-check.md) のMUSTを満たすこと。MUST不足はScoreにかかわらず停止する。

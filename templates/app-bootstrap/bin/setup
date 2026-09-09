@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_EXAMPLE="$ROOT/.env.example"
+ENV_FILE="$ROOT/.env"
+APP_SETUP="$ROOT/bin/setup.app"
+
+if [[ ! -f "$ENV_EXAMPLE" ]]; then
+  printf 'FAIL setup: .env.example is missing\n' >&2
+  exit 1
+fi
+
+if [[ -e "$ENV_FILE" ]]; then
+  printf 'PASS setup: existing .env preserved\n'
+else
+  (umask 077 && cp "$ENV_EXAMPLE" "$ENV_FILE")
+  printf 'PASS setup: .env created from .env.example\n'
+fi
+
+if [[ ! -x "$APP_SETUP" ]]; then
+  printf 'FAIL setup: bin/setup.app must be executable\n' >&2
+  exit 1
+fi
+
+bash "$APP_SETUP"
+printf 'PASS setup: application hook completed\n'
