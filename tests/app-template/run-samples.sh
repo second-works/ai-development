@@ -75,6 +75,44 @@ done
   ./bin/doctor
 )
 
+ipv6_port="$((20000 + RANDOM % 1000))"
+cat > "$health_project/ipv6_health_server.py" <<'PY'
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import socket
+import sys
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+    def log_message(self, format_string, *args):
+        return
+
+class IPv6HTTPServer(HTTPServer):
+    address_family = socket.AF_INET6
+
+IPv6HTTPServer(("::1", int(sys.argv[1])), Handler).serve_forever()
+PY
+python3 "$health_project/ipv6_health_server.py" "$ipv6_port" >/dev/null 2>&1 &
+ipv6_server_pid=$!
+trap 'kill "$server_pid" "$ipv6_server_pid" >/dev/null 2>&1 || true; rm -rf "$WORK_DIR"' EXIT
+for _ in {1..20}; do
+  if curl --noproxy '*' --silent --fail "http://[::1]:${ipv6_port}/health" >/dev/null; then
+    break
+  fi
+  sleep 0.1
+done
+(
+  cd "$health_project"
+  APP_PORT="$ipv6_port" \
+  APP_HEALTHCHECK_URL="http://[::1]:${ipv6_port}/health" \
+  APP_HEALTHCHECK_REQUIRED=1 \
+  APP_EXPECT_RUNNING=1 \
+  ./bin/doctor
+)
+kill "$ipv6_server_pid" >/dev/null 2>&1 || true
+ipv6_server_pid=""
+
 secret_output="$WORK_DIR/secret-output.log"
 (
   cd "$health_project"
@@ -85,6 +123,17 @@ secret_output="$WORK_DIR/secret-output.log"
   ./bin/doctor
 ) >"$secret_output" 2>&1 || true
 if grep -Fq 'secret' "$secret_output" || grep -Fq 'secret-token' "$secret_output"; then
+  exit 1
+fi
+
+malformed_output="$WORK_DIR/malformed-output.log"
+(
+  cd "$health_project"
+  APP_HEALTHCHECK_URL='http://user:topsecret@[bad/health?token=querysecret' \
+  APP_HEALTHCHECK_REQUIRED=1 \
+  ./bin/doctor
+) >"$malformed_output" 2>&1 || true
+if grep -Fq 'topsecret' "$malformed_output" || grep -Fq 'querysecret' "$malformed_output"; then
   exit 1
 fi
 
@@ -111,5 +160,43 @@ for invalid_value in true 2; do
     exit 1
   fi
 done
+
+for empty_flag in APP_HEALTHCHECK_REQUIRED APP_EXPECT_RUNNING; do
+  if (
+    cd "$health_project"
+    env \
+      APP_PORT="$health_port" \
+      APP_HEALTHCHECK_URL="http://127.0.0.1:${health_port}/health" \
+      APP_HEALTHCHECK_REQUIRED=1 \
+      APP_EXPECT_RUNNING=0 \
+      "$empty_flag"= \
+      ./bin/doctor
+  ); then
+    exit 1
+  fi
+done
+
+sed -i.bak 's/^APP_EXPECT_RUNNING=0$/APP_EXPECT_RUNNING =/' "$health_project/.env"
+if (cd "$health_project" && ./bin/doctor); then
+  exit 1
+fi
+sed -i.bak 's/^APP_EXPECT_RUNNING =$/APP_EXPECT_RUNNING=0/' "$health_project/.env"
+
+mock_bin="$WORK_DIR/mock-bin"
+mkdir -p "$mock_bin"
+cat > "$mock_bin/curl" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+chmod +x "$mock_bin/curl"
+(
+  cd "$health_project"
+  PATH="$mock_bin:$PATH" \
+  APP_PORT=8123 \
+  APP_HEALTHCHECK_URL='http://[fe80::3%25eth0]:8123/health' \
+  APP_HEALTHCHECK_REQUIRED=1 \
+  APP_EXPECT_RUNNING=1 \
+  ./bin/doctor
+)
 
 printf 'app setup/doctor template samples passed\n'
