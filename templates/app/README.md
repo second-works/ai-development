@@ -25,7 +25,7 @@
 
 setupは既存の.envを上書きせず、アプリのデータディレクトリを作成します。Node.jsアプリではpackage-lock.jsonに基づくnpm ci、Pythonアプリでは.venvとリポジトリ内の依存定義を使います。依存関係がないアプリでもデータディレクトリと設定ファイルを準備できます。何度実行しても既存の設定・データを破壊しないことが契約です。
 
-doctorは設定ファイル、基盤コマンド、依存定義、永続データディレクトリ、port設定を検査します。APP_HEALTHCHECK_REQUIRED=1にするとAPP_HEALTHCHECK_URLへ接続し、APP_EXPECT_RUNNING=1と組み合わせることで起動中のport / health endpointを検査します。起動前の開発環境ではhealth検査をスキップし、明示的な理由を表示します。
+doctorは設定ファイル、基盤コマンド、依存定義、永続データディレクトリ、port設定を検査します。APP_HEALTHCHECK_REQUIRED=1にするとAPP_HEALTHCHECK_URLへ接続し、APP_EXPECT_RUNNING=1と組み合わせることで設定portとhealth endpointのport一致を確認します。両フラグは0または1だけを受け付け、health URLの資格情報やqueryは出力しません。起動前の開発環境ではhealth検査をスキップし、明示的な理由を表示します。
 
 ## 境界
 

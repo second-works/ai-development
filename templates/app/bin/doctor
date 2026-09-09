@@ -114,27 +114,59 @@ health_required="$(config_value APP_HEALTHCHECK_REQUIRED || true)"
 health_required="${health_required:-0}"
 expect_running="$(config_value APP_EXPECT_RUNNING || true)"
 expect_running="${expect_running:-0}"
+flags_valid=1
+for flag_name in APP_HEALTHCHECK_REQUIRED APP_EXPECT_RUNNING; do
+  if [[ "$flag_name" == "APP_HEALTHCHECK_REQUIRED" ]]; then
+    flag_value="$health_required"
+  else
+    flag_value="$expect_running"
+  fi
+  if [[ "$flag_value" != "0" && "$flag_value" != "1" ]]; then
+    printf '[doctor] config status=FAIL reason=%s must be 0 or 1\n' "$flag_name" >&2
+    failures=$((failures + 1))
+    flags_valid=0
+  fi
+done
 
-if [[ -n "$health_url" && "$health_required" == "1" ]]; then
+health_succeeded=0
+health_port=""
+
+if ((flags_valid)) && [[ -n "$health_url" && "$health_required" == "1" ]]; then
   check_command curl
   if command -v curl >/dev/null 2>&1 && curl --fail --silent --show-error --max-time 5 "$health_url" >/dev/null; then
-    printf '[doctor] health status=PASS url=%s\n' "$health_url"
+    printf '[doctor] health status=PASS\n'
+    health_succeeded=1
   else
-    printf '[doctor] health status=FAIL url=%s\n' "$health_url" >&2
+    printf '[doctor] health status=FAIL\n' >&2
     failures=$((failures + 1))
   fi
-elif [[ -n "$health_url" ]]; then
+elif ((flags_valid)) && [[ -n "$health_url" ]]; then
   printf '[doctor] health status=SKIPPED reason=APP_HEALTHCHECK_REQUIRED is not 1\n'
-else
+elif ((flags_valid)); then
   printf '[doctor] health status=SKIPPED reason=APP_HEALTHCHECK_URL is not configured\n'
 fi
 
-if [[ "$expect_running" == "1" && "$health_required" != "1" ]]; then
+if ((flags_valid)) && [[ "$expect_running" == "1" && "$health_required" != "1" ]]; then
   printf '[doctor] runtime status=FAIL reason=APP_EXPECT_RUNNING=1 requires APP_HEALTHCHECK_REQUIRED=1\n' >&2
   failures=$((failures + 1))
-elif [[ "$expect_running" == "1" ]]; then
-  printf '[doctor] runtime port=%s status=PASS health_endpoint_reachable\n' "$port"
-else
+elif ((flags_valid)) && [[ "$expect_running" == "1" && "$health_succeeded" == "1" ]]; then
+  if [[ "$health_url" =~ ^https?://([^/@]*@)?[^/:?#]+:([0-9]+)([/?#].*)?$ ]]; then
+    health_port="${BASH_REMATCH[2]}"
+  elif [[ "$health_url" == https://* ]]; then
+    health_port=443
+  else
+    health_port=80
+  fi
+  if [[ "$health_port" != "$port" ]]; then
+    printf '[doctor] runtime status=FAIL reason=APP_PORT does not match health endpoint port\n' >&2
+    failures=$((failures + 1))
+  else
+    printf '[doctor] runtime port=%s status=PASS health_endpoint_reachable\n' "$port"
+  fi
+elif ((flags_valid)) && [[ "$expect_running" == "1" ]]; then
+  printf '[doctor] runtime status=FAIL reason=health endpoint is unavailable\n' >&2
+  failures=$((failures + 1))
+elif ((flags_valid)); then
   printf '[doctor] runtime status=SKIPPED reason=APP_EXPECT_RUNNING is not 1\n'
 fi
 
