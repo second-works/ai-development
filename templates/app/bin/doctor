@@ -44,7 +44,7 @@ config_is_present() {
   if [[ ${!key+x} == x ]]; then
     return 0
   fi
-  [[ -f "$ENV_FILE" ]] && grep -Eq "^[[:space:]]*${key}=" "$ENV_FILE"
+  [[ -f "$ENV_FILE" ]] && grep -Eq "^[[:space:]]*${key}[[:space:]]*=" "$ENV_FILE"
 }
 
 failures=0
@@ -164,7 +164,7 @@ if ((flags_valid)) && [[ "$expect_running" == "1" && "$health_required" != "1" ]
   printf '[doctor] runtime status=FAIL reason=APP_EXPECT_RUNNING=1 requires APP_HEALTHCHECK_REQUIRED=1\n' >&2
   failures=$((failures + 1))
 elif ((flags_valid)) && [[ "$expect_running" == "1" && "$health_succeeded" == "1" ]]; then
-  if [[ "$health_url" =~ ^https?://([^/@]*@)?\[[0-9A-Fa-f:.]+\]:([0-9]+)([/?#].*)?$ ]]; then
+  if [[ "$health_url" =~ ^https?://([^/@]*@)?\[[^]]+\]:([0-9]+)([/?#].*)?$ ]]; then
     health_port="${BASH_REMATCH[2]}"
   elif [[ "$health_url" =~ ^https?://([^/@]*@)?[^/:?#]+:([0-9]+)([/?#].*)?$ ]]; then
     health_port="${BASH_REMATCH[2]}"

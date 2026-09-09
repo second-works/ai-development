@@ -176,4 +176,27 @@ for empty_flag in APP_HEALTHCHECK_REQUIRED APP_EXPECT_RUNNING; do
   fi
 done
 
+sed -i.bak 's/^APP_EXPECT_RUNNING=0$/APP_EXPECT_RUNNING =/' "$health_project/.env"
+if (cd "$health_project" && ./bin/doctor); then
+  exit 1
+fi
+sed -i.bak 's/^APP_EXPECT_RUNNING =$/APP_EXPECT_RUNNING=0/' "$health_project/.env"
+
+mock_bin="$WORK_DIR/mock-bin"
+mkdir -p "$mock_bin"
+cat > "$mock_bin/curl" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+chmod +x "$mock_bin/curl"
+(
+  cd "$health_project"
+  PATH="$mock_bin:$PATH" \
+  APP_PORT=8123 \
+  APP_HEALTHCHECK_URL='http://[fe80::3%25eth0]:8123/health' \
+  APP_HEALTHCHECK_REQUIRED=1 \
+  APP_EXPECT_RUNNING=1 \
+  ./bin/doctor
+)
+
 printf 'app setup/doctor template samples passed\n'
