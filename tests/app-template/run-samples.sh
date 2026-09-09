@@ -22,10 +22,9 @@ copy_template "$project_dir"
 (
   cd "$project_dir"
   ./bin/setup
-  env_before="$(shasum .env | cut -d' ' -f1)"
+  cp .env .env.before
   ./bin/setup >/dev/null
-  env_after="$(shasum .env | cut -d' ' -f1)"
-  [[ "$env_before" == "$env_after" ]]
+  cmp -s .env .env.before
   ./bin/doctor
 )
 
