@@ -14,7 +14,7 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 4. 親Issueを作成
 5. 1 PR単位の子Issueへ分解
 6. Codexで実装
-7. 標準検証 `./scripts/verify.sh` 実行
+7. 標準検証 `./scripts/verify.sh` を実行
 8. PR作成
 9. GitHub Actions CI
 10. Codex Code Review（レビュー専用）
