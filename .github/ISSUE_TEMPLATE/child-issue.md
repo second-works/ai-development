@@ -10,6 +10,17 @@ assignees: []
 
 <!-- このIssueだけで達成すること -->
 
+# UI Level / PRODUCT UI 引き継ぎ
+
+- 親IssueのUI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`
+- UI対象範囲:
+- 分類理由 / 親Issue参照:
+- PRODUCT時の設計参照: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)、[Design Profile / docs/design.md雛形](../blob/main/templates/app/docs/design.md)
+- UI受入対象外の理由（NONE/UTILITYでPRODUCT項目を適用しない場合）:
+- NEEDS_DECISIONの未決定事項 / 決定期限:
+
+> 親IssueのUI Levelと分類理由を引き継ぐ。UI Levelが `NEEDS_DECISION` の場合、AI/Codexは推測で子Issue化・実装開始せず、決定まで停止する。PRODUCT以外ではPRODUCT用の仕様・Design Profile・Visual/UI Acceptanceを必須化しない。
+
 # 今回の変更
 
 - 実装内容:
