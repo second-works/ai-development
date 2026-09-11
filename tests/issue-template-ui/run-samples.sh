@@ -30,9 +30,8 @@ assert_exact_line() {
 assert_exact_line "$PARENT" '# UI Level / PRODUCT UI'
 assert_exact_line "$CHILD" '# UI Level / PRODUCT UI 引き継ぎ'
 
-for file in "$PARENT" "$CHILD"; do
-  assert_exact_line "$file" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`' || true
-done
+assert_exact_line "$PARENT" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
+assert_exact_line "$CHILD" '- 親IssueのUI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
 
 assert_contains "$PARENT" '- 分類理由:'
 assert_contains "$PARENT" '- PRODUCT時の適用仕様: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)'
