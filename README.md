@@ -38,6 +38,8 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 詳細は [`docs/nine-standard-ai-development-flow.md`](docs/nine-standard-ai-development-flow.md) を参照してください。
 
+UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PRODUCTでは [`docs/product-ui-standard.md`](docs/product-ui-standard.md) と [`templates/app/docs/design.md`](templates/app/docs/design.md) を利用します。UI Levelが分類不能な場合は `NEEDS_DECISION` として、AIが重要なUX判断を推測で確定しないようにします。
+
 テンプレートから生成したプロジェクトは、[`templates/verification/verify.sh`](templates/verification/verify.sh) を `scripts/verify.sh` として配置し、ローカル・Agent・GitHub Actionsで同じ標準検証入口を使用します。検証は lint → type check → test → build の順に進み、対象外工程は理由付きで明示され、失敗時は後続工程へ進みません。
 
 自作アプリには、[`templates/app`](templates/app) の `bin/setup` / `bin/doctor` 雛形を配置します。setupは冪等にアプリ固有依存と永続データ領域を準備し、doctorは設定・依存・port・必要時のhealth endpointを検査します。
@@ -48,12 +50,14 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 - `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール
 - `docs/nine-standard-ai-development-flow.md` — 標準開発フロー
+- `docs/product-ui-standard.md` — Nine PRODUCT UI Standard v1
 - `docs/plan-review-gate.md` — 計画書の実装前Plan Review正本文書
 - `docs/ai-execution-state.md` — schema v3のCurrent State契約と読み取り専用GitHub観測の利用手順
 - `scripts/collect-github-state.py` — Issue / PR / head SHA / workflow / reviewをJSONへ読み取り専用で収集する補助script
 - `docs/deployment-release-design.md` — Deployment as Code・Release / Production設計標準
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート
+- `templates/app/docs/design.md` — PRODUCT案件のDesign Source of Truth雛形
 - `.github/pull_request_template.md` — PRテンプレート
 - `.agents/skills/pr-review-fix/SKILL.md` — 既存PRのレビュー修正Skill
 
