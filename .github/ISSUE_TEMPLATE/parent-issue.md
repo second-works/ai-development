@@ -19,6 +19,16 @@ assignees: []
 
 > `NEEDS_DECISION` の間は子Issue化・実装開始を停止する。重要な設計変更は正本のDesign Decisionへ記録する。
 
+# UI Level / PRODUCT UI
+
+- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`
+- 分類理由:
+- PRODUCT時の適用仕様: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)
+- PRODUCT時のDesign Profile / docs/design.md: [Design Profile / design.md雛形](../blob/main/templates/app/docs/design.md)
+- UI LevelがNEEDS_DECISIONの場合の未決定事項・決定期限:
+
+> UI Levelが `NEEDS_DECISION` の間は、AI/Codexが分類や重要UX判断を推測せず、子Issue化・実装開始を停止する。PRODUCT以外ではPRODUCT用の必須欄やVisual/UI Acceptanceを強制しない。
+
 # 今回の範囲
 
 - 今回実装する範囲:
