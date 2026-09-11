@@ -73,22 +73,22 @@ MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判�
 
 Acceptance Verificationに、実利用時のVisual ReviewとUI Acceptanceを統合する。UI LevelはIssueで確定した値を引き継ぎ、検収時に再推測しない。
 
-- \`PRODUCT\`: 下記のVisual Review / UI Acceptanceを適用し、スクリーンショットまたはRender結果と判定を保存する。
-- \`UTILITY\`: 主要操作、Loading、Empty、Error + Recovery、Success/feedback、最低限のAccessibilityを確認する。PRODUCT用のVisual Review項目を必須化しない。
-- \`NONE\`: UI Acceptanceは対象外とし、対象外の理由を記録する。
-- \`NEEDS_DECISION\`: UI Levelの決定までAcceptanceを開始せず、未決定事項と決定期限を記録する。
+- `PRODUCT`: 下記のVisual Review / UI Acceptanceを適用し、スクリーンショットまたはRender結果と判定を保存する。
+- `UTILITY`: 主要操作、Loading、Empty、Error + Recovery、Success/feedback、最低限のAccessibilityを確認する。PRODUCT用のVisual Review項目を必須化しない。
+- `NONE`: UI Acceptanceは対象外とし、対象外の理由を記録する。
+- `NEEDS_DECISION`: UI Levelの決定までAcceptanceを開始せず、未決定事項と決定期限を記録する。
 
 PRODUCTの検証順序は、機能の動作確認や主観的な自動採点とは分離し、次の順序で記録する。
 
-\`\`\`text
+```text
 Screenshot / Render
   ↓ Visual Review
   ↓ Fix（指摘がある場合）
   ↓ UI Acceptance
   ↓ Product Acceptance
-\`\`\`
+```
 
-Visual Reviewの判定は人間が行い、スクリーンショットやRender結果、対象commit / 環境、指摘と修正結果を証跡として残す。Visual ReviewをCIの主観的な品質ブール値にしない。UI受入を完了しても、実利用シナリオの目的・成功条件を満たしたことを示すProduct Acceptanceにはならない（\`Implementation Done\` != \`UI Accepted\` != \`Product Accepted\`）。
+Visual Reviewの判定は人間が行い、スクリーンショットやRender結果、対象commit / 環境、指摘と修正結果を証跡として残す。Visual ReviewをCIの主観的な品質ブール値にしない。UI受入を完了しても、実利用シナリオの目的・成功条件を満たしたことを示すProduct Acceptanceにはならない（`Implementation Done` != `UI Accepted` != `Product Accepted`）。
 
 #### PRODUCT Visual Review checklist
 
@@ -102,26 +102,26 @@ Visual Reviewの判定は人間が行い、スクリーンショットやRender�
 - [ ] Responsive（対象幅でのレイアウトと操作性）を確認した
 - [ ] Accessibility minimum（キーボード操作、フォーカス、名前、コントラスト等）を確認した
 - [ ] Design consistency（既存UIとの一貫性）を確認した
-- [ ] \`docs/design.md\` conformity（Design Profile / design.mdとの整合）を確認した
+- [ ] `docs/design.md` conformity（Design Profile / design.mdとの整合）を確認した
 
 #### UI状態とAcceptance記録
 
-UI状態は色だけで表現せず、意味の異なる状態を混同しない。少なくとも \`UNKNOWN\` != \`ERROR\`、\`EMPTY\` != \`ERROR\`、\`UNAVAILABLE\` != \`FAILED\` として、画面上の文言・状態名・復旧可能性を記録する。
+UI状態は色だけで表現せず、意味の異なる状態を混同しない。少なくとも `UNKNOWN` != `ERROR`、`EMPTY` != `ERROR`、`UNAVAILABLE` != `FAILED` として、画面上の文言・状態名・復旧可能性を記録する。
 
 PRODUCTのAcceptance記録には、既存の検収記録に加えて次を記録する。
 
 - UI Level:
 - Acceptance target artifact（画面、主要フロー、対象幅）:
 - Screenshot / Render evidence（保存先、取得日時、対象commit / 環境）:
-- Visual Review result: \`Accepted\` / \`Not Accepted\` / \`Conditional\`
-- UI Acceptance result: \`Accepted\` / \`Not Accepted\` / \`Conditional\`
+- Visual Review result: `Accepted` / `Not Accepted` / `Conditional`
+- UI Acceptance result: `Accepted` / `Not Accepted` / `Conditional`
 - Visual Reviewの指摘、Fix内容、再確認結果:
-- UI状態（\`UNKNOWN\` / \`EMPTY\` / \`ERROR\` / \`UNAVAILABLE\` を含む）と表示・復旧確認:
+- UI状態（`UNKNOWN` / `EMPTY` / `ERROR` / `UNAVAILABLE` を含む）と表示・復旧確認:
 - Accessibility minimumの確認結果:
-- \`docs/design.md\` conformityの確認結果:
-- UI受入対象外の理由（\`NONE\` / \`UTILITY\` の場合）:
+- `docs/design.md` conformityの確認結果:
+- UI受入対象外の理由（`NONE` / `UTILITY` の場合）:
 
-Visual ReviewまたはUI Acceptanceが\`Not Accepted\`の場合は、Product Acceptanceを\`Accepted\`にしない。\`Conditional\`の場合は、受入条件、期限、未解決事項を既存の検収記録へ接続する。
+Visual ReviewまたはUI Acceptanceが`Not Accepted`の場合は、Product Acceptanceを`Accepted`にしない。`Conditional`の場合は、受入条件、期限、未解決事項を既存の検収記録へ接続する。
 
 ## 5. 検収記録
 
