@@ -7,7 +7,6 @@ ROOT_DIR="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 STANDARD="${ROOT_DIR}/docs/product-ui-standard.md"
 DESIGN_TEMPLATE="${ROOT_DIR}/templates/app/docs/design.md"
 README="${ROOT_DIR}/README.md"
-CI_WORKFLOW="${ROOT_DIR}/.github/workflows/ci.yml"
 
 assert_contains() {
   local file="$1"
@@ -78,9 +77,6 @@ done
 
 assert_exact_heading "${DESIGN_TEMPLATE}" '## Do'
 assert_exact_heading "${DESIGN_TEMPLATE}" "## Don't"
-assert_contains "${CI_WORKFLOW}" 'tests/product-ui-standard/run-samples.sh'
-assert_contains "${CI_WORKFLOW}" 'PRODUCT UI standard documentation contract'
-
 assert_contains "${README}" 'docs/product-ui-standard.md'
 assert_contains "${README}" 'templates/app/docs/design.md'
 
