@@ -22,6 +22,32 @@ assert_contains() {
 assert_contains "$doc" 'Implementation Done'
 assert_contains "$doc" 'Deployed'
 assert_contains "$doc" 'Product Accepted'
+assert_contains "$doc" 'PRODUCT UI Visual / UI Acceptance'
+assert_contains "$doc" 'UI LevelがPRODUCTの場合'
+assert_contains "$doc" 'Screenshot / Render'
+assert_contains "$doc" 'Visual Review'
+assert_contains "$doc" 'UI Acceptance'
+assert_contains "$doc" 'Product Acceptance'
+assert_contains "$doc" 'Primary user flow'
+assert_contains "$doc" 'Primary Action clarity'
+assert_contains "$doc" 'Navigation'
+assert_contains "$doc" 'Loading状態'
+assert_contains "$doc" 'Empty状態'
+assert_contains "$doc" 'Error + Recovery'
+assert_contains "$doc" 'Success/feedback'
+assert_contains "$doc" 'Responsive'
+assert_contains "$doc" 'Accessibility minimum'
+assert_contains "$doc" 'Design consistency'
+assert_contains "$doc" 'docs/design.md'
+assert_contains "$doc" 'UNKNOWN'
+assert_contains "$doc" 'UNKNOWN` != `ERROR'
+assert_contains "$doc" 'EMPTY` != `ERROR'
+assert_contains "$doc" 'UNAVAILABLE` != `FAILED'
+assert_contains "$doc" '色だけで表現せず'
+assert_contains "$doc" 'Implementation Done` != `UI Accepted` != `Product Accepted'
+assert_contains "$doc" 'Accepted'
+assert_contains "$doc" 'Not Accepted'
+assert_contains "$doc" 'Conditional'
 assert_contains "$doc" '解決したい課題 / 利用目的:'
 assert_contains "$doc" '対象ユーザー / 利用者:'
 assert_contains "$doc" '実利用シナリオ（開始条件から完了まで）:'
@@ -79,6 +105,20 @@ parallel_line="$(grep -nF '次Issue着手と、Deploy後の実利用検証・検
 }
 (( branch_line < guide_usage_line )) || {
   printf 'merged branch cleanup must precede real-use verification\n' >&2
+  exit 1
+}
+
+
+render_line="$(grep -nF 'Screenshot / Render' "$doc" | head -n1 | cut -d: -f1)"
+visual_line="$(grep -nF '↓ Visual Review' "$doc" | head -n1 | cut -d: -f1)"
+ui_acceptance_line="$(grep -nF '↓ UI Acceptance' "$doc" | head -n1 | cut -d: -f1)"
+product_acceptance_line="$(grep -nF '↓ Product Acceptance' "$doc" | head -n1 | cut -d: -f1)"
+[[ -n "$render_line" && -n "$visual_line" && -n "$ui_acceptance_line" && -n "$product_acceptance_line" ]] || {
+  printf 'PRODUCT UI acceptance flow anchors are missing\n' >&2
+  exit 1
+}
+(( render_line < visual_line && visual_line < ui_acceptance_line && ui_acceptance_line < product_acceptance_line )) || {
+  printf 'PRODUCT UI acceptance flow order is invalid\n' >&2
   exit 1
 }
 
