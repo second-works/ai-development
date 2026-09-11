@@ -15,6 +15,8 @@ Plan Review Gateは、計画書作成後、親Issue / 子Issue化前に置く。
   ↓
 計画書作成
   ↓
+UI Level Decision / PRODUCT前提整理
+  ↓
 Plan Review Gate（Grilling）
   ├─ NEEDS_DECISION → Design Decision確定 → 計画書更新 → 再Review
   ├─ PASS → 親Issue / 子Issue化
