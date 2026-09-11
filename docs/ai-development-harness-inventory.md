@@ -75,6 +75,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | S-03 | Implementation、Deploy、Product Acceptance状態 | S | KEEP | Issue、PR、docs/acceptance-verification.md |
 | S-04 | Structured Current State契約 | S | STRENGTHEN | docs/ai-execution-state.md、AGENTS.md、pr-review-fix Skill、Issue / PRテンプレート |
 | L-01 | verify.shとCI | L | KEEP | templates/verification、.github/workflows/ci.yml |
+| L-03 | PRODUCT UI Standard contract test | L | KEEP | docs/product-ui-standard.md、templates/app/docs/design.md、tests/product-ui-standard/run-samples.sh、.github/workflows/ci.yml |
 | L-02a | Security Preflight | L | KEEP | templates/security、docs/ai-agent-security-boundary.md |
 | L-02b | CodeQL | L | KEEP | GitHub Code Scanning、docs/github-repository-security-baseline.md |
 | L-02c | Dependabot | L | KEEP | GitHub Dependabot、docs/github-repository-security-baseline.md |
@@ -369,6 +370,21 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：KEEP。
 - **削除・再評価条件**：台帳スキーマ、必須フィールドの一意性、集約表と詳細レコードの整合性を、同等の独立検証環境と再現可能な結果で保証する仕組みへ置換する場合に再評価する。
 - **関連Issue / 正本文書**：#56、L-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：templates/verification、.github/workflows/ci.yml、tests/harness-minimalism/run-samples.sh、docs/ai-development-harness-inventory.md。
+
+### L-03 PRODUCT UI Standard contract test
+
+- **ETCSLV分類**：Lifecycle Hooks
+- **解決する失敗モード**：PRODUCT UI標準、`design.md`雛形、README導線、またはCI配線が変更されたときに、必須のUI Level、状態、Design Profile、AI境界、既存正本参照が欠落したまま後続案件へ流れること。
+- **発火条件**：Template CIでPRODUCT UI標準の契約テストを実行するとき。標準文書、`templates/app/docs/design.md`、README、または対応CI配線を変更するPRでは、同テストを実行対象とする。
+- **入力 / Context**：リポジトリ差分、`docs/product-ui-standard.md`、`templates/app/docs/design.md`、`README.md`、`tests/product-ui-standard/run-samples.sh`、`.github/workflows/ci.yml`、Issue #92、AGENTS.md、Harness台帳。
+- **出力 / State変更**：必須マーカーの存在確認とCI結果を出力し、欠落時はPRの検証を失敗させる。Product AcceptanceやCurrent State schemaは変更しない。
+- **決定論的判定可能か**：Shellの`grep`による必須契約、`bash -n`による構文、CIステップの存在を決定論的に判定できる。
+- **実行コスト / 運用負荷**：外部サービスや追加依存を使わない軽量なShell 1ステップ。既存Template CIの実行時間とログを少量増加させる。
+- **重複する仕組み**：L-01は標準検証とCIの共通入口、台帳スキーマ、CI実行を担う。L-03はPRODUCT UI標準固有の必須契約を担い、通常のlint/type/test/buildやHarness台帳整合性の検証を代替しない。
+- **安全上必須か**：後続案件のUI計画品質とAIの設計境界を、文書・雛形・CIの契約欠落から保護するために必要。Security Boundary、Human Approval Boundary、Production保護の代替ではない。
+- **判定**：KEEP。
+- **削除・再評価条件**：PRODUCT UI標準の必須契約を、同等以上に決定論的かつ独立して検証し、CIで実行される既存ハーネスへ移行できる場合に再評価する。
+- **関連Issue / 正本文書**：#92、L-03。正本：docs/product-ui-standard.md、templates/app/docs/design.md、tests/product-ui-standard/run-samples.sh、.github/workflows/ci.yml、AGENTS.md。
 
 ### L-02a Security Preflight
 
