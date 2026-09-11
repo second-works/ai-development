@@ -28,17 +28,17 @@ for needle in \
   'Next Action is Clear' \
   'Invalid States are Prevented Structurally' \
   'Implementation Done != UI Accepted' \
-  '## PRODUCT UI Specification' \
-  '## Design Profile' \
+  'PRODUCT UI Specification' \
+  'Design Profile' \
   'Use:' \
   'Do NOT copy:' \
   'UNKNOWN != ERROR' \
   'EMPTY != ERROR' \
   'UNAVAILABLE != FAILED' \
-  '## Responsive Design' \
-  '## Accessibility Minimum' \
-  '## AI / Codex Design Boundary' \
-  '## Visual Review / UI Acceptance' \
+  'Responsive Design' \
+  'Accessibility Minimum' \
+  'AI / Codex Design Boundary' \
+  'Visual Review / UI Acceptance' \
   'Plan Review Gate' \
   'Acceptance Verification' \
   'Harness Minimalism / ETCSLV'; do
