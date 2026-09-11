@@ -7,12 +7,22 @@ ROOT_DIR="$(cd -- "${SCRIPT_DIR}/../.." && pwd)"
 STANDARD="${ROOT_DIR}/docs/product-ui-standard.md"
 DESIGN_TEMPLATE="${ROOT_DIR}/templates/app/docs/design.md"
 README="${ROOT_DIR}/README.md"
+CI_WORKFLOW="${ROOT_DIR}/.github/workflows/ci.yml"
 
 assert_contains() {
   local file="$1"
   local needle="$2"
   if ! grep -Fq -- "${needle}" "${file}"; then
     printf 'missing PRODUCT UI contract: %s in %s\n' "${needle}" "${file}" >&2
+    exit 1
+  fi
+}
+
+assert_exact_heading() {
+  local file="$1"
+  local heading="$2"
+  if ! grep -Fxq -- "$heading" "$file"; then
+    printf 'missing exact PRODUCT UI heading: %s in %s\\n' "$heading" "$file" >&2
     exit 1
   fi
 }
@@ -62,11 +72,14 @@ for needle in \
   '## UI States' \
   '## Responsive Rules' \
   '## Accessibility' \
-  '## Do' \
-  "## Don't" \
   '## Open Design Decisions'; do
   assert_contains "${DESIGN_TEMPLATE}" "${needle}"
 done
+
+assert_exact_heading "${DESIGN_TEMPLATE}" '## Do'
+assert_exact_heading "${DESIGN_TEMPLATE}" "## Don't"
+assert_contains "${CI_WORKFLOW}" 'tests/product-ui-standard/run-samples.sh'
+assert_contains "${CI_WORKFLOW}" 'PRODUCT UI standard documentation contract'
 
 assert_contains "${README}" 'docs/product-ui-standard.md'
 assert_contains "${README}" 'templates/app/docs/design.md'
