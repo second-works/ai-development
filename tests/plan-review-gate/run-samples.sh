@@ -37,11 +37,24 @@ for needle in \
   '採用案に不利な証拠、比較対象、既存手法を見落としていないか。' \
   '期待する結果を先取りしていないか' \
   '関連する過去のPlan vs Reality記録:' \
-  '今回計画へ反映した教訓:'; do
+  '今回計画へ反映した教訓:' \
+  'UI Level Decision' \\
+  'UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`' \\
+  'UI適用対象: UIなし / UTILITY / PRODUCT' \\
+  'PRODUCT UI completeness: `COMPLETE / INCOMPLETE / NOT_APPLICABLE`' \\
+  'PRODUCT未決定事項:' \\
+  'Primary screen structure:' \\
+  'Destructive action behavior:' \\
+  'Major Design Direction:' \\
+  'Design Decisionへ送るUI項目:' \\; do
   assert_contains "$doc" "$needle"
 done
 
 assert_contains "$flow" 'Plan Review Gate（Grilling）'
+assert_contains "$flow" '## 2.0 UI Level Decision（案件分類）'
+assert_contains "$flow" 'Consultation → UI Level Decision → PRODUCT前提整理 → Plan Review Gate'
+assert_contains "$flow" 'NONE / UTILITY: PRODUCT用チェックを必須化しない'
+assert_contains "$flow" 'PRODUCT UI completenessが `INCOMPLETE` の場合'
 assert_contains "$guide" 'Plan Review Gate（Grilling）'
 assert_contains "$guide" '- [ ] `docs/plan-review-gate.md` を配置'
 assert_contains "$guide" 'Plan Review正本文書（`docs/plan-review-gate.md`）を配置'
@@ -68,10 +81,12 @@ guide_parent_line="$(grep -nF '    ├─ PASS → 親Issue' "$guide" | cut -d: 
   exit 1
 }
 
+
+ui_level_line="$(grep -nF '## 2.0 UI Level Decision（案件分類）' "$flow" | cut -d: -f1)"
 plan_line="$(grep -nF '## 2.1 Plan Review Gate（計画書Grilling）' "$flow" | cut -d: -f1)"
 parent_line="$(grep -nF '## 3. 親Issue' "$flow" | cut -d: -f1)"
-[[ -n "$plan_line" && -n "$parent_line" && "$plan_line" -lt "$parent_line" ]] || {
-  printf 'Plan Review Gate must precede parent Issue conversion\n' >&2
+[[ -n "$ui_level_line" && -n "$plan_line" && -n "$parent_line" && "$ui_level_line" -lt "$plan_line" && "$plan_line" -lt "$parent_line" ]] || {
+  printf 'UI Level Decision must precede Plan Review Gate and parent Issue conversion\n' >&2
   exit 1
 }
 

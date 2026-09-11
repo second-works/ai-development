@@ -23,6 +23,24 @@ Plan Review Gate（Grilling）
 
 NEEDS_DECISIONの間は、親Issue / 子Issue化および実装開始へ進まない。重大な判断をAIがユーザー未承認のまま確定してはならない。
 
+### UI Level Decision（Plan Reviewの入力）
+
+Plan Review Gateの前に、案件のUI Levelを `NONE / UTILITY / PRODUCT / NEEDS_DECISION` から明示する。UIを持つ可能性があるのに分類できない場合は `NEEDS_DECISION` とし、AI/Codexが推測で分類してIssue化・実装開始へ進めない。
+
+- `NONE`: UI仕様を適用しない。対象外の理由を記録する。
+- `UTILITY`: 主要操作、状態表示、Error Recovery、最低限のAccessibilityを確認する。PRODUCT用の完全性チェックを必須化しない。
+- `PRODUCT`: 次の重要なUI/UX前提をPlan Reviewで確認する。
+  - Primary screen structure
+  - Navigation
+  - Primary Action
+  - Critical user flow
+  - Destructive action behavior
+  - Device Priority（Mobile First / Desktop First / Equal）
+  - Major Design Direction
+- `NEEDS_DECISION`: UI LevelまたはPRODUCTの重要前提が未決定である。Design Decisionで候補案、trade-off、推奨案を確定し、計画書を更新して再Reviewするまで、親Issue / 子Issue化と実装開始を停止する。
+
+PRODUCTでは、上記項目が `COMPLETE` か、未決定事項を `NEEDS_DECISION` として明示していることをPlan Reviewの完了条件とする。NONE / UTILITYでは、PRODUCT UI completenessを `NOT_APPLICABLE` とし、PRODUCT相当のチェックを要求しない。
+
 Plan Review Gateは、既存の 1 Issue / 1 PR、CI、Codex Code Review、P2四分類、人間Merge判断を変更しない。
 
 ## 3. Review対象
@@ -39,6 +57,7 @@ Plan Review Gateは、既存の 1 Issue / 1 PR、CI、Codex Code Review、P2四�
 - 検収方法、成功条件、実利用シナリオ
 - 将来拡張と現在Scopeの境界
 - 実装中にAIが重大な設計判断を代行しそうな箇所
+- UI Level、PRODUCT UI completeness、重要なUI/UX未決定事項
 
 ### 反証レビュー（既存Plan Reviewの一部）
 
@@ -93,6 +112,21 @@ Deploymentと検収はここで再設計しない。Deploymentの設計項目は
 ## Plan Review
 
 判定: PASS / NEEDS_DECISION / NOT_APPLICABLE
+
+### UI Level / PRODUCT UI completeness
+- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`
+- UI適用対象: UIなし / UTILITY / PRODUCT
+- PRODUCT UI completeness: `COMPLETE / INCOMPLETE / NOT_APPLICABLE`
+- PRODUCT未決定事項:
+  - Primary screen structure:
+  - Navigation:
+  - Primary Action:
+  - Critical user flow:
+  - Destructive action behavior:
+  - Device Priority:
+  - Major Design Direction:
+- Design Decisionへ送るUI項目:
+
 
 ### 未決定事項
 - ...

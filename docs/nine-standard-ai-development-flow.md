@@ -50,9 +50,22 @@ ChatGPTは開発マネージャー兼設計担当として使う。
 
 > この開発内容をGitHub Issueベースで実装できる形に整理してください。親Issueと1 PR単位の子Issueに分解し、各子Issueには完了条件、変更対象、変更禁止範囲、テスト条件、依存関係を書いてください。
 
+## 2.0 UI Level Decision（案件分類）
+
+Plan Review Gateの前に、案件ごとのUI Levelを `NONE / UTILITY / PRODUCT / NEEDS_DECISION` から決定する。UIを持つ可能性があるのに分類できない場合、またはPRODUCTの重要なUI/UX前提が未決定の場合は `NEEDS_DECISION` とし、Issue化・実装開始を停止してDesign Decisionへ接続する。
+
+```text
+Consultation → UI Level Decision → PRODUCT前提整理 → Plan Review Gate
+                                  ├─ NONE / UTILITY: PRODUCT用チェックを必須化しない
+                                  └─ PRODUCT: 重要UI/UX前提の完全性を確認する
+```
+
+UI Level DecisionとPRODUCT前提整理の結果は、Plan Review標準出力のUI Level、適用対象、PRODUCT UI completeness、未決定事項へ記録する。
+
 ## 2.1 Plan Review Gate（計画書Grilling）
 
 計画書から親Issue / 子Issueへ変換する前に、[docs/plan-review-gate.md](plan-review-gate.md) に従ってPlan Review Gateを実施する。
+UI Level Decisionで `NEEDS_DECISION` となった場合、またはPRODUCT UI completenessが `INCOMPLETE` の場合は、Plan Reviewの判定を `NEEDS_DECISION` としてIssue化・実装開始へ進まない。`NONE / UTILITY` ではPRODUCT用チェックを必須化しない。
 
 PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_DECISIONの場合はIssue化・実装開始を止めて既存のDesign Decisionへ接続する。NOT_APPLICABLEの場合は省略理由を記録する。Plan Reviewは計画書の全面書き換え、一問一答の強制、既存のDesign Decision Escalationの置換ではない。採用案の反証（失敗原因、成立条件、単純な代替案、不利な証拠、期待の先取り）も既存Plan Reviewの記録として確認する。
 
