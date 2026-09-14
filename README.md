@@ -51,6 +51,7 @@ UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PR
 - `AGENTS.md` — AIエージェント共通ルール・Codex Code Reviewルール
 - `docs/nine-standard-ai-development-flow.md` — 標準開発フロー
 - `docs/product-ui-standard.md` — Nine PRODUCT UI Standard v1
+- `docs/architecture/framework-decision.md` — 要件からFrameworkまでの選定順序と判定を定める正本
 - `docs/plan-review-gate.md` — 計画書の実装前Plan Review正本文書
 - `docs/ai-execution-state.md` — schema v3のCurrent State契約と読み取り専用GitHub観測の利用手順
 - `scripts/collect-github-state.py` — Issue / PR / head SHA / workflow / reviewをJSONへ読み取り専用で収集する補助script
@@ -58,6 +59,7 @@ UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PR
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート
 - `templates/app/docs/design.md` — PRODUCT案件のDesign Source of Truth雛形
+- `templates/app/docs/framework-decision.md` — 案件ごとのFramework選定記録雛形
 - `.github/pull_request_template.md` — PRテンプレート
 - `.agents/skills/pr-review-fix/SKILL.md` — 既存PRのレビュー修正Skill
 
