@@ -18,7 +18,7 @@ docs/framework-decision.md として具体化する。
 - Framework Decision is applicable: Yes / No
 - Reason:
 
-<!-- CLI、library、文書のみの変更等でNoの場合は、StatusをNOT_APPLICABLEとして理由を残す。 -->
+<!-- CLI、library、文書のみの変更等でNoの場合は、ResultをNOT_APPLICABLEとして理由を残す。 -->
 
 ## 1. Requirements
 
