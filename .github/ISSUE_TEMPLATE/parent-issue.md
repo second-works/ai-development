@@ -10,15 +10,6 @@ assignees: []
 
 <!-- プロジェクト全体で達成すること -->
 
-# Plan Review / Design Decision
-
-- Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`
-- 記録・正本: [Plan Review Gate](../blob/main/docs/plan-review-gate.md)
-- 採用案と理由:
-- 未決定事項・決定タイミング:
-
-> `NEEDS_DECISION` の間は子Issue化・実装開始を停止する。重要な設計変更は正本のDesign Decisionへ記録する。
-
 # Framework Decision
 
 - Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
@@ -28,6 +19,16 @@ assignees: []
 - 子Issueへ引き継ぐ参照:
 
 > `NEEDS_DECISION` の間はFramework依存のUI設計、子Issue化、実装開始を停止し、既存のDesign Decisionへ接続する。特定FrameworkをAIが暗黙に採用しない。
+
+# Plan Review / Design Decision
+
+- Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`
+- 記録・正本: [Plan Review Gate](../blob/main/docs/plan-review-gate.md)
+- Framework Decision結果の参照:
+- 採用案と理由:
+- 未決定事項・決定タイミング:
+
+> `NEEDS_DECISION` の間は子Issue化・実装開始を停止する。重要な設計変更は正本のDesign Decisionへ記録する。
 
 # UI Level / PRODUCT UI
 
