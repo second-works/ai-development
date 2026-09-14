@@ -9,24 +9,26 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 ## 標準フロー
 
 1. ChatGPTで要件整理・計画書作成
-2. Plan Review Gate（Grilling）
-3. 必要なDesign Decisionを確定
-4. 親Issueを作成
-5. 1 PR単位の子Issueへ分解
-6. Codexで実装
-7. 標準検証 `./scripts/verify.sh` を実行
-8. PR作成
-9. GitHub Actions CI
-10. Codex Code Review（レビュー専用）
-11. P0 / P1は原則BLOCKINGとして必ず修正し、P2はSeverityだけで判断せず四分類（`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`）する。非BLOCKING P2に個別人間承認は要求せず、既存PRのhead branchでBLOCKINGだけを修正
-12. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
-13. GitHub上で修正後のhead SHAが、pushした修正コミットSHAと一致することを確認
-14. SHA未確認・未更新・不一致の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
-15. 修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象にローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証
-16. 各チェックの対象SHAを記録し、再検証完了時にPR head SHAがpushした修正コミットSHAおよび検証対象SHAと一致することを確認。不一致なら完了扱いにせず停止
-17. 新しいPRを作らず既存PRを再利用
-18. 人間が最終確認
-19. 人間がMerge
+2. Framework Decision（要件 → Rendering Strategy → Application Architecture → Framework）
+3. UI Level Decision / PRODUCT前提整理
+4. Plan Review Gate（Grilling）
+5. 必要なDesign Decisionを確定
+6. 親Issueを作成
+7. 1 PR単位の子Issueへ分解
+8. Codexで実装
+9. 標準検証 `./scripts/verify.sh` を実行
+10. PR作成
+11. GitHub Actions CI
+12. Codex Code Review（レビュー専用）
+13. P0 / P1は原則BLOCKINGとして必ず修正し、P2はSeverityだけで判断せず四分類（`BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS`）する。非BLOCKING P2に個別人間承認は要求せず、既存PRのhead branchでBLOCKINGだけを修正
+14. 修正前に対象PR番号・head branch・head SHAを確認し、同じhead branchへcommit / push
+15. GitHub上で修正後のhead SHAが、pushした修正コミットSHAと一致することを確認
+16. SHA未確認・未更新・不一致の場合は再テスト・CI・セキュリティチェック・再レビューへ進まず停止
+17. 修正コミットSHAを検証対象SHAとして記録し、そのSHAを対象にローカルテスト → CI → セキュリティチェック → `@codex review` の順で再検証
+18. 各チェックの対象SHAを記録し、再検証完了時にPR head SHAがpushした修正コミットSHAおよび検証対象SHAと一致することを確認。不一致なら完了扱いにせず停止
+19. 新しいPRを作らず既存PRを再利用
+20. 人間が最終確認
+21. 人間がMerge
 
 P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として使用せず、`@codex review` はレビュー専用とします。CodexのAutomatic reviewsが利用可能な場合は自動レビューを原則とし、無効な場合はPR上で `@codex review` を依頼します。
 
@@ -37,6 +39,8 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 レビュー指摘の修正ではrepo-local Skill `.agents/skills/pr-review-fix/` を利用できます。Codexへ `PR #XXのレビュー修正を進めて` と依頼すると、既存PRのhead branch固定、同一branchへの修正/push、SHA一致確認、CI/セキュリティチェック待機、更新後headへの再レビュー確認までを行い、Merge前で停止します。
 
 詳細は [`docs/nine-standard-ai-development-flow.md`](docs/nine-standard-ai-development-flow.md) を参照してください。
+
+新規Web/UI案件では、UI設計前に [`docs/architecture/framework-decision.md`](docs/architecture/framework-decision.md) を確認し、結果をPlan Reviewへ引き継ぎます。`NEEDS_DECISION` の間はFramework依存のIssue化・実装を停止し、CLIや文書のみの変更は理由付きで `NOT_APPLICABLE` とします。
 
 UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PRODUCTでは [`docs/product-ui-standard.md`](docs/product-ui-standard.md) と [`templates/app/docs/design.md`](templates/app/docs/design.md) を利用します。UI Levelが分類不能な場合は `NEEDS_DECISION` として、AIが重要なUX判断を推測で確定しないようにします。
 

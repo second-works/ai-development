@@ -67,8 +67,6 @@ Framework DecisionはUI Level、Plan Review、Deployment / Release、Security、
 
 ## 2.1 UI Level Decision（案件分類）
 
-<!-- Legacy documentation anchor retained for existing contract checks: ## 2.0 UI Level Decision（案件分類） -->
-
 Plan Review Gateの前に、案件ごとのUI Levelを `NONE / UTILITY / PRODUCT / NEEDS_DECISION` から決定する。UIを持つ可能性があるのに分類できない場合、またはPRODUCTの重要なUI/UX前提が未決定の場合は `NEEDS_DECISION` とし、Issue化・実装開始を停止してDesign Decisionへ接続する。
 
 ```text
@@ -81,13 +79,9 @@ UI Level Decision
   └─ PRODUCT: 重要UI/UX前提の完全性を確認する
 ```
 
-<!-- Legacy sequence anchor retained for existing contract checks: Consultation → UI Level Decision → PRODUCT前提整理 → Plan Review Gate -->
-
 UI Level DecisionとPRODUCT前提整理の結果は、Plan Review標準出力のUI Level、適用対象、PRODUCT UI completeness、未決定事項へ記録する。
 
 ## 2.2 Plan Review Gate（計画書Grilling）
-
-<!-- Legacy documentation anchor retained for existing contract checks: ## 2.1 Plan Review Gate（計画書Grilling） -->
 
 計画書から親Issue / 子Issueへ変換する前に、[docs/plan-review-gate.md](plan-review-gate.md) に従ってPlan Review Gateを実施する。
 Framework DecisionまたはUI Level Decisionで `NEEDS_DECISION` となった場合、またはPRODUCT UI completenessが `INCOMPLETE` の場合は、Plan Reviewの判定を `NEEDS_DECISION` としてIssue化・実装開始へ進まない。`NONE / UTILITY` ではPRODUCT用チェックを必須化しない。
