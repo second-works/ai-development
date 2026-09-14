@@ -19,6 +19,16 @@ assignees: []
 
 > `NEEDS_DECISION` の間は子Issue化・実装開始を停止する。重要な設計変更は正本のDesign Decisionへ記録する。
 
+# Framework Decision
+
+- Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
+- 正本文書: [Framework Decision v1](../blob/main/docs/architecture/framework-decision.md)
+- 適用対象 / 対象外理由:
+- 決定内容・Framework依存の未決定事項:
+- 子Issueへ引き継ぐ参照:
+
+> `NEEDS_DECISION` の間はFramework依存のUI設計、子Issue化、実装開始を停止し、既存のDesign Decisionへ接続する。特定FrameworkをAIが暗黙に採用しない。
+
 # UI Level / PRODUCT UI
 
 - UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`
