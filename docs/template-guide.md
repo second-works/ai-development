@@ -33,9 +33,10 @@
 11. 利用可能ならCodeQL
 12. Ruleset / Branch protection
 13. `Automatically delete head branches` の有効化
-14. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
+14. Framework Decision正本文書（`docs/architecture/framework-decision.md`）を配置
+15. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
 
-設定後、計画書を親Issue・子Issueへ変換し、子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
+設定後、計画書を親Issue・子Issueへ変換します。新規Web/UI案件ではFramework DecisionをUI Level DecisionとPlan Reviewより前に確認し、その結果を引き継ぎます。子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
 
 
 
@@ -362,6 +363,12 @@ Nine標準AI開発フローでは、AIだけにもGitHubだけにも品質保証
     ↓
 ChatGPTで計画書
     ↓
+Framework Decision
+    ├─ NEEDS_DECISION → Design Decision → 計画書更新 → 再Review
+    ├─ DECIDED / NOT_APPLICABLE → 次工程
+    ↓
+UI Level Decision / PRODUCT前提整理
+    ↓
 Plan Review Gate（Grilling）
     ├─ NEEDS_DECISION → Design Decision → 計画書更新 → 再Review
     ├─ PASS → 親Issue
@@ -413,6 +420,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 - [ ] `AGENTS.md` を配置
 - [ ] `docs/ai-agent-security-boundary.md` を配置
 - [ ] `docs/ai-development-harness-inventory.md` を配置
+- [ ] `docs/architecture/framework-decision.md` を配置
 - [ ] `docs/plan-review-gate.md` を配置
 - [ ] 親Issueテンプレートを配置
 - [ ] 子Issueテンプレートを配置
