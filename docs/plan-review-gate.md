@@ -15,6 +15,8 @@ Plan Review Gateは、計画書作成後、親Issue / 子Issue化前に置く。
   ↓
 計画書作成
   ↓
+Framework Decision
+  ↓
 UI Level Decision / PRODUCT前提整理
   ↓
 Plan Review Gate（Grilling）
@@ -23,7 +25,17 @@ Plan Review Gate（Grilling）
   └─ NOT_APPLICABLE → 省略理由を記録 → Issue化
 ~~~
 
-NEEDS_DECISIONの間は、親Issue / 子Issue化および実装開始へ進まない。重大な判断をAIがユーザー未承認のまま確定してはならない。
+Framework DecisionまたはUI Level Decisionが `NEEDS_DECISION` の間は、親Issue / 子Issue化および実装開始へ進まない。重大な判断をAIがユーザー未承認のまま確定してはならない。
+
+### Framework Decision（Plan Reviewの入力）
+
+新規Web/UI案件、またはRendering Strategy、Application Architecture、Runtime、Deployment / hostingの変更を伴う案件では、[Framework Decision v1](architecture/framework-decision.md) をPlan Reviewの入力として参照する。Frameworkの判断順序は `Requirements → Rendering Strategy → Application Architecture → Framework` とし、特定Frameworkを暗黙に採用しない。
+
+- `DECIDED`: 正本文書の結果、選定理由、参照先をPlan Reviewへ引き継ぐ。
+- `NOT_APPLICABLE`: Framework選定が実装結果へ影響しない理由と正本文書の参照先を記録する。
+- `NEEDS_DECISION`: 未決定事項を既存のDesign Decisionへ接続し、Framework依存のIssue化・実装開始を停止する。
+
+Plan ReviewはFramework候補の比較を再評価・再記録せず、結果が要件・UI Level・Deployment設計の前提と矛盾しないことを確認する。CLI、library、文書のみの変更などは、正本文書の対象外理由があれば `NOT_APPLICABLE` として扱う。
 
 ### UI Level Decision（Plan Reviewの入力）
 
@@ -60,6 +72,7 @@ Plan Review Gateは、既存の 1 Issue / 1 PR、CI、Codex Code Review、P2四�
 - 将来拡張と現在Scopeの境界
 - 実装中にAIが重大な設計判断を代行しそうな箇所
 - UI Level、PRODUCT UI completeness、重要なUI/UX未決定事項
+- Framework Decisionの結果、参照先、未決定事項、UI設計へ引き継ぐ前提
 
 ### 反証レビュー（既存Plan Reviewの一部）
 
@@ -114,6 +127,12 @@ Deploymentと検収はここで再設計しない。Deploymentの設計項目は
 ## Plan Review
 
 判定: PASS / NEEDS_DECISION / NOT_APPLICABLE
+
+### Framework Decision
+- Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
+- 正本文書の参照:
+- 選定結果・適用対象の要約:
+- Framework依存の未決定事項 / 停止範囲:
 
 ### UI Level / PRODUCT UI completeness
 - UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`

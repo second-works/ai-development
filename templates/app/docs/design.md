@@ -1,6 +1,18 @@
 # Product Design
 
-<!-- PRODUCT案件では、実装前にこのファイルを案件リポジトリの docs/design.md として具体化する。 -->
+<!-- PRODUCT案件では、Framework Decision完了後にこのファイルを案件リポジトリの docs/design.md として具体化する。 -->
+
+## Framework Decision Boundary
+
+- Framework Decision reference:
+- Framework Decision result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
+- Rendering / Application Architecture assumptions handed into UI design:
+
+<!--
+Framework DecisionはRequirements、Rendering Strategy、Application Architecture、Framework選定を扱う。
+このファイルはFrameworkを再選定せず、UI Level、画面構造、navigation、visual direction、component、accessibilityを扱う。
+ResultがNEEDS_DECISIONの場合はFramework依存のUI設計を開始せず、既存のDesign Decisionへ接続する。
+-->
 
 ## Product
 

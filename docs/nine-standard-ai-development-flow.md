@@ -6,7 +6,7 @@
 
 開発は原則として次の流れで進める。
 
-**要望 → ChatGPTで要件整理・計画書作成 → UI Level Decision → PRODUCT前提整理 → Plan Review Gate（Grilling） → 必要なDesign Decision確定 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → Security Preflight / GitHub Security checks → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定 → 必要なら修正・再CI・再Security・再レビュー → 人間確認またはSafety Gate成立後のAuto-Merge → Deploy → 実利用検証 → 検収判定**
+**要望 → ChatGPTで要件整理・計画書作成 → Framework Decision → UI Level Decision → PRODUCT前提整理 → Plan Review Gate（Grilling） → 必要なDesign Decision確定 → GitHub親Issue → 子Issue → Codex実装 → ローカルテスト → PR → GitHub Actions CI → Security Preflight / GitHub Security checks → Codex Code Review → 通常レーン / Safe Auto-Fix・Auto-Merge判定 → 必要なら修正・再CI・再Security・再レビュー → 人間確認またはSafety Gate成立後のAuto-Merge → Deploy → 実利用検証 → 検収判定**
 
 大きな計画をCodexへ一括投入せず、レビュー可能な単位まで分割する。
 
@@ -50,22 +50,47 @@ ChatGPTは開発マネージャー兼設計担当として使う。
 
 > この開発内容をGitHub Issueベースで実装できる形に整理してください。親Issueと1 PR単位の子Issueに分解し、各子Issueには完了条件、変更対象、変更禁止範囲、テスト条件、依存関係を書いてください。
 
-## 2.0 UI Level Decision（案件分類）
+## 2.0 Framework Decision（技術選定）
+
+新規Web/UI案件、またはRendering Strategy、Application Architecture、Runtime、Deployment / hostingの変更を伴う案件では、[Framework Decision v1](architecture/framework-decision.md) をUI Level Decisionより前に完了させる。
+判断順序は `Requirements → Rendering Strategy → Application Architecture → Framework` とし、特定FrameworkをAIが暗黙に採用してはならない。
+
+Framework Decisionの結果は `DECIDED / NOT_APPLICABLE / NEEDS_DECISION` のいずれかで記録する。`NEEDS_DECISION` の間はFramework依存のUI設計、Issue化、実装開始を停止し、既存のDesign Decisionへ接続する。`NOT_APPLICABLE` の場合は対象外理由を記録する。
+
+Framework DecisionはUI Level、Plan Review、Deployment / Release、Security、Acceptanceの代替ではない。Plan Reviewには結果と正本文書への参照だけを入力し、候補比較を重複保存しない。
+
+```text
+要件整理 → Framework Decision → UI Level Decision → PRODUCT前提整理 → Plan Review Gate
+                              ├─ DECIDED / NOT_APPLICABLE: 次工程へ
+                              └─ NEEDS_DECISION: Design Decisionへ接続して停止
+```
+
+## 2.1 UI Level Decision（案件分類）
+
+<!-- Legacy documentation anchor retained for existing contract checks: ## 2.0 UI Level Decision（案件分類） -->
 
 Plan Review Gateの前に、案件ごとのUI Levelを `NONE / UTILITY / PRODUCT / NEEDS_DECISION` から決定する。UIを持つ可能性があるのに分類できない場合、またはPRODUCTの重要なUI/UX前提が未決定の場合は `NEEDS_DECISION` とし、Issue化・実装開始を停止してDesign Decisionへ接続する。
 
 ```text
-Consultation → UI Level Decision → PRODUCT前提整理 → Plan Review Gate
-                                  ├─ NONE / UTILITY: PRODUCT用チェックを必須化しない
-                                  └─ PRODUCT: 重要UI/UX前提の完全性を確認する
+Consultation → Framework Decision → UI Level Decision → PRODUCT前提整理 → Plan Review Gate
+                 ├─ DECIDED / NOT_APPLICABLE: 次工程へ
+                 └─ NEEDS_DECISION: Design Decisionへ接続して停止
+
+UI Level Decision
+  ├─ NONE / UTILITY: PRODUCT用チェックを必須化しない
+  └─ PRODUCT: 重要UI/UX前提の完全性を確認する
 ```
+
+<!-- Legacy sequence anchor retained for existing contract checks: Consultation → UI Level Decision → PRODUCT前提整理 → Plan Review Gate -->
 
 UI Level DecisionとPRODUCT前提整理の結果は、Plan Review標準出力のUI Level、適用対象、PRODUCT UI completeness、未決定事項へ記録する。
 
-## 2.1 Plan Review Gate（計画書Grilling）
+## 2.2 Plan Review Gate（計画書Grilling）
+
+<!-- Legacy documentation anchor retained for existing contract checks: ## 2.1 Plan Review Gate（計画書Grilling） -->
 
 計画書から親Issue / 子Issueへ変換する前に、[docs/plan-review-gate.md](plan-review-gate.md) に従ってPlan Review Gateを実施する。
-UI Level Decisionで `NEEDS_DECISION` となった場合、またはPRODUCT UI completenessが `INCOMPLETE` の場合は、Plan Reviewの判定を `NEEDS_DECISION` としてIssue化・実装開始へ進まない。`NONE / UTILITY` ではPRODUCT用チェックを必須化しない。
+Framework DecisionまたはUI Level Decisionで `NEEDS_DECISION` となった場合、またはPRODUCT UI completenessが `INCOMPLETE` の場合は、Plan Reviewの判定を `NEEDS_DECISION` としてIssue化・実装開始へ進まない。`NONE / UTILITY` ではPRODUCT用チェックを必須化しない。
 
 PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_DECISIONの場合はIssue化・実装開始を止めて既存のDesign Decisionへ接続する。NOT_APPLICABLEの場合は省略理由を記録する。Plan Reviewは計画書の全面書き換え、一問一答の強制、既存のDesign Decision Escalationの置換ではない。採用案の反証（失敗原因、成立条件、単純な代替案、不利な証拠、期待の先取り）も既存Plan Reviewの記録として確認する。
 

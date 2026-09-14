@@ -98,6 +98,16 @@ Issue化前、実装開始時、PR提出前および差分の影響変更時は 
 
 Plan Review Gateは計画書の全面書き換えや一問一答の強制ではなく、既存のDesign Decision、Design Decision Escalation、子Issue品質チェック、1 Issue / 1 PRを置き換えない。
 
+## Framework Decision
+
+新規Web/UI案件、またはRendering Strategy、Application Architecture、Runtime、Deployment / hostingの変更を伴う案件では、[Framework Decision v1](docs/architecture/framework-decision.md) をUI Level DecisionとPlan Review Gateより前に確認する。
+
+- 判断順序は `Requirements → Rendering Strategy → Application Architecture → Framework` とし、特定FrameworkをAIが暗黙に採用しない。
+- 結果は `DECIDED / NOT_APPLICABLE / NEEDS_DECISION` で記録する。`NOT_APPLICABLE` は対象外理由を必須とする。
+- `NEEDS_DECISION` の間はFramework依存のUI設計、Issue化、実装開始を停止し、既存のDesign Decisionへ接続する。
+- Framework DecisionはUI Level、Plan Review、Deployment / Release、Security、Acceptanceの責務を置き換えない。Plan Reviewへは結果と正本文書の参照を引き継ぎ、候補比較を重複保存しない。
+- CLI、library、文書のみの変更など、Framework選定が実装結果へ影響しない案件は、理由付きで `NOT_APPLICABLE` とできる。
+
 ## Child Issue Quality Gate
 
 子IssueはGitHub登録・Codex実装前に [`docs/issue-quality-check.md`](docs/issue-quality-check.md) のMUSTを確認する。

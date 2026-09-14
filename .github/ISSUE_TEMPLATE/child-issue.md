@@ -10,6 +10,15 @@ assignees: []
 
 <!-- このIssueだけで達成すること -->
 
+# Framework Decision 引き継ぎ
+
+- 親IssueのFramework Decision Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
+- 正本文書 / 親Issueの参照:
+- 決定内容・この子Issueへの前提:
+- Framework依存の未決定事項 / 停止範囲:
+
+> `NEEDS_DECISION` の場合はFramework依存の子Issue化・実装開始を停止し、既存のDesign Decisionへ接続する。候補比較をこの子Issueで再定義しない。
+
 # UI Level / PRODUCT UI 引き継ぎ
 
 - 親IssueのUI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`

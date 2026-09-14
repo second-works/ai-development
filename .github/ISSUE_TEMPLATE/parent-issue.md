@@ -10,10 +10,21 @@ assignees: []
 
 <!-- プロジェクト全体で達成すること -->
 
+# Framework Decision
+
+- Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
+- 正本文書: [Framework Decision v1](../blob/main/docs/architecture/framework-decision.md)
+- 適用対象 / 対象外理由:
+- 決定内容・Framework依存の未決定事項:
+- 子Issueへ引き継ぐ参照:
+
+> `NEEDS_DECISION` の間はFramework依存のUI設計、子Issue化、実装開始を停止し、既存のDesign Decisionへ接続する。特定FrameworkをAIが暗黙に採用しない。
+
 # Plan Review / Design Decision
 
 - Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`
 - 記録・正本: [Plan Review Gate](../blob/main/docs/plan-review-gate.md)
+- Framework Decision結果の参照:
 - 採用案と理由:
 - 未決定事項・決定タイミング:
 
