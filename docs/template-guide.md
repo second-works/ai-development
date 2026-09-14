@@ -420,6 +420,7 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 - [ ] `AGENTS.md` を配置
 - [ ] `docs/ai-agent-security-boundary.md` を配置
 - [ ] `docs/ai-development-harness-inventory.md` を配置
+- [ ] `docs/architecture/framework-decision.md` を配置
 - [ ] `docs/plan-review-gate.md` を配置
 - [ ] 親Issueテンプレートを配置
 - [ ] 子Issueテンプレートを配置

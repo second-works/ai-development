@@ -78,6 +78,7 @@ assert_contains "$design" '## Framework Decision Boundary'
 assert_contains "$design" 'このファイルはFrameworkを再選定せず'
 assert_contains "$readme" 'docs/plan-review-gate.md'
 assert_contains "$readme" 'docs/architecture/framework-decision.md'
+assert_contains "$guide" '- [ ] `docs/architecture/framework-decision.md` を配置'
 
 guide_setup_line="$(grep -nF 'Plan Review正本文書（`docs/plan-review-gate.md`）を配置' "$guide" | cut -d: -f1)"
 guide_after_setup_line="$(grep -nF '設定後、計画書を親Issue・子Issueへ変換' "$guide" | cut -d: -f1)"
