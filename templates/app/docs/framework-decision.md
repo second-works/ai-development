@@ -8,7 +8,6 @@ docs/framework-decision.md として具体化する。
 
 ## Record
 
-- Status: `NOT_APPLICABLE / DECIDED / NEEDS_DECISION`
 - Decision owner:
 - Decision date:
 - Related plan / Issue:
@@ -122,12 +121,26 @@ docs/design.mdで扱う。Deployment、Security、Acceptanceの既存Gateを置�
 
 ## Completion Checklist
 
+### All results
+
 - [ ] Applicability and reason are recorded
-- [ ] Requirements precede Framework selection
-- [ ] Rendering Strategy is decided or escalated
-- [ ] Application Architecture and API boundary are decided or escalated
-- [ ] SEO, public/auth focus, runtime, hosting, portability, and operations are evaluated
-- [ ] Adoption and rejection reasons are recorded
 - [ ] Result is one of `NOT_APPLICABLE / DECIDED / NEEDS_DECISION`
-- [ ] `NEEDS_DECISION` includes a stop scope and Design Decision reference
 - [ ] Existing UI, Deployment, Security, and Acceptance responsibilities remain separate
+
+### When `NOT_APPLICABLE`
+
+- [ ] The reason Framework selection cannot affect the implementation result is recorded
+
+### When `DECIDED`
+
+- [ ] Requirements precede Framework selection
+- [ ] Rendering Strategy is decided
+- [ ] Application Architecture and API boundary are decided
+- [ ] SEO, public/auth focus, runtime, hosting, portability, and operations are evaluated or excluded with reasons
+- [ ] Adoption and rejection reasons are recorded
+
+### When `NEEDS_DECISION`
+
+- [ ] Unresolved items and candidate trade-offs are recorded
+- [ ] Framework-dependent work to stop is recorded
+- [ ] A Design Decision owner or reference is recorded

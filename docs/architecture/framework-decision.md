@@ -100,12 +100,26 @@ Framework
 
 ## 9. 完了チェック
 
+### 全判定共通
+
 - [ ] 適用判定と理由がある
+- [ ] 結果が `NOT_APPLICABLE / DECIDED / NEEDS_DECISION` のいずれかである
+- [ ] UI設計、Deployment、Security、Acceptanceの既存責務を置き換えていない
+
+### `NOT_APPLICABLE` の場合
+
+- [ ] Framework選定が実装結果へ影響しない理由がある
+
+### `DECIDED` の場合
+
 - [ ] RequirementsがFramework名より先に記録されている
 - [ ] Rendering Strategyが決まっている
 - [ ] Application ArchitectureとAPI境界が決まっている
 - [ ] 最低評価項目が評価済み、または理由付き対象外である
 - [ ] 候補の採用理由と不採用理由がある
-- [ ] 結果が `NOT_APPLICABLE / DECIDED / NEEDS_DECISION` のいずれかである
-- [ ] `NEEDS_DECISION` の場合、停止対象とDesign Decision参照がある
-- [ ] UI設計、Deployment、Security、Acceptanceの既存責務を置き換えていない
+
+### `NEEDS_DECISION` の場合
+
+- [ ] 未決定事項と候補のtrade-offが記録されている
+- [ ] Framework依存作業の停止範囲が記録されている
+- [ ] Design Decisionの担当者または参照先が記録されている
