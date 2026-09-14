@@ -122,4 +122,4 @@ Framework
 
 - [ ] 未決定事項と候補のtrade-offが記録されている
 - [ ] Framework依存作業の停止範囲が記録されている
-- [ ] Design Decisionの担当者または参照先が記録されている
+- [ ] 既存Design Decisionへの参照先が記録されている

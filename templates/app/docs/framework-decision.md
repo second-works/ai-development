@@ -143,4 +143,4 @@ docs/design.mdで扱う。Deployment、Security、Acceptanceの既存Gateを置�
 
 - [ ] Unresolved items and candidate trade-offs are recorded
 - [ ] Framework-dependent work to stop is recorded
-- [ ] A Design Decision owner or reference is recorded
+- [ ] A Design Decision / escalation reference is recorded
