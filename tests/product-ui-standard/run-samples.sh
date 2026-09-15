@@ -8,6 +8,7 @@ STANDARD="${ROOT_DIR}/docs/product-ui-standard.md"
 DESIGN_TEMPLATE="${ROOT_DIR}/templates/app/docs/design.md"
 README="${ROOT_DIR}/README.md"
 AGENTS="${ROOT_DIR}/AGENTS.md"
+CI_WORKFLOW="${ROOT_DIR}/.github/workflows/ci.yml"
 
 assert_contains() {
   local file="$1"
@@ -40,6 +41,52 @@ assert_order() {
   fi
 }
 
+assert_rule_contract() {
+  local heading="$1"
+  local rule_id="$2"
+  local section
+  section="$(awk -v heading="### ${heading}" '
+    $0 == heading { found=1; next }
+    found && /^### / { exit }
+    found { print }
+  ' "$STANDARD")"
+  if [[ -z "$section" ]]; then
+    printf 'missing PRODUCT UI rule section: %s\n' "$heading" >&2
+    exit 1
+  fi
+  for needle in \
+    "- Rule ID: \`${rule_id}\`" \
+    '- Condition:' \
+    '- Decision:' \
+    '- Candidate pattern/component:' \
+    '- Verification:' \
+    '- Fallback:'; do
+    if ! grep -Fq -- "$needle" <<< "$section"; then
+      printf 'missing PRODUCT UI rule field: %s in %s\n' "$needle" "$heading" >&2
+      exit 1
+    fi
+  done
+  local previous=0
+  for needle in \
+    '- Condition:' \
+    '- Decision:' \
+    '- Candidate pattern/component:' \
+    '- Verification:' \
+    '- Fallback:'; do
+    local line
+    line="$(grep -nF -- "$needle" <<< "$section" | head -n 1 | cut -d: -f1)"
+    if [[ -z "$line" || "$line" -le "$previous" ]]; then
+      printf 'invalid PRODUCT UI rule field order: %s in %s\n' "$needle" "$heading" >&2
+      exit 1
+    fi
+    previous="$line"
+  done
+  if ! grep -Fq -- 'NEEDS_DECISION' <<< "$section"; then
+    printf 'missing PRODUCT UI rule fallback decision: %s\n' "$heading" >&2
+    exit 1
+  fi
+}
+
 assert_exact_heading "$AGENTS" '## AI / Codex Reference Contract'
 assert_order "$AGENTS" '## Framework Decision' '## AI / Codex Reference Contract'
 assert_order "$AGENTS" '## AI / Codex Reference Contract' '## Child Issue Quality Gate'
@@ -59,6 +106,40 @@ assert_order "$AGENTS" '1. Framework Decision結果と正本文書（Framework�
 assert_order "$AGENTS" '2. UI Level Decisionと適用対象' '3. Nine PRODUCT UI Standard / `Component Decision Rules`'
 assert_order "$AGENTS" '3. Nine PRODUCT UI Standard / `Component Decision Rules`' '4. 案件 `docs/design.md`'
 assert_order "$AGENTS" '4. 案件 `docs/design.md`' '5. component / library固有docs（存在する場合）'
+
+assert_exact_heading "$STANDARD" '## Component Decision Rules'
+assert_exact_heading "$STANDARD" '### Rule Record Contract'
+assert_order "$STANDARD" '## Component Decision Rules' '## 10. Visual Review / UI Acceptance'
+for rule in \
+  'Primary Action|PRIMARY_ACTION' \
+  'Selection Pattern|SELECTION_PATTERN' \
+  'Destructive Action|DESTRUCTIVE_ACTION' \
+  'Async Feedback|ASYNC_FEEDBACK' \
+  'Form Validation|FORM_VALIDATION' \
+  'State Mapping|STATE_MAPPING' \
+  'Responsive Priority|RESPONSIVE_PRIORITY' \
+  'Accessibility|ACCESSIBILITY'; do
+  IFS='|' read -r heading rule_id <<< "$rule"
+  assert_rule_contract "$heading" "$rule_id"
+done
+for needle in \
+  '### Conflict and Scope Boundary' \
+  '標準ruleと案件設計が重要UXについて矛盾する、候補componentがない、または判断材料が不足する場合は暗黙PASSせず `NEEDS_DECISION` とする。' \
+  'この契約は `NONE` / `UTILITY` にPRODUCT UIの必須条件を過剰適用せず'; do
+  assert_contains "$STANDARD" "$needle"
+done
+assert_exact_heading "$DESIGN_TEMPLATE" '## Component Decision Rules'
+for needle in \
+  '- Rule ID:' \
+  '- Condition:' \
+  '- Decision:' \
+  '- Candidate pattern/component:' \
+  '- Verification:' \
+  '- Fallback: 重要な判断を確定できない場合は `NEEDS_DECISION` として停止する。'; do
+  assert_contains "$DESIGN_TEMPLATE" "$needle"
+done
+assert_contains "$CI_WORKFLOW" 'bash tests/product-ui-standard/run-samples.sh'
+assert_contains "$CI_WORKFLOW" 'bash tests/issue-template-ui/run-samples.sh'
 
 for needle in \
   'Nine PRODUCT UI Standard v1' \
