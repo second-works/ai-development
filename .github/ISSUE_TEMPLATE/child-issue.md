@@ -30,6 +30,19 @@ assignees: []
 
 > 親IssueのUI Levelと分類理由を引き継ぐ。UI Levelが `NEEDS_DECISION` の場合、AI/Codexは推測で子Issue化・実装開始せず、決定まで停止する。PRODUCT以外ではPRODUCT用の仕様・Design Profile・Visual/UI Acceptanceを必須化しない。
 
+# AI / Codex Reference Contract（PRODUCT UI実装時）
+
+- 参照順序: Framework Decision結果 → UI Level → Nine PRODUCT UI Standard / `Component Decision Rules` → 案件 `docs/design.md` → component / library固有docs（存在時）
+- 親Issueから引き継ぐFramework Decision結果・正本文書:
+- 親Issueから引き継ぐUI Level・適用対象・分類理由:
+- Standard Design Rules: [Component Decision Rules](../blob/main/docs/product-ui-standard.md#component-decision-rules)
+- 案件 `docs/design.md`: [Design Profile / docs/design.md雛形](../blob/main/templates/app/docs/design.md)
+- 案件固有のvisual、brand、tokens、採用component、例外、根拠:
+- component / library固有docsと採用理由（存在時）:
+- 親Issue・前Issueから引き継ぐ未決定事項・矛盾・Design Decision参照:
+
+> PRODUCT UIの重要判断は親Issueの決定と上記順序を引き継ぐ。判断材料が欠落・矛盾・不足する場合は推測で補完せず `NEEDS_DECISION` としてDesign Decisionへ接続し、実装を停止する。NONE / UTILITYではPRODUCT UI用の必須欄やVisual/UI Acceptanceを強制しない。
+
 # 今回の変更
 
 - 実装内容:
