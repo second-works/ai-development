@@ -197,10 +197,10 @@ PRODUCT UIでは、重要なcomponent / patternの選択を、見た目の好み
 
 - Rule ID: `SELECTION_PATTERN`
 - Condition: 選択肢の相互排他性、可視性、探索性、検索要否、入力頻度を確認する。
-- Decision: 少数で同時比較する候補はRadio候補、既知の候補を省スペースで選ぶ場合はSelect候補、多数または検索可能性が必要な場合はCombobox候補とする。
-- Candidate pattern/component: Radio、Select、Combobox、または案件Design Systemの同等semantic component。
-- Verification: キーボード操作、label、現在値、未選択、候補なし、エラー状態を確認する。
-- Fallback: 条件から候補を区別できない場合は `NEEDS_DECISION`。根拠のない選択肢数を閾値として固定しない。
+- Decision: まず単一選択か複数選択かを確定する。非排他的な少数候補はCheckbox group候補、多数または検索可能な複数選択はmulti-select候補とする。排他的な少数で同時比較する候補はRadio候補、既知の単一候補を省スペースで選ぶ場合はSelect候補、多数または検索可能な単一選択はCombobox候補とする。
+- Candidate pattern/component: Checkbox group、multi-select、Radio、Select、Combobox、または案件Design Systemの同等semantic component。
+- Verification: キーボード操作、label、単一/複数選択の意味、現在値、未選択、候補なし、選択数制約、エラー状態を確認する。
+- Fallback: 単一/複数選択、排他性、候補の探索性を区別できない場合は `NEEDS_DECISION`。根拠のない選択肢数を閾値として固定しない。
 
 ### Destructive Action
 
