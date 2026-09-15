@@ -49,7 +49,9 @@ for needle in \
   '3. Nine PRODUCT UI Standard / `Component Decision Rules`' \
   '4. 案件 `docs/design.md`' \
   '5. component / library固有docs（存在する場合）' \
+  '参照順序、適用対象、案件固有の例外と根拠をIssueまたはPRで追跡できる状態にする。' \
   '推測で補完せず `NEEDS_DECISION` として既存のDesign Decisionへ接続し、実装を停止する' \
+  '案件 `docs/design.md` の決定は、標準Design RulesのUX原則とAccessibility最低条件を満たす範囲で尊重する。標準側と案件側の責務を暗黙に入れ替えない。' \
   '`NONE` / `UTILITY` の案件にはPRODUCT UI用の必須欄やVisual/UI Acceptanceを過剰適用しない'; do
   assert_contains "$AGENTS" "$needle"
 done
