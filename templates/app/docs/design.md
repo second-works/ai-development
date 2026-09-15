@@ -97,6 +97,29 @@ ResultがNEEDS_DECISIONの場合はFramework依存のUI設計を開始せず、�
 - Feedback:
 - Destructive action:
 
+## Component Decision Rules
+
+PRODUCT UIのcomponent / pattern判断は、標準 `docs/product-ui-standard.md` の `Component Decision Rules` を参照して記録する。案件側ではvisual、brand、tokens、採用component、例外を具体化するが、標準のUX原則とAccessibility最低条件を暗黙に弱めない。
+
+### Rule Record
+
+- Rule ID:
+- Condition:
+- Decision:
+- Candidate pattern/component:
+- Verification:
+- Fallback: 重要な判断を確定できない場合は `NEEDS_DECISION` として停止する。
+
+### Project-specific Decision
+
+- Selected rule / Rule ID:
+- Project context:
+- Adopted pattern/component:
+- Reason and evidence:
+- Exception or conflict:
+- Design Decision / Issue reference:
+
+案件特性で変わる判断は案件側へ記録する。根拠のない数値閾値、特定Framework、component library、brandをこのテンプレートから標準化しない。
 ## UI States
 
 - LOADING:
@@ -132,11 +155,15 @@ ResultがNEEDS_DECISIONの場合はFramework依存のUI設計を開始せず、�
 
 ## Do
 
-- 
+- Rule IDとConditionを参照して、DecisionとVerificationを記録する。
+- 案件固有のvisual、brand、tokens、採用component、例外を根拠とともに記録する。
+- 判断不能、矛盾、候補不足では `NEEDS_DECISION` としてDesign Decisionへ接続する。
 
 ## Don't
 
-- 
+- 見た目だけでPrimary/Secondaryやcomponentを決めない。
+- 標準の最低品質、semantic、keyboard、label、focus、contrast、status表現を案件都合で暗黙に弱めない。
+- 根拠のない数値閾値、特定Framework、component library、brandを標準ルールとして追加しない.
 
 ## Open Design Decisions
 
