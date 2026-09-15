@@ -13,6 +13,23 @@ require_marker() {
   fi
 }
 
+require_workflow_run() {
+  local command="$1"
+  if ! awk -v command="$command" '
+    {
+      line=$0
+      sub(/^[[:space:]]*/, "", line)
+      if (line == "run: " command) {
+        found=1
+      }
+    }
+    END { exit found ? 0 : 1 }
+  ' "$ROOT/.github/workflows/ci.yml"; then
+    printf 'missing workflow run step: %s\n' "$command" >&2
+    failures=1
+  fi
+}
+
 require_section_marker() {
   local file="$1"
   local start="$2"
@@ -158,8 +175,8 @@ require_marker "docs/ai-development-harness-inventory.md" "ETCSLV"
 require_marker "docs/ai-development-harness-inventory.md" "schema v3に従ったphase"
 require_marker "docs/ai-development-harness-inventory.md" "Acceptance対象artifact"
 require_marker "docs/ai-development-harness-inventory.md" "現行Deploy target"
-require_marker ".github/workflows/ci.yml" "tests/product-ui-standard/run-samples.sh"
-require_marker ".github/workflows/ci.yml" "tests/issue-template-ui/run-samples.sh"
+require_workflow_run "bash tests/product-ui-standard/run-samples.sh"
+require_workflow_run "bash tests/issue-template-ui/run-samples.sh"
 require_marker ".github/workflows/ci.yml" "PRODUCT UI standard documentation contract"
 bash "$ROOT/tests/html-status-report/run-samples.sh" "$ROOT"
 ledger_headings=()
