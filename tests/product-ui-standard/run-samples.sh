@@ -81,8 +81,8 @@ assert_rule_contract() {
     fi
     previous="$line"
   done
-  if ! grep -Fq -- 'NEEDS_DECISION' <<< "$section"; then
-    printf 'missing PRODUCT UI rule fallback decision: %s\n' "$heading" >&2
+  if ! grep -Eq -- '^- Fallback:.*NEEDS_DECISION' <<< "$section"; then
+    printf 'missing PRODUCT UI rule fallback decision in Fallback field: %s\n' "$heading" >&2
     exit 1
   fi
 }
@@ -129,14 +129,34 @@ for needle in \
   assert_contains "$STANDARD" "$needle"
 done
 assert_exact_heading "$DESIGN_TEMPLATE" '## Component Decision Rules'
+design_rules_section="$(awk -v heading='## Component Decision Rules' '
+  $0 == heading { found=1; next }
+  found && /^## / { exit }
+  found { print }
+' "$DESIGN_TEMPLATE")"
+if [[ -z "$design_rules_section" ]]; then
+  printf 'missing design template component decision rules section\n' >&2
+  exit 1
+fi
 for needle in \
+  '案件側ではvisual、brand、tokens、採用component、例外を具体化するが、標準のUX原則とAccessibility最低条件を暗黙に弱めない。' \
+  '### Project-specific Decision' \
   '- Rule ID:' \
   '- Condition:' \
   '- Decision:' \
   '- Candidate pattern/component:' \
   '- Verification:' \
-  '- Fallback: 重要な判断を確定できない場合は `NEEDS_DECISION` として停止する。'; do
-  assert_contains "$DESIGN_TEMPLATE" "$needle"
+  '- Fallback: 重要な判断を確定できない場合は `NEEDS_DECISION` として停止する。' \
+  '- Selected rule / Rule ID:' \
+  '- Project context:' \
+  '- Adopted pattern/component:' \
+  '- Reason and evidence:' \
+  '- Exception or conflict:' \
+  '- Design Decision / Issue reference:'; do
+  if ! grep -Fq -- "$needle" <<< "$design_rules_section"; then
+    printf 'missing design template decision rule contract: %s\n' "$needle" >&2
+    exit 1
+  fi
 done
 assert_contains "$CI_WORKFLOW" 'bash tests/product-ui-standard/run-samples.sh'
 assert_contains "$CI_WORKFLOW" 'bash tests/issue-template-ui/run-samples.sh'
