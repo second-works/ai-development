@@ -108,6 +108,21 @@ Plan Review Gateは計画書の全面書き換えや一問一答の強制では�
 - Framework DecisionはUI Level、Plan Review、Deployment / Release、Security、Acceptanceの責務を置き換えない。Plan Reviewへは結果と正本文書の参照を引き継ぎ、候補比較を重複保存しない。
 - CLI、library、文書のみの変更など、Framework選定が実装結果へ影響しない案件は、理由付きで `NOT_APPLICABLE` とできる。
 
+## AI / Codex Reference Contract
+
+PRODUCT UIの実装を開始するAI/Codexは、重要なUI判断を行う前に、次の順序でrepositoryとIssueの正本を参照する。
+
+1. Framework Decision結果と正本文書（Frameworkを再選定しない）
+2. UI Level Decisionと適用対象
+3. Nine PRODUCT UI Standard / `Component Decision Rules`
+4. 案件 `docs/design.md`（案件固有のvisual、brand、tokens、採用component、例外）
+5. component / library固有docs（存在する場合）
+
+- 参照順序、適用対象、案件固有の例外と根拠をIssueまたはPRで追跡できる状態にする。
+- Framework Decision、UI Level、標準Design Rules、案件 `docs/design.md`、component/library docsのいずれかが欠落・矛盾・判断不能で、重要UX判断を確定できない場合は推測で補完せず `NEEDS_DECISION` として既存のDesign Decisionへ接続し、実装を停止する。
+- 案件 `docs/design.md` の決定は、標準Design RulesのUX原則とAccessibility最低条件を満たす範囲で尊重する。標準側と案件側の責務を暗黙に入れ替えない。
+- `NONE` / `UTILITY` の案件にはPRODUCT UI用の必須欄やVisual/UI Acceptanceを過剰適用しない。Framework、component library、brandの採用をこの契約から強制しない。
+
 ## Child Issue Quality Gate
 
 子IssueはGitHub登録・Codex実装前に [`docs/issue-quality-check.md`](docs/issue-quality-check.md) のMUSTを確認する。

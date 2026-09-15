@@ -40,6 +40,19 @@ assignees: []
 
 > UI Levelが `NEEDS_DECISION` の間は、AI/Codexが分類や重要UX判断を推測せず、子Issue化・実装開始を停止する。PRODUCT以外ではPRODUCT用の必須欄やVisual/UI Acceptanceを強制しない。
 
+# AI / Codex Reference Contract（PRODUCT UI実装時）
+
+- 参照順序: Framework Decision結果 → UI Level → Nine PRODUCT UI Standard / `Component Decision Rules` → 案件 `docs/design.md` → component / library固有docs（存在時）
+- Framework Decision結果・正本文書: [Framework Decision v1](../blob/main/docs/architecture/framework-decision.md)、親Issueの記録:
+- UI Level・適用対象・親Issueの判断:
+- Standard Design Rules: [Component Decision Rules](../blob/main/docs/product-ui-standard.md#component-decision-rules)
+- 案件 `docs/design.md`: [Design Profile / docs/design.md雛形](../blob/main/templates/app/docs/design.md)
+- 案件固有のvisual、brand、tokens、採用component、例外、根拠:
+- component / library固有docsと採用理由（存在時）:
+- 未決定事項・矛盾・候補不足・Design Decision参照:
+
+> PRODUCT UIの重要判断は上記順序で参照する。判断材料が欠落・矛盾・不足する場合は推測で補完せず `NEEDS_DECISION` としてDesign Decisionへ接続し、実装を停止する。NONE / UTILITYではPRODUCT UI用の必須欄やVisual/UI Acceptanceを強制しない。
+
 # 今回の範囲
 
 - 今回実装する範囲:
