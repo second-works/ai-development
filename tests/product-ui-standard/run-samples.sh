@@ -68,6 +68,7 @@ assert_rule_contract() {
   done
   local previous=0
   for needle in \
+    "- Rule ID: \`${rule_id}\`" \
     '- Condition:' \
     '- Decision:' \
     '- Candidate pattern/component:' \
@@ -138,6 +139,15 @@ if [[ -z "$design_rules_section" ]]; then
   printf 'missing design template component decision rules section\n' >&2
   exit 1
 fi
+project_specific_section="$(awk -v heading='### Project-specific Decision' '
+  $0 == heading { found=1; next }
+  found && /^### / { exit }
+  found { print }
+' <<< "$design_rules_section")"
+if [[ -z "$project_specific_section" ]]; then
+  printf 'missing design template project-specific decision section\n' >&2
+  exit 1
+fi
 for needle in \
   '案件側ではvisual、brand、tokens、採用component、例外を具体化するが、標準のUX原則とAccessibility最低条件を暗黙に弱めない。' \
   '### Project-specific Decision' \
@@ -146,14 +156,20 @@ for needle in \
   '- Decision:' \
   '- Candidate pattern/component:' \
   '- Verification:' \
-  '- Fallback: 重要な判断を確定できない場合は `NEEDS_DECISION` として停止する。' \
+  '- Fallback: 重要な判断を確定できない場合は `NEEDS_DECISION` として停止する。'; do
+  if ! grep -Fq -- "$needle" <<< "$design_rules_section"; then
+    printf 'missing design template decision rule contract: %s\n' "$needle" >&2
+    exit 1
+  fi
+done
+for needle in \
   '- Selected rule / Rule ID:' \
   '- Project context:' \
   '- Adopted pattern/component:' \
   '- Reason and evidence:' \
   '- Exception or conflict:' \
   '- Design Decision / Issue reference:'; do
-  if ! grep -Fq -- "$needle" <<< "$design_rules_section"; then
+  if ! grep -Fq -- "$needle" <<< "$project_specific_section"; then
     printf 'missing design template decision rule contract: %s\n' "$needle" >&2
     exit 1
   fi

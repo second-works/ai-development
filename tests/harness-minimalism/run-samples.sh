@@ -159,6 +159,7 @@ require_marker "docs/ai-development-harness-inventory.md" "schema v3に従った
 require_marker "docs/ai-development-harness-inventory.md" "Acceptance対象artifact"
 require_marker "docs/ai-development-harness-inventory.md" "現行Deploy target"
 require_marker ".github/workflows/ci.yml" "tests/product-ui-standard/run-samples.sh"
+require_marker ".github/workflows/ci.yml" "tests/issue-template-ui/run-samples.sh"
 require_marker ".github/workflows/ci.yml" "PRODUCT UI standard documentation contract"
 bash "$ROOT/tests/html-status-report/run-samples.sh" "$ROOT"
 ledger_headings=()
