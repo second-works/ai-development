@@ -41,7 +41,23 @@ assert_order() {
   fi
 }
 
+assert_reference_stop_boundary() {
+  local section boundary_line
+  section="$(awk -v heading='## AI / Codex Reference Contract' '
+    $0 == heading { found=1; next }
+    found && /^## / { exit }
+    found { print }
+  ' "$AGENTS")"
+  boundary_line="$(grep -F 'Framework Decision、UI Level、標準Design Rules、案件 `docs/design.md` のいずれかが欠落・矛盾・判断不能で' <<< "$section" || true)"
+  boundary_line="${boundary_line#- }"
+  if [[ "$boundary_line" != 'Framework Decision、UI Level、標準Design Rules、案件 `docs/design.md` のいずれかが欠落・矛盾・判断不能で、重要UX判断を確定できない場合は推測で補完せず `NEEDS_DECISION` として既存のDesign Decisionへ接続し、実装を停止する。component / library固有docsは採用する場合に参照し、採用を決めたdocsが取得できない場合だけ同じ停止条件を適用する。' ]]; then
+    printf 'reference stop boundary changed or missing\n' >&2
+    exit 1
+  fi
+}
+
 assert_exact_line "$AGENTS" '## AI / Codex Reference Contract'
+assert_reference_stop_boundary
 assert_order "$AGENTS" '## Framework Decision' '## AI / Codex Reference Contract'
 assert_order "$AGENTS" '## AI / Codex Reference Contract' '## Child Issue Quality Gate'
 for needle in \
