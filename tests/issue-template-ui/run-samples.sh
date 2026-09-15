@@ -8,6 +8,7 @@ PARENT="${ROOT_DIR}/.github/ISSUE_TEMPLATE/parent-issue.md"
 CHILD="${ROOT_DIR}/.github/ISSUE_TEMPLATE/child-issue.md"
 STANDARD="${ROOT_DIR}/docs/product-ui-standard.md"
 DESIGN_TEMPLATE="${ROOT_DIR}/templates/app/docs/design.md"
+AGENTS="${ROOT_DIR}/AGENTS.md"
 
 assert_contains() {
   local file="$1"
@@ -27,8 +28,42 @@ assert_exact_line() {
   fi
 }
 
+assert_order() {
+  local file="$1"
+  local first="$2"
+  local second="$3"
+  local first_line second_line
+  first_line="$(grep -nF -- "$first" "$file" | head -n 1 | cut -d: -f1)"
+  second_line="$(grep -nF -- "$second" "$file" | head -n 1 | cut -d: -f1)"
+  if [[ -z "$first_line" || -z "$second_line" || "$first_line" -ge "$second_line" ]]; then
+    printf 'invalid Issue template contract order: %s before %s in %s\n' "$first" "$second" "$file" >&2
+    exit 1
+  fi
+}
+
+assert_exact_line "$AGENTS" '## AI / Codex Reference Contract'
+assert_order "$AGENTS" '## Framework Decision' '## AI / Codex Reference Contract'
+assert_order "$AGENTS" '## AI / Codex Reference Contract' '## Child Issue Quality Gate'
+for needle in \
+  '1. Framework Decision結果と正本文書（Frameworkを再選定しない）' \
+  '2. UI Level Decisionと適用対象' \
+  '3. Nine PRODUCT UI Standard / `Component Decision Rules`' \
+  '4. 案件 `docs/design.md`' \
+  '5. component / library固有docs（存在する場合）' \
+  '推測で補完せず `NEEDS_DECISION` として既存のDesign Decisionへ接続し、実装を停止する' \
+  '`NONE` / `UTILITY` の案件にはPRODUCT UI用の必須欄やVisual/UI Acceptanceを過剰適用しない'; do
+  assert_contains "$AGENTS" "$needle"
+done
+
 assert_exact_line "$PARENT" '# UI Level / PRODUCT UI'
 assert_exact_line "$CHILD" '# UI Level / PRODUCT UI 引き継ぎ'
+
+assert_exact_line "$PARENT" '# AI / Codex Reference Contract（PRODUCT UI実装時）'
+assert_exact_line "$CHILD" '# AI / Codex Reference Contract（PRODUCT UI実装時）'
+assert_order "$PARENT" '# UI Level / PRODUCT UI' '# AI / Codex Reference Contract（PRODUCT UI実装時）'
+assert_order "$PARENT" '# AI / Codex Reference Contract（PRODUCT UI実装時）' '# 今回の範囲'
+assert_order "$CHILD" '# UI Level / PRODUCT UI 引き継ぎ' '# AI / Codex Reference Contract（PRODUCT UI実装時）'
+assert_order "$CHILD" '# AI / Codex Reference Contract（PRODUCT UI実装時）' '# 今回の変更'
 
 assert_exact_line "$PARENT" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
 assert_exact_line "$CHILD" '- 親IssueのUI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
@@ -48,6 +83,15 @@ assert_contains "$CHILD" '- UI受入対象外の理由（NONE/UTILITYでPRODUCT�
 assert_contains "$CHILD" '- NEEDS_DECISIONの未決定事項 / 決定期限:'
 assert_contains "$CHILD" 'UI Levelが `NEEDS_DECISION` の場合、AI/Codexは推測で子Issue化・実装開始せず、決定まで停止する'
 assert_contains "$CHILD" 'PRODUCT以外ではPRODUCT用の仕様・Design Profile・Visual/UI Acceptanceを必須化しない'
+
+for file in "$PARENT" "$CHILD"; do
+  assert_contains "$file" '参照順序: Framework Decision結果 → UI Level → Nine PRODUCT UI Standard / `Component Decision Rules` → 案件 `docs/design.md` → component / library固有docs（存在時）'
+  assert_contains "$file" 'Standard Design Rules: [Component Decision Rules](../blob/main/docs/product-ui-standard.md#component-decision-rules)'
+  assert_contains "$file" '案件固有のvisual、brand、tokens、採用component、例外、根拠:'
+  assert_contains "$file" '推測で補完せず `NEEDS_DECISION` としてDesign Decisionへ接続し、実装を停止する'
+done
+assert_contains "$PARENT" '未決定事項・矛盾・候補不足・Design Decision参照:'
+assert_contains "$CHILD" '親Issue・前Issueから引き継ぐ未決定事項・矛盾・Design Decision参照:'
 
 assert_contains "$STANDARD" 'Nine PRODUCT UI Standard v1'
 assert_contains "$DESIGN_TEMPLATE" '# Product Design'
