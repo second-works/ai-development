@@ -55,6 +55,10 @@ for needle in \
   '`NONE` / `UTILITY` の案件にはPRODUCT UI用の必須欄やVisual/UI Acceptanceを過剰適用しない'; do
   assert_contains "$AGENTS" "$needle"
 done
+assert_order "$AGENTS" '1. Framework Decision結果と正本文書（Frameworkを再選定しない）' '2. UI Level Decisionと適用対象'
+assert_order "$AGENTS" '2. UI Level Decisionと適用対象' '3. Nine PRODUCT UI Standard / `Component Decision Rules`'
+assert_order "$AGENTS" '3. Nine PRODUCT UI Standard / `Component Decision Rules`' '4. 案件 `docs/design.md`'
+assert_order "$AGENTS" '4. 案件 `docs/design.md`' '5. component / library固有docs（存在する場合）'
 
 for needle in \
   'Nine PRODUCT UI Standard v1' \
