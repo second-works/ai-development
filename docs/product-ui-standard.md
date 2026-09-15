@@ -167,6 +167,103 @@ Codex/AIは仕様にない重要UX判断を勝手に確定しない。次が未�
 
 一方、承認済みDesign Systemに従う微細なspacing、一般的レスポンシブ調整、明白なアクセシビリティ改善は実装裁量としてよい。
 
+## Component Decision Rules
+
+PRODUCT UIでは、重要なcomponent / patternの選択を、見た目の好みではなく次のrule recordで追跡する。これは標準側の判断原則と最低品質を定義し、案件固有のvisual、brand、tokens、採用component、例外は案件 `docs/design.md` で決定する。
+
+### Rule Record Contract
+
+各ruleは次の順序で記録する。
+
+- Rule ID:
+- Condition: どの利用者、目的、選択肢、状態、画面幅、危険度が判断条件になるか。
+- Decision: 条件から導くUI判断。
+- Candidate pattern/component: 候補と、候補を選ぶ理由。特定libraryの採用を標準から強制しない。
+- Verification: 実装後に確認する意味、状態、操作、Accessibility、またはVisual/UI Acceptance。
+- Fallback: 条件や候補が不足し、重要UX判断を確定できない場合は `NEEDS_DECISION` として停止する。
+
+数値閾値は根拠がある場合だけ記録する。案件特性で変わる判断は、閾値をglobal ruleへ固定せず、案件側の判断材料と例外を `docs/design.md` に記録する。
+
+### Primary Action
+
+- Rule ID: `PRIMARY_ACTION`
+- Condition: 画面のPrimary user goalと、同時に提示する操作の優先順位を確認する。
+- Decision: 最重要操作を一意にPrimaryとし、競合する同格Primary CTAを乱立させない。
+- Candidate pattern/component: Primary button、link、または既存Design Systemの同等semantic component。
+- Verification: `Entry -> Action -> Result` とPrimary Actionの意図が追跡でき、Responsiveでも失われないことを確認する。
+- Fallback: Primary goalまたは優先順位が定まらない場合は `NEEDS_DECISION`。
+
+### Selection Pattern
+
+- Rule ID: `SELECTION_PATTERN`
+- Condition: 選択肢の相互排他性、可視性、探索性、検索要否、入力頻度を確認する。
+- Decision: まず単一選択か複数選択かを確定する。非排他的な少数候補はCheckbox group候補、多数または検索可能な複数選択はmulti-select候補とする。排他的な少数で同時比較する候補はRadio候補、既知の単一候補を省スペースで選ぶ場合はSelect候補、多数または検索可能な単一選択はCombobox候補とする。
+- Candidate pattern/component: Checkbox group、multi-select、Radio、Select、Combobox、または案件Design Systemの同等semantic component。
+- Verification: キーボード操作、label、単一/複数選択の意味、現在値、未選択、候補なし、選択数制約、エラー状態を確認する。
+- Fallback: 単一/複数選択、排他性、候補の探索性を区別できない場合は `NEEDS_DECISION`。根拠のない選択肢数を閾値として固定しない。
+
+### Destructive Action
+
+- Rule ID: `DESTRUCTIVE_ACTION`
+- Condition: 削除、取消、上書きなどの不可逆性、影響範囲、復旧可能性を確認する。
+- Decision: 危険操作を通常操作と区別し、Confirmationは必要な場合だけ要求する。
+- Candidate pattern/component: Destructive button、確認dialog、Undo、または復旧手順を持つ同等component。
+- Verification: 誤操作防止、確認内容、キャンセル、成功、失敗、復旧または次の操作を確認する。
+- Fallback: 危険度または復旧方法が定まらない場合は `NEEDS_DECISION`。
+
+### Async Feedback
+
+- Rule ID: `ASYNC_FEEDBACK`
+- Condition: 処理時間、進行中に許可する操作、成功・失敗時の次の操作を確認する。
+- Decision: `Action -> Processing -> Success/Failure -> Next Action` を状態として表現する。
+- Candidate pattern/component: Progress、status、toast、inline message、retry、または同等のfeedback component。
+- Verification: Processing中の二重実行、成功、失敗、retry、cancel、recoveryを確認する。
+- Fallback: 処理中・成功・失敗・復旧の区別が定まらない場合は `NEEDS_DECISION`。
+
+### Form Validation
+
+- Rule ID: `FORM_VALIDATION`
+- Condition: 入力境界、required/optional、形式、依存入力、送信時と入力時の検証を確認する。
+- Decision: 境界で検証し、inline error、required/optional、修正方法を明示する。
+- Candidate pattern/component: label、input、fieldset、inline error、summary、または同等form component。
+- Verification: 正常値、境界値、空値、異常値、キーボード操作、error recoveryを確認する。
+- Fallback: 入力制約またはエラー回復が定まらない場合は `NEEDS_DECISION`。
+
+### State Mapping
+
+- Rule ID: `STATE_MAPPING`
+- Condition: データ取得、権限、空結果、エラー、未確認状態、利用不能状態を区別する。
+- Decision: `LOADING`、`READY/NORMAL`、`EMPTY`、`SUCCESS`、`ERROR`、`DISABLED`、`UNAVAILABLE/PERMISSION_DENIED`、`NEEDS_REVIEW`、`UNKNOWN`を意味どおりにcomponentへ割り当てる。
+- Candidate pattern/component: skeleton、empty state、error message、status、disabled control、recovery actionなどの同等component。
+- Verification: `UNKNOWN != ERROR`、`EMPTY != ERROR`、`UNAVAILABLE != FAILED`、および色以外のstatus cueを確認する。
+- Fallback: 状態の意味または遷移が区別できない場合は `NEEDS_DECISION`。
+
+### Responsive Priority
+
+- Rule ID: `RESPONSIVE_PRIORITY`
+- Condition: 画面幅、情報量、操作順、Primary Action、Current State、Critical Information、Recoveryを確認する。
+- Decision: 小画面でもPrimary Action、Current State、Critical Information、Error / Recovery Actionを失わないように優先順位を定める。
+- Candidate pattern/component: responsive layout、priority content、折りたたみ、scroll、または同等layout component。
+- Verification: Device Priorityに沿って主要flowと重要情報が追跡できることを確認する。
+- Fallback: 小画面で何を残すか決められない場合は `NEEDS_DECISION`。
+
+### Accessibility
+
+- Rule ID: `ACCESSIBILITY`
+- Condition: semantic、keyboard、label、focus、typography、contrast、status表現を確認する。
+- Decision: semantic HTML、keyboard operation、explicit labels、visible focus、readable typography、sufficient contrast、color以外のstatus cueを最低条件とする。
+- Candidate pattern/component: native semantic element、accessible form/control、status、focus management、または同等component。
+- Verification: キーボード、screen reader相当のlabel/status、focus、contrast、非色表現を確認する。主観的Visual品質はHuman Visual/UI Acceptanceで確認する。
+- Fallback: Accessibility要件またはstatusの伝達方法が定まらない場合は `NEEDS_DECISION`。
+
+### Conflict and Scope Boundary
+
+- 標準Design RulesはUX原則、component semantics、Accessibility最低条件を定義する。
+- 案件 `docs/design.md` は案件固有のvisual、brand、tokens、採用component、例外を定義する。
+- 案件側の決定が標準の最低条件を満たす範囲では案件側の選択を尊重する。
+- 標準ruleと案件設計が重要UXについて矛盾する、候補componentがない、または判断材料が不足する場合は暗黙PASSせず `NEEDS_DECISION` とする。
+- この契約は `NONE` / `UTILITY` にPRODUCT UIの必須条件を過剰適用せず、特定Framework、component library、brandを強制しない。
+
 ## 10. Visual Review / UI Acceptance
 
 PRODUCTではコードレビューとVisual/UI Reviewを分離する。
