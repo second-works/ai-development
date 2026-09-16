@@ -30,6 +30,18 @@
 - 実装とテストが完了したらPRを作成して、そのIssueの作業を終了する。
 - warning / deprecationはテスト成功と別に評価し、V1を止めない場合でも必要に応じて後続メンテナンスIssueへ記録する。
 
+## AI生成ドキュメント原則
+
+AIが設計文書、Issue、PR本文を生成・更新するときは、網羅性より意思決定の理解速度を優先する。
+
+- **Decision First**: 設計判断は冒頭3行程度で採用案、主要理由、影響を示す。背景より先に結論を置く。ただし、Framework Decisionの判断順序 `Requirements → Rendering Strategy → Application Architecture → Framework` は変更せず、冒頭の要約は判断完了後に記入する。
+- **Non-goals**: 今回扱わない範囲を明示し、未承認の将来拡張や周辺論点を追加しない。
+- **Minimum Documentation**: 意思決定の理解に不要な定型章、コード・diff・Issueから自明な情報、同じ理由の言い換えを省く。安全境界、停止条件、承認、検証、Acceptanceなど既存Gateが要求する今回値は省略しない。
+- **Alternatives**: 原則として `案 / 却下理由` の表で主要な却下理由だけを記録する。比較判断に必要な場合だけ詳細を加える。
+- **PR本文**: 差分、判断、レビュー上の注意点を中心にし、GitHubから確認できる変更ファイル一覧を再掲しない。
+
+生成後は、重複説明、意思決定に不要な章、同じ理由の言い換え、根拠のない将来可能性を削除し、長い背景が結論より前にないことを確認する。簡潔化は既存仕様や必須証拠を削る許可ではない。
+
 ## Adaptive Development Flow / Risk Tier
 
 Issue化前、実装開始時、PR提出前および差分の影響変更時は [docs/adaptive-development-flow.md](docs/adaptive-development-flow.md) に従ってRisk Tierを判定し、Issue / PRへTierと理由を記録する。

@@ -1,9 +1,18 @@
 # Framework Decision
 
+## Decision Summary
+
+- Adopted:
+- Primary reason:
+- Impact:
+
+<!-- 判断完了後に記入する。RequirementsからFrameworkまでの判断順序は変更しない。 -->
+
 <!--
 新規Web案件またはFramework再選定時に、このファイルを案件リポジトリの
 docs/framework-decision.md として具体化する。
 先に要件を記録し、特定Frameworkを前提に欄を埋めない。
+判断に不要な補助項目は対象外理由をまとめて記録できるが、Completion Checklistの必須情報は残す。
 -->
 
 ## Record
@@ -64,14 +73,14 @@ docs/framework-decision.md として具体化する。
 - Data and authentication boundary:
 - Why it follows from Rendering Strategy:
 
-## 4. Framework Candidates
+## 4. Framework Alternatives
 
 | Candidate / version constraint | Requirements fit | Rendering fit | Architecture fit | Runtime / hosting fit | Portability / lock-in | Operational complexity | Decision and reason |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 |  |  |  |  |  |  |  |  |
 |  |  |  |  |  |  |  |  |
 
-<!-- 候補が一つだけの場合は、他候補を比較しない理由をDecision and reasonへ記録する。 -->
+<!-- 候補の採否と主要理由はこの表だけに記録する。候補が一つだけの場合は、他候補を比較しない理由をDecision and reasonへ記録する。 -->
 
 ## 5. Decision
 
@@ -80,13 +89,15 @@ docs/framework-decision.md として具体化する。
 - Selected version or constraint:
 - Adoption reasons:
   -
-- Rejected candidates and reasons:
-  -
 - Known risks and mitigations:
   -
 - Conditions that would invalidate this decision:
   -
 - Re-evaluation trigger:
+
+## Non-goals
+
+- Out of scope:
 
 ## 6. Open Decisions / Escalation
 

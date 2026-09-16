@@ -10,6 +10,12 @@ assignees: []
 
 <!-- このIssueだけで達成すること -->
 
+# Decision Summary
+
+- 採用する実装:
+- 主要理由:
+- 影響:
+
 # Framework Decision 引き継ぎ
 
 - 親IssueのFramework Decision Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
@@ -48,7 +54,7 @@ assignees: []
 - 実装内容:
 - 変更してよい範囲:
 - 原則変更しない範囲:
-- やらないこと:
+- Non-goals（今回扱わないこと）:
 - 完了条件:
 - Parent / Depends on:
 
