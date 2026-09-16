@@ -31,6 +31,14 @@
   ↓
 テンプレに沿って計画書化（未決は推測で埋めない）
   ↓
+Framework Decision
+  ├─ NEEDS_DECISION → 確認して計画を更新 → 再判定。Framework依存のIssue化は停止
+  ├─ DECIDED / NOT_APPLICABLE → 次工程
+  ↓
+UI Level Decision / PRODUCT前提整理
+  ├─ NEEDS_DECISION → 確認して計画を更新 → 再判定。UI依存のIssue化は停止
+  ├─ NONE / UTILITY / PRODUCT → 次工程（PRODUCTは7項目が COMPLETE）
+  ↓
 Plan Review Gate
   ├─ NEEDS_DECISION → 確認して計画を更新 → 再Review
   ├─ PASS → 親Issue / 子Issue
@@ -52,7 +60,7 @@ AI が Framework 名から話し始めたら止める。順番は **要件 → �
 
 ### 2. テンプレで計画書にする
 
-方針が見えたら、次のように依頼する。
+方針が見えたら、次のように依頼する。計画書化のあとにすぐ Issue 化せず、手順 3〜6 を経る。
 
 > 今までの方針で、Nine の計画書の作り方（`docs/plan-authoring.md`）と関連テンプレに沿って計画書を作成してください。  
 > 会話で決まっていない欄は推測で埋めないでください。  
@@ -62,7 +70,15 @@ AI が Framework 名から話し始めたら止める。順番は **要件 → �
 
 「確認してください」だけだと AI が埋めてしまうことがある。**推測で埋めない** を明示する。
 
-### 3. 確認への答え方
+### 3. Framework Decision を先に確定する
+
+新規 Web / UI、または描画方針・構成・Runtime・配備が変わる案件では、[Framework Decision](architecture/framework-decision.md) を Plan Review より前に完了する。順番は **要件 → 画面の出し方 → アプリの形 → Framework**。`NEEDS_DECISION` の間は Framework 依存の計画・Issue化・実装を止める。CLI や文書のみなら理由付き `NOT_APPLICABLE`。
+
+### 4. UI Level と PRODUCT 前提を確定する
+
+[PRODUCT UI Standard](product-ui-standard.md) に従い `NONE` / `UTILITY` / `PRODUCT` を決める。分類できない、または PRODUCT の7項目が未完なら `NEEDS_DECISION` とし、Issue化を止める。
+
+### 5. 確認への答え方
 
 | 答え | 使うとき |
 | --- | --- |
@@ -72,9 +88,9 @@ AI が Framework 名から話し始めたら止める。順番は **要件 → �
 
 「よく分からないからお任せ」は、技術選定や認証など実装の骨格が変わる話には使わない。
 
-### 4. 門番を通してから Issue 化する
+### 6. 門番を通してから Issue 化する
 
-計画書ができたあと（または同じ依頼の後半）で Plan Review する。依頼文の正本は [Plan Review Gate の標準利用方法](plan-review-gate.md#7-標準利用方法)。
+Framework Decision と UI Level が `NEEDS_DECISION` でないことを確認してから Plan Review する。依頼文の正本は [Plan Review Gate の標準利用方法](plan-review-gate.md#7-標準利用方法)。
 
 子Issueのテスト6観点まで計画書に全部書かなくてよい。計画では分割と依存、詳細は子Issueテンプレート。
 
