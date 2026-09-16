@@ -11,6 +11,7 @@ parent="$repo_root/.github/ISSUE_TEMPLATE/parent-issue.md"
 child="$repo_root/.github/ISSUE_TEMPLATE/child-issue.md"
 design="$repo_root/templates/app/docs/design.md"
 readme="$repo_root/README.md"
+authoring="$repo_root/docs/plan-authoring.md"
 
 assert_contains() {
   local file="$1"
@@ -78,6 +79,14 @@ assert_contains "$design" '## Framework Decision Boundary'
 assert_contains "$design" 'このファイルはFrameworkを再選定せず'
 assert_contains "$readme" 'docs/plan-review-gate.md'
 assert_contains "$readme" 'docs/architecture/framework-decision.md'
+assert_contains "$readme" 'docs/plan-authoring.md'
+assert_contains "$readme" 'ChatGPTで要件整理・計画書作成（手順は [`docs/plan-authoring.md`](docs/plan-authoring.md)）'
+assert_contains "$authoring" '会話で決まっていない欄は推測で埋めないでください。'
+assert_contains "$authoring" 'README には手順の全文を置かない'
+assert_contains "$guide" '## 4.4 計画書の作り方（会話）'
+assert_contains "$guide" '[計画書の作り方](plan-authoring.md)'
+assert_contains "$flow" '[計画書の作り方](plan-authoring.md)'
+assert_contains "$doc" '[計画書の作り方](plan-authoring.md)'
 assert_contains "$guide" '- [ ] `docs/architecture/framework-decision.md` を配置'
 
 guide_setup_line="$(grep -nF 'Plan Review正本文書（`docs/plan-review-gate.md`）を配置' "$guide" | cut -d: -f1)"
