@@ -12,6 +12,7 @@ child="$repo_root/.github/ISSUE_TEMPLATE/child-issue.md"
 design="$repo_root/templates/app/docs/design.md"
 readme="$repo_root/README.md"
 authoring="$repo_root/docs/plan-authoring.md"
+sample="$repo_root/templates/planning/web-todo-app-plan.sample.md"
 
 assert_contains() {
   local file="$1"
@@ -86,6 +87,10 @@ assert_contains "$authoring" 'README には手順の全文を置かない'
 assert_contains "$authoring" 'Framework Decision'
 assert_contains "$authoring" 'UI Level Decision / PRODUCT前提整理'
 assert_contains "$authoring" 'NEEDS_DECISION → 確認して計画を更新 → 再判定。Framework依存のIssue化は停止'
+assert_contains "$sample" '| { tag: LOADED, list: EMPTY | NONEMPTY, form: IDLE | INVALID | SUBMITTING }'
+assert_contains "$sample" '`LOADING` や `LOAD_FAILED` のときに `list` と `form` を持たない。'
+assert_contains "$sample" '`title === title.trim()`'
+assert_contains "$sample" '読込時に値を暗黙にtrimして別のTodoへ変換しない'
 assert_contains "$guide" '## 4.4 計画書の作り方（会話）'
 assert_contains "$guide" '[計画書の作り方](plan-authoring.md)'
 assert_contains "$flow" '[計画書の作り方](plan-authoring.md)'

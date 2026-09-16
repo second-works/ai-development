@@ -151,16 +151,18 @@
 
 フィルタは `ALL` / `ACTIVE` / `COMPLETED`。
 
-画面の状態は1本の union にまとめない。同時に成り立つ4軸にする。権限画面（`UNAVAILABLE`）はログインがないため対象外。
+画面の状態は、独立して同時に成り立つ軸と、入れ子でしか成り立たない軸を分ける。権限画面（`UNAVAILABLE`）はログインがないため対象外。
 
-| 軸 | 取りうる値 | 意味 |
-| --- | --- | --- |
-| 読み込み結果 `load` | `LOADING` / `LOADED` / `LOAD_FAILED` | 保存データの取得。失敗時は一覧を空で上書きしない |
-| 一覧内容 `list`（`load=LOADED` のときだけ有効） | `EMPTY` / `NONEMPTY` | 0件か1件以上。`EMPTY` はエラーではない |
-| 操作結果 `notice` | `NONE` / `SAVED` / `SAVE_FAILED` | 追加・完了・削除の直後フィードバック。一覧内容とは独立 |
-| 追加フォーム `form` | `IDLE` / `INVALID` / `SUBMITTING` | 可否。`INVALID` や `SUBMITTING` でも `list` は維持する |
+```text
+load:
+  LOADING
+  | LOAD_FAILED
+  | { tag: LOADED, list: EMPTY | NONEMPTY, form: IDLE | INVALID | SUBMITTING }
 
-`LOAD_FAILED` と `EMPTY` を混ぜない。`SAVED` は `list=NONEMPTY` の上に短い通知を重ねてよい。`form=INVALID` で追加ボタンを押せなくしても、既存一覧は消さない。
+notice: NONE | SAVED | SAVE_FAILED   # load と直交
+```
+
+`LOADING` や `LOAD_FAILED` のときに `list` と `form` を持たない。`LOADED + EMPTY` はエラーではない。`LOADED` 中は `form=INVALID` でも `list` は消えない。`SAVED` は `LOADED` の上に短い通知を重ねてよい（最後の1件を消した直後は `list=EMPTY` でも可）。
 
 ## 主要画面仕様（一覧 = 唯一の主画面）
 
@@ -183,7 +185,7 @@ Accessibility（最低）: 追加ボタンと削除確認はキーボードで�
 
 ```text
 Todo = {
-  id: 文字列（内部で発行。ユーザー入力ではない）
+  id: 空でない文字列（内部で発行。同一一覧で一意。ユーザー入力ではない）
   title: 1〜100文字（前後空白なし）
   status: ACTIVE | COMPLETED
   createdAt: 日時
@@ -192,11 +194,13 @@ Todo = {
 
 保存形式は JSON 配列。読み込み境界の採用挙動は次で固定する（拒否と無視を併用しない）。
 
-- 全体が配列でない、または JSON として壊れている: 一覧全体を `LOAD_FAILED`。空配列で上書きしない
+- 全体が配列でない、または JSON として壊れている: `load=LOAD_FAILED`。空配列で上書きしない
 - 配列の各要素: 必須フィールド（`id`, `title`, `status`, `createdAt`）が型どおりなら **要素単位で採用**。未知フィールドは捨てて既知フィールドだけ残す（将来キー追加の前方互換）
-- 必須フィールド欠落・型不正・`title` が空 / 100文字超 / `status` が `ACTIVE` でも `COMPLETED` でもない要素: **その要素だけ捨てる**。他の正当な要素は残す
-- 正当な要素が0件で、捨てた不正要素が1件以上ある: `LOADED` + `EMPTY`。不正要素があったことは `notice=NONE` のまま一覧説明で出さず、開発者向けログだけ（V1）。利用者には空一覧として扱う
-- 内部では検証済み `Todo` だけを持ち、未知フィールドをアプリ状態へ広げない
+- `id` の不変条件: 空でない文字列。配列内で一意。空文字・空白のみは **その要素だけ捨てる**。同じ `id` が複数ある場合は **先に現れた正当な要素だけ残し、後続の重複は捨てる**
+- `title` の不変条件: 1〜100文字で、`title === title.trim()` を満たす。trim後が空、前後に空白がある、または100文字を超える場合は **その要素だけ捨てる**。読込時に値を暗黙にtrimして別のTodoへ変換しない
+- 必須フィールド欠落・型不正・`status` が `ACTIVE` でも `COMPLETED` でもない要素: **その要素だけ捨てる**。他の正当な要素は残す
+- 正当な要素が0件: `{ tag: LOADED, list: EMPTY }`。不正要素を捨てた事実は V1 では利用者向け `notice` に出さない（開発者向けログのみ）
+- 内部では検証済み `Todo` だけを持ち、未知フィールドをアプリ状態へ広げない。完了切替・削除は検証済み `id` だけをキーにする
 
 ## 外部入力
 
@@ -282,8 +286,8 @@ Harness 追加（新しい AI 作業枠）は V1 でやらない。既存の `./
 | 順 | 子Issue（仮） | 目的 | 依存 |
 | --- | --- | --- | --- |
 | 1 | リポジトリ基盤 | `AGENTS.md`、`scripts/verify.sh`、CI、lockfile、`bin/setup` `bin/doctor` | なし |
-| 2 | Todo モデルと保存 | 検証済み型、`localStorage`、壊れたデータの扱い | 1 |
-| 3 | 追加と一覧 | `list` の EMPTY / NONEMPTY、空入力は `form=INVALID` | 2 |
+| 2 | Todo モデルと保存 | 検証済み型、`id` 非空・一意、未知キー破棄、壊れた JSON は LOAD_FAILED | 1 |
+| 3 | 追加と一覧 | LOADED 配下の EMPTY / NONEMPTY、空入力は `form=INVALID` | 2 |
 | 4 | 完了切替とフィルタ | Todo.status とフィルタ enum、件数 | 3 |
 | 5 | 削除確認 | 破壊操作、キャンセルで不変 | 3 |
 | 6 | 読み込み失敗と再試行 | `LOAD_FAILED` ≠ `EMPTY` | 2 |
