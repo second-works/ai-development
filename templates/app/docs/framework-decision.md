@@ -1,9 +1,18 @@
 # Framework Decision
 
+## Decision Summary
+
+- Adopted:
+- Primary reason:
+- Impact:
+
+<!-- 判断完了後に記入する。RequirementsからFrameworkまでの判断順序は変更しない。 -->
+
 <!--
 新規Web案件またはFramework再選定時に、このファイルを案件リポジトリの
 docs/framework-decision.md として具体化する。
 先に要件を記録し、特定Frameworkを前提に欄を埋めない。
+判断に不要な補助項目は対象外理由をまとめて記録できるが、Completion Checklistの必須情報は残す。
 -->
 
 ## Record
@@ -87,6 +96,18 @@ docs/framework-decision.md として具体化する。
 - Conditions that would invalidate this decision:
   -
 - Re-evaluation trigger:
+
+### Alternatives
+
+| Alternative | Rejection reason |
+| --- | --- |
+|  |  |
+
+<!-- 比較判断に必要な場合だけ詳細を追加する。 -->
+
+## Non-goals
+
+- Out of scope:
 
 ## 6. Open Decisions / Escalation
 

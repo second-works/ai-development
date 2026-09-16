@@ -52,6 +52,29 @@ MEDIUMでは影響と通常テスト、HIGHでは安全境界・復旧・必要�
 
 テンプレートは今回の判断・範囲・証拠を記入し、停止条件、安全境界、検収、レビュー収束の詳細は正本文書を参照する。リンクだけで必要な今回値を省略してはならない。
 
+記述はDecision Firstとし、冒頭で採用案、主要理由、影響を把握できるようにする。Non-goalsへ今回扱わない範囲を記録し、Alternativesは原則として案と主要な却下理由の表にする。背景、用語、将来拡張などの定型章は判断に必要な場合だけ追加する。
+
+生成後は、重複説明、意思決定に不要な章、同じ理由の言い換え、将来の可能性だけを述べる文章を削除する。コード、diff、Issueから自明な内容も再掲しない。ただし、既存Gateが要求する今回値と証拠は削除しない。
+
+Design Decisionの最小構成は次のとおりとする。案件固有の判断や既存Gateに必要な情報がある場合だけ節を追加する。
+
+```md
+# Decision
+採用:
+理由:
+影響:
+
+# Alternatives
+| 案 | 却下理由 |
+| --- | --- |
+
+# Non-goals
+- 今回扱わないもの
+
+# Implementation Notes
+意思決定の理解に必要な場合のみ記載
+```
+
 | Tier | テンプレートに記入する値 | 正本参照で不足しない情報 |
 | --- | --- | --- |
 | LOW | 目的、範囲、理由、テスト証拠を一段落で記入する。 | 必須Gate、Security、Review、人間Merge判断。 |
@@ -88,7 +111,7 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 
 ファイル: `.github/ISSUE_TEMPLATE/parent-issue.md`
 
-親Issueはロードマップ、Plan Reviewの結論、採用案、範囲、子Issue、依存関係、検収計画、現在状態だけを記録する。Deployment、安全境界、検収の詳細はそれぞれの正本文書を参照し、今回の承認状態と例外だけを記入する。
+親Issueはロードマップ、Plan Reviewの結論、採用案、主要理由と影響、Non-goals、範囲、子Issue、依存関係、検収計画、現在状態だけを記録する。Deployment、安全境界、検収の詳細はそれぞれの正本文書を参照し、今回の承認状態と例外だけを記入する。
 
 ## 4.1 デプロイ設計とRelease / Production計画
 
@@ -124,7 +147,7 @@ Plan Reviewは子Issue品質チェックを置き換えません。Issue化後�
 
 ファイル: `.github/ISSUE_TEMPLATE/child-issue.md`
 
-子Issueは目的、変更・非変更範囲、完了条件、依存、Risk Tier、6観点のテスト条件、今回の安全境界と対象SHAを記入する。1子Issue = 1 PRを維持し、MUST不足時は[Issue Quality Check](issue-quality-check.md)に従って停止する。
+子Issueは採用する実装、主要理由と影響、目的、変更範囲、Non-goals、完了条件、依存、Risk Tier、6観点のテスト条件、今回の安全境界と対象SHAを記入する。1子Issue = 1 PRを維持し、MUST不足時は[Issue Quality Check](issue-quality-check.md)に従って停止する。
 
 詳細なDesign Decision Escalation、Security Boundary、Harness、Current Stateのenum、検収とレビュー収束は正本文書を参照する。テンプレートには今回の例外、承認、停止理由、引き継ぎ先だけを記録する。
 
@@ -140,7 +163,7 @@ Plan Reviewは子Issue品質チェックを置き換えません。Issue化後�
 
 ファイル: `.github/pull_request_template.md`
 
-PRには対応Issue、今回の変更、Risk Tierと安全境界、対象SHA、標準検証・CI・Security・Codex Reviewの結果、残課題だけを記録する。修正時は既存PR branchと修正後SHAを記録し、詳細なP2分類・Evidence・Safe Auto-Fix条件は正本文書を参照する。
+PRには対応Issue、差分、判断、レビュー上の注意点、Risk Tierと安全境界、対象SHA、標準検証・CI・Security・Codex Reviewの結果、残課題だけを記録する。GitHubから確認できる変更ファイル一覧は再掲しない。修正時は既存PR branchと修正後SHAを記録し、詳細なP2分類・Evidence・Safe Auto-Fix条件は正本文書を参照する。
 
 CI、Security、Reviewは別ゲートであり、最終Mergeは人間が判断する。
 

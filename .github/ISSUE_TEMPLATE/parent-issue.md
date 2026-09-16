@@ -10,6 +10,12 @@ assignees: []
 
 <!-- プロジェクト全体で達成すること -->
 
+# Decision Summary
+
+- 採用案:
+- 主要理由:
+- 影響:
+
 # Framework Decision
 
 - Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
@@ -56,9 +62,15 @@ assignees: []
 # 今回の範囲
 
 - 今回実装する範囲:
-- やらないこと:
+- Non-goals（今回扱わないこと）:
 - 子Issue（原則 1子Issue = 1 PR）:
 - 依存関係・実装順:
+
+## Alternatives
+
+| 案 | 却下理由 |
+| --- | --- |
+|  |  |
 
 # Agent Security Boundary とリリース判断
 

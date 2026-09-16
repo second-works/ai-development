@@ -69,6 +69,7 @@ UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PR
 
 ## 基本原則
 
+- AI生成文書はDecision First、Non-goals、Minimum Documentationを共通原則とし、既存Gateの必須情報を保ったまま重複と不要な定型章を削る
 - 計画書はIssue化前にPlan Review Gateで実装可能性を確認する
 - ChatGPTは考える
 - GitHubは仕事を管理する

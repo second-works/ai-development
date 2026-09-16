@@ -16,6 +16,8 @@
 
 品質保証は、Codex側の自己チェック、共通の標準検証入口、GitHub Actionsによる機械検証、Codex Code Review、人間の最終判断を組み合わせる。
 
+AI生成ドキュメントはDecision First、Non-goals、Minimum Documentationを共通原則とする。採用案、主要理由、影響を先に示し、Alternativesは原則として案と主要な却下理由の表にする。コード、diff、Issueから自明な情報や定型章を重複させないが、安全境界、停止条件、承認、検証、Acceptanceなど既存Gateの必須情報は維持する。
+
 テンプレート利用プロジェクトでは、ローカル・Agent・GitHub Actionsが同じ `./scripts/verify.sh` を呼び出す。標準検証は lint → type check → test → build の順に実行し、対象外工程は理由付きで明示する。標準検証を実行できない場合や失敗した場合は、commit・PR作成・レビュー依頼へ進まず停止する。
 
 GitHub上の実装完了と本番投入可能な状態は分けて扱う。Release Candidate以降のDeployment as Code設計、判断項目、安全条件は [docs/deployment-release-design.md](deployment-release-design.md) を参照する。
@@ -92,11 +94,11 @@ PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_
 
 親Issueは実装指示ではなくプロジェクト全体のロードマップとして使う。Plan Review GateがPASSまたは理由付きのNOT_APPLICABLEとなった後に作成する。
 
-テンプレートは今回値（Plan Reviewの結論、採用案、範囲、子Issue、依存、検収計画、現在状態）だけを記入する。安全境界、Release、検収の詳細は各正本文書を参照し、今回の承認・例外・停止理由を残す。
+テンプレートはDecision Firstで今回値（Plan Reviewの結論、主要理由、影響、範囲、子Issue、依存、検収計画、現在状態）だけを記入する。Non-goalsに対象外を記録し、安全境界、Release、検収の詳細は各正本文書を参照して、今回の承認・例外・停止理由を残す。
 
 ## 4. 子Issue
 
-子IssueはCodexが実装でき、かつ人間が1 PRとしてレビューできるサイズにする。テンプレートは今回値（目的、範囲、完了条件、依存、Risk Tier、テスト、対象SHA）を記入し、停止条件、安全境界、Harness、Current State、レビュー収束の詳細は正本文書を参照する。
+子IssueはCodexが実装でき、かつ人間が1 PRとしてレビューできるサイズにする。テンプレートは今回値（採用する実装、主要理由と影響、目的、範囲、Non-goals、完了条件、依存、Risk Tier、テスト、対象SHA）を記入し、停止条件、安全境界、Harness、Current State、レビュー収束の詳細は正本文書を参照する。
 
 子IssueはGitHub登録前に `docs/issue-quality-check.md` に従ってMUSTを確認する。MUST不足時はScoreにかかわらず登録・実装開始を停止する。
 

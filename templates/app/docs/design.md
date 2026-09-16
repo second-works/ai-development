@@ -1,6 +1,25 @@
 # Product Design
 
 <!-- PRODUCT案件では、Framework Decision完了後にこのファイルを案件リポジトリの docs/design.md として具体化する。 -->
+<!-- 案件に不要な定型章は削除できる。ただし、PRODUCT UI標準と既存Gateが要求する判断・検証情報は残す。 -->
+
+## Decision Summary
+
+- Adopted:
+- Primary reason:
+- Impact:
+
+## Alternatives
+
+| Alternative | Rejection reason |
+| --- | --- |
+|  |  |
+
+<!-- 比較判断に必要な場合だけ詳細を追加する。 -->
+
+## Non-goals
+
+- Out of scope:
 
 ## Framework Decision Boundary
 
