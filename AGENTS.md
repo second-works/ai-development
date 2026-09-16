@@ -532,6 +532,16 @@ CIの成功をSecurityの成功として扱わない。標準の待機処理はC
 
 fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は各lockfileのディレクトリで `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` と混同しない。パス由来の状態理由はCR/LFをエスケープし、機械可読な状態行を汚染しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
 
+## Full-System Security Audit
+
+Release Candidateを作る案件では、Release判定前に [Deployment / Release Design](docs/deployment-release-design.md) のFull-System Security Auditを実施する。
+
+- PR単位Security Checkは個別差分のGateとして維持し、Full-System Security Auditで置き換えない。
+- RC静的監査と必要なStaging上の確認を、同じRelease CandidateのSHA / artifact identityへ結び付ける。
+- 結果は `PASS / FAIL / NOT_APPLICABLE` で記録し、未実施、`FAIL`、証拠不足、identity不一致ではRelease判定とProduction Deployへ進まない。
+- LOW Riskだけを理由に監査を省略しない。`NOT_APPLICABLE` は対象外理由を必要とする。
+- 監査後にコード、依存関係、Secrets設定、Deploy設定、Release Candidateが変わった場合は、変更後の対象を再監査する。
+
 ## Before PR
 
 プロジェクトで定義されている場合、PR作成前に標準検証入口を実行する。
