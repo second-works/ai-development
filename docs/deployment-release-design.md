@@ -49,7 +49,7 @@ Merge
 ```
 
 Mergeは実装の統合であり、Production Deployの自動実行を意味しない。
-Production Deployは、CI成功、必要なPR単位Security Check、Full-System Security AuditのPASS、Release判定、必要なbackupとmigration確認を満たした後に実行する。
+Production Deployは、CI成功、必要なPR単位Security Check、Full-System Security Auditの`PASS`または理由と適格性を確認した`NOT_APPLICABLE`、Release判定、必要なbackupとmigration確認を満たした後に実行する。
 自動承認が適切でない場合は、GitHub Environmentsの`production`などで人間の承認を要求する。
 
 ## 4. Full-System Security Audit
@@ -77,7 +77,7 @@ Gate結果は次の3値で記録する。
 
 - `PASS`：適用対象の証拠が揃い、すべて同じRelease Candidateを指している。Release判定へ進める。
 - `FAIL`：未解決のSecurity問題がある。Releaseを停止し、修正Issue / PRへ戻す。
-- `NOT_APPLICABLE`：Release工程を持たない成果物、またはセキュリティ影響が実質なく監査対象がない案件に限る。理由を記録する。
+- `NOT_APPLICABLE`：Release工程を持たない成果物、またはセキュリティ影響が実質なく監査対象がない案件に限る。理由と適格性を確認した場合はRelease判定へ進める。
 
 未実施、`FAIL`、証拠不足、Release Candidateとのidentity不一致では、Release判定とProduction Deployへ進めない。
 監査後にコード、依存関係、Secrets設定、Deploy設定、Release Candidateのidentityが変わった場合は、古い`PASS`を再利用せず、変更後のRelease Candidateを再監査する。
@@ -120,7 +120,7 @@ migration失敗時は、後続のDeployやHealth Checkを成功扱いにせず�
 - Secrets、APIキー、個人情報、実データをGit、Issue、PR、ログへ書かない
 - SecretsはGitHub Secrets、GitHub Environment、対象基盤のSecret管理などから実行時に注入する
 - self-hosted runnerは専用アカウント・最小権限・不要な公開ポートなしを基本とする
-- Production Deploy前にCI、必要なPR単位Security Check、Full-System Security Auditを成功させる
+- Production Deploy前にCIと必要なPR単位Security Checkを成功させ、Full-System Security Auditを`PASS`または理由と適格性を確認した`NOT_APPLICABLE`にする
 - backupが必要な変更では、backup成功をDeployの前提条件にする
 - Health Check / Smoke Testの失敗時はRelease失敗として扱い、MonitoringとRollbackへ接続する
 
