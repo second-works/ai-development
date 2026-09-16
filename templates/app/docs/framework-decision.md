@@ -73,14 +73,14 @@ docs/framework-decision.md として具体化する。
 - Data and authentication boundary:
 - Why it follows from Rendering Strategy:
 
-## 4. Framework Candidates
+## 4. Framework Alternatives
 
 | Candidate / version constraint | Requirements fit | Rendering fit | Architecture fit | Runtime / hosting fit | Portability / lock-in | Operational complexity | Decision and reason |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 |  |  |  |  |  |  |  |  |
 |  |  |  |  |  |  |  |  |
 
-<!-- 候補が一つだけの場合は、他候補を比較しない理由をDecision and reasonへ記録する。 -->
+<!-- 候補の採否と主要理由はこの表だけに記録する。候補が一つだけの場合は、他候補を比較しない理由をDecision and reasonへ記録する。 -->
 
 ## 5. Decision
 
@@ -89,21 +89,11 @@ docs/framework-decision.md として具体化する。
 - Selected version or constraint:
 - Adoption reasons:
   -
-- Rejected candidates and reasons:
-  -
 - Known risks and mitigations:
   -
 - Conditions that would invalidate this decision:
   -
 - Re-evaluation trigger:
-
-### Alternatives
-
-| Alternative | Rejection reason |
-| --- | --- |
-|  |  |
-
-<!-- 比較判断に必要な場合だけ詳細を追加する。 -->
 
 ## Non-goals
 

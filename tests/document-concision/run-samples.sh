@@ -29,6 +29,13 @@ for template in \
   require "$template" 'Non-goals'
 done
 
+require templates/app/docs/framework-decision.md '## 4. Framework Alternatives'
+require templates/app/docs/framework-decision.md '候補の採否と主要理由はこの表だけに記録する'
+if grep -Fq -- 'Rejected candidates and reasons:' "$ROOT/templates/app/docs/framework-decision.md"; then
+  printf 'duplicated framework rejection field remains\n' >&2
+  failures=1
+fi
+
 require .github/ISSUE_TEMPLATE/child-issue.md 'Decision Summary'
 require .github/ISSUE_TEMPLATE/child-issue.md 'Non-goals（今回扱わないこと）'
 require .github/pull_request_template.md '# 差分・判断・レビュー上の注意点'
