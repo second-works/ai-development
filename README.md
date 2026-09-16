@@ -8,7 +8,7 @@ ChatGPTで要件整理・設計を行い、GitHub Issueで作業を分解し、C
 
 ## 標準フロー
 
-1. ChatGPTで要件整理・計画書作成
+1. ChatGPTで要件整理・計画書作成（手順は [`docs/plan-authoring.md`](docs/plan-authoring.md)）
 2. Framework Decision（要件 → Rendering Strategy → Application Architecture → Framework）
 3. UI Level Decision / PRODUCT前提整理
 4. Plan Review Gate（Grilling）
@@ -56,6 +56,7 @@ UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PR
 - `docs/nine-standard-ai-development-flow.md` — 標準開発フロー
 - `docs/product-ui-standard.md` — Nine PRODUCT UI Standard v1
 - `docs/architecture/framework-decision.md` — 要件からFrameworkまでの選定順序と判定を定める正本
+- `docs/plan-authoring.md` — 会話から計画書を書く手順（READMEには手順全文を置かない）
 - `docs/plan-review-gate.md` — 計画書の実装前Plan Review正本文書
 - `docs/ai-execution-state.md` — schema v3のCurrent State契約と読み取り専用GitHub観測の利用手順
 - `scripts/collect-github-state.py` — Issue / PR / head SHA / workflow / reviewをJSONへ読み取り専用で収集する補助script
@@ -64,6 +65,7 @@ UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PR
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート
 - `templates/app/docs/design.md` — PRODUCT案件のDesign Source of Truth雛形
 - `templates/app/docs/framework-decision.md` — 案件ごとのFramework選定記録雛形
+- `templates/planning/web-todo-app-plan.sample.md` — Web Todoアプリの計画書記入例（学習用。Nineが特定Frameworkを標準化した例ではない）
 - `.github/pull_request_template.md` — PRテンプレート
 - `.agents/skills/pr-review-fix/SKILL.md` — 既存PRのレビュー修正Skill
 

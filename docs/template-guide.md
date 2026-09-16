@@ -143,6 +143,10 @@ Deploy後は、Health Check / Smoke Testとは別に主要ユースケースを�
 
 Plan Reviewは子Issue品質チェックを置き換えません。Issue化後は従来どおり docs/issue-quality-check.md を使い、1 Issue / 1 PR、CI、Codex Code Review、人間Mergeの流れを維持します。Deployment設計、実利用検証、Issue #30の状態設計原則は各正本文書を参照し、同じ詳細を重複記載しません。
 
+## 4.4 計画書の作り方（会話）
+
+方針は会話で固め、テンプレへ転記する。未決欄は推測で埋めず確認する。手順・依頼文・READMEに全文を置かない理由は [計画書の作り方](plan-authoring.md) を正本とする。記入例は [Web Todo 計画書サンプル](../templates/planning/web-todo-app-plan.sample.md)。Plan Review の判定は [Plan Review Gate](plan-review-gate.md) のままとする。
+
 ## 5. 子Issueテンプレート
 
 ファイル: `.github/ISSUE_TEMPLATE/child-issue.md`
@@ -468,6 +472,12 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 ## 16. 普段の短縮指示
 
 ChatGPTには例えば次のように依頼します。
+
+方針が見えたあと、計画書化（詳細は [計画書の作り方](plan-authoring.md)）:
+
+> 今までの方針で、Nineの計画書の作り方に沿って計画書を作成してください。会話で決まっていない欄は推測で埋めないでください。テンプレ上必要だが未決の項目は候補と推奨を出して確認してください。重要判断が残る場合はNEEDS_DECISIONとし、Issue化しないでください。
+
+計画書のあと、Issue化:
 
 > この計画をNine標準AI開発フローでIssue化して。Issue化前にPlan Review（Grilling）を実施し、PASSまたは理由付きNOT_APPLICABLEの場合だけ親Issue / 子Issueへ変換して。NEEDS_DECISIONの場合はIssue化を止め、Design Decisionの候補案と推奨案を提示して。
 

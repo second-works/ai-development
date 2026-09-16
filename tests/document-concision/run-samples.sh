@@ -19,6 +19,9 @@ require AGENTS.md '安全境界、停止条件、承認、検証、Acceptanceな
 require AGENTS.md '案 / 却下理由'
 require AGENTS.md '変更ファイル一覧を再掲しない'
 require AGENTS.md '重複説明、意思決定に不要な章、同じ理由の言い換え、根拠のない将来可能性を削除'
+require docs/plan-authoring.md '## Decision'
+require docs/plan-authoring.md '## Non-goals'
+require docs/plan-authoring.md '推測で埋めない'
 
 for template in \
   .github/ISSUE_TEMPLATE/parent-issue.md \
