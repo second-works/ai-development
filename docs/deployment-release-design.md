@@ -21,6 +21,7 @@
 | Persistent data | DB、ファイル、vector store、外部ストレージ、backup、logの保存先と、アプリ／コンテナ再作成後も残る仕組み |
 | Deployment method | GitHub Actions、self-hosted runner、Cloudflare連携、VPS等の方式、実行主体、権限、承認方法 |
 | Release Candidate / artifact identity | commit SHA、artifact ID、image digest等で候補を識別し、Stagingで検証した同一成果物をProductionへ昇格させる方法 |
+| Full-System Security Audit | Release Candidate全体の監査対象、使用するSecurity結果、Stagingで確認する境界、結果、対象SHA / artifact identity、証拠参照 |
 | Secrets / external services | Secrets、環境変数、外部API／サービス、GitHub Environmentの利用。値そのものは記録しない |
 | Backup / migration | 永続データ変更前のbackup、DB / schema / vector migration、失敗時の停止・復旧手順 |
 | Post-deploy check | Health Check、Smoke Test、必要なE2E、確認対象、合格条件、失敗時の扱い |
@@ -33,8 +34,10 @@
 ```text
 Merge
   ↓ Release Candidate
+  ↓ RC静的監査
   ↓ Staging Deploy（必要な場合）
-  ↓ E2E / Smoke Test
+  ↓ Staging上のSecurity確認 / E2E / Smoke Test
+  ↓ Full-System Security Audit判定
   ↓ Release判定
   ↓ Production Deploy
   ↓ Post-deploy Health Check
@@ -46,10 +49,41 @@ Merge
 ```
 
 Mergeは実装の統合であり、Production Deployの自動実行を意味しない。
-Production Deployは、CI成功、必要なSecurity Check、Release判定、必要なbackupとmigration確認を満たした後に実行する。
+Production Deployは、CI成功、必要なPR単位Security Check、Full-System Security Auditの`PASS`または理由と適格性を確認した`NOT_APPLICABLE`、Release判定、必要なbackupとmigration確認を満たした後に実行する。
 自動承認が適切でない場合は、GitHub Environmentsの`production`などで人間の承認を要求する。
 
-## 4. 環境別の設計判断
+## 4. Full-System Security Audit
+
+**Full-System Security Audit**は、完成したRelease Candidate全体を対象に、統合後のコード、構成、依存関係、実行環境の境界をRelease判定前に確認するGateである。
+各Issue / PRのSecurity Checkは個別差分を対象とし、このGateはそれらを置き換えない。
+
+Release Candidateを作る案件では、原則として次の証拠を一つのGateへ集約する。
+
+- RC静的監査：完成したコードと構成、認証、認可、権限境界、Secretsやcredentialの混入、Dependencyとsupply chainの既知リスク、CodeQL等の静的解析、API、DB、外部サービス間のtrust boundaryを確認する。
+- Staging上の確認：実行環境で確認する必要がある認証、認可、公開範囲、権限、Secrets注入、外部接続、Production / Deployment設定を確認する。
+- Identity照合：Security結果、監査証拠、Stagingへ配置した成果物が、Release Candidateのcommit SHA、artifact ID、image digest等と一致することを確認する。
+- HIGH Risk確認：認証、認可、Secrets、Production、破壊的変更、Security Gate変更に対して計画した追加検証の完了を確認する。
+
+Stagingを使わない案件では、Design Decisionに記録した代替環境または静的な代替確認を使用する。
+RC静的監査だけで実行環境の確認が必要な項目をPASSにしてはならない。
+
+確認深度は既存のRisk Tierを再利用する。
+
+- `LOW`：既存Security結果とRelease Candidateのidentity照合を中心とする。ただし、LOWだけを理由に監査を省略しない。
+- `MEDIUM`：適用可能な静的監査とStaging上の確認を実施する。
+- `HIGH`：認証、認可、Secrets、Production、破壊的変更、Security Gate変更に対する追加検証と人間承認の状態を確認する。
+
+Gate結果は次の3値で記録する。
+
+- `PASS`：適用対象の証拠が揃い、すべて同じRelease Candidateを指している。Release判定へ進める。
+- `FAIL`：未解決のSecurity問題がある。Releaseを停止し、修正Issue / PRへ戻す。
+- `NOT_APPLICABLE`：Release工程を持たない成果物、またはセキュリティ影響が実質なく監査対象がない案件に限る。理由と適格性を確認した場合はRelease判定へ進める。
+
+未実施、`FAIL`、証拠不足、Release Candidateとのidentity不一致では、Release判定とProduction Deployへ進めない。
+監査後にコード、依存関係、Secrets設定、Deploy設定、Release Candidateのidentityが変わった場合は、古い`PASS`を再利用せず、変更後のRelease Candidateを再監査する。
+`NOT_APPLICABLE`は、既存のPR単位Security Checkを省略する根拠にはならない。
+
+## 5. 環境別の設計判断
 
 ### Cloudflare等のマネージド環境
 
@@ -67,7 +101,7 @@ self-hosted runner、Docker、Compose、Staging、MergeからProductionへの自
 macOSアプリやmacOS専用のローカル運用では、Dockerを使わない選択を標準的な候補として扱う。
 LaunchAgent、アプリバンドル、ローカルデータ、ログ、更新・Rollback方法など、対象環境に合った運用経路を記録する。
 
-## 5. 永続データとRollback
+## 6. 永続データとRollback
 
 アプリやコンテナの再作成と、永続データのライフサイクルを分離する。
 永続データを持つ場合は、少なくとも保存先、backup頻度・保持期間、復元確認、migrationの前後互換性を記録する。
@@ -81,12 +115,12 @@ schema、DB、vector store、indexなどに後方互換性のない変更があ�
 
 migration失敗時は、後続のDeployやHealth Checkを成功扱いにせず、backupからの復旧または安全な再実行手順へ進む。
 
-## 6. Secrets・安全性の最低条件
+## 7. Secretsと安全性の最低条件
 
 - Secrets、APIキー、個人情報、実データをGit、Issue、PR、ログへ書かない
 - SecretsはGitHub Secrets、GitHub Environment、対象基盤のSecret管理などから実行時に注入する
 - self-hosted runnerは専用アカウント・最小権限・不要な公開ポートなしを基本とする
-- Production Deploy前にCIと必要なSecurity Checkを成功させる
+- Production Deploy前にCIと必要なPR単位Security Checkを成功させ、Full-System Security Auditを`PASS`または理由と適格性を確認した`NOT_APPLICABLE`にする
 - backupが必要な変更では、backup成功をDeployの前提条件にする
 - Health Check / Smoke Testの失敗時はRelease失敗として扱い、MonitoringとRollbackへ接続する
 
@@ -94,7 +128,7 @@ Health Check / Smoke Testの成功だけでは、利用者が当初の目的を�
 
 MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判断・実行を検収完了まで遅らせない。実利用検証はMonitoring / Rollbackを妨げない形で行う。
 
-## 7. Design Decisionとエスカレーション
+## 8. Design Decisionとエスカレーション
 
 少なくとも次の判断を、プロジェクトの親Issueまたは設計記録に残す。
 
@@ -110,7 +144,7 @@ Issue本文や親IssueのDesign Decisionにない重要な設計判断が実装�
 選択肢、推奨案、影響範囲、親Issue更新または追加Issueの要否を提示し、人間の決定後に記録を更新する。
 Docker化、Kubernetes導入、全プロジェクトのCloudflare統一、大規模な既存アプリ移行は、このIssueの自動的な完了条件ではない。
 
-## 8. 完了チェック
+## 9. 完了チェック
 
 - [ ] GitHub上の実装完了と本番投入可能を別状態として記録した
 - [ ] Production runtime、Container、Persistent dataを記録した
@@ -120,4 +154,5 @@ Docker化、Kubernetes導入、全プロジェクトのCloudflare統一、大規
 - [ ] Production Deploy後のHealth Check、Monitoring、Rollbackを記録した
 - [ ] データの後方互換性または非互換時の停止・移行方法を確認した
 - [ ] CI、Security Check、秘密情報の扱いを確認した
+- [ ] Full-System Security Auditの結果、対象SHA / artifact identity、証拠参照を記録した
 - [ ] 不要とした工程には理由がある

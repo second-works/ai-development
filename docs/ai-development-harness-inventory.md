@@ -60,7 +60,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | E-03 | Design DecisionとEscalation | E | KEEP | Issueテンプレート、AGENTS.md |
 | E-04 | Safe Auto-Fix / Auto-Merge | E | KEEP | docs/safe-auto-fix-auto-merge.md |
 | E-05 | Child Issue Quality Gate | E | KEEP | AGENTS.md、docs/issue-quality-check.md |
-| E-06 | Deployment Design / Release Gate | E | KEEP | docs/deployment-release-design.md、.github/workflows |
+| E-06 | Deployment Design / Release Gate | E | STRENGTHEN | docs/deployment-release-design.md、.github/workflows |
 | E-07 | RAG Architecture Standard | E | KEEP | AGENTS.md、docs/architecture/rag-guidelines.md、docs/architecture/rag-design.md |
 | E-08 | Test Design / Safe Test Deletion | E | KEEP | AGENTS.md、テスト実装、Issue / PR |
 | E-09 | Parent Issue Completion | E | KEEP | AGENTS.md、親Issue、子Issue、PR |
@@ -163,17 +163,17 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 ### E-06 Deployment Design / Release Gate
 
 - **ETCSLV分類**：Execution
-- **解決する失敗モード**：実装PRの完了を本番投入可能と誤認し、Production runtime、永続データ、Secrets、Release判定、Deploy後確認、Monitoring、Rollback、人間承認の設計や前提条件を確認しないまま本番投入すること。
+- **解決する失敗モード**：実装PRの完了を本番投入可能と誤認し、Production runtime、永続データ、Secrets、完成したRelease Candidate全体のSecurity監査、Release判定、Deploy後確認、Monitoring、Rollback、人間承認の設計や前提条件を確認しないまま本番投入すること。
 - **発火条件**：本番投入経路を設計するとき、Release Candidateを作成するとき、またはProduction Deployの可否を判定するとき。
-- **入力 / Context**：対象環境、runtime、Container、Persistent data、Deployment method、commit SHAやartifact identity、Secrets / 外部サービス、backup、migration、Health Check、Smoke Test、Monitoring、Rollback、CI、Security Check、GitHub Environment、人間承認。
-- **出力 / State変更**：実装完了と本番投入可能状態の分離、Release判定、Deploy可否、Post-deploy Health Check、Monitoring開始、Rollback判断、人間承認の記録。
-- **決定論的判定可能か**：対象SHA、CI・Security結果、backup成功、Health Check結果、必要な項目の記録有無は機械確認できる。Release判定、設計選択、人間承認はレビューで確認する。
-- **実行コスト / 運用負荷**：本番投入経路の設計とRelease前後の確認が必要。runtime、データ、backup、migration、Health Check、Rollbackを記録する負荷はあるが、本番障害や復旧不能な変更を防ぐためのゲートである。
-- **重複する仕組み**：S-03はImplementation、Deploy、Product Acceptanceの状態を分離し、V-03はDeploy後の実利用検証と検収を担う。E-06は本番投入前の設計、Release判定、backup・migration・Rollback、人間承認を担い、これらの状態管理や検収を代替しない。
+- **入力 / Context**：対象環境、runtime、Container、Persistent data、Deployment method、Release Candidateのcommit SHAやartifact identity、RC静的監査、Staging上のSecurity確認、Secrets / 外部サービス、Dependency、CodeQL等の静的解析、trust boundary、Production / Deployment設定、backup、migration、Health Check、Smoke Test、Monitoring、Rollback、PR単位Security Check、Risk Tier、GitHub Environment、人間承認。
+- **出力 / State変更**：実装完了と本番投入可能状態の分離、Full-System Security Auditの`PASS / FAIL / NOT_APPLICABLE`、監査対象identityと証拠、Release判定、Deploy可否、Post-deploy Health Check、Monitoring開始、Rollback判断、人間承認の記録。
+- **決定論的判定可能か**：対象SHA / artifact identity、CI、PR単位Security結果、監査証拠のidentity一致、Full-System Security Audit結果、backup成功、Health Check結果、必要な項目の記録有無は機械確認できる。監査範囲、`NOT_APPLICABLE`の適格性、Release判定、設計選択、人間承認はレビューで確認する。
+- **実行コスト / 運用負荷**：本番投入経路の設計とRelease前後の確認に加え、RC静的監査と必要なStaging上のSecurity確認が必要。既存のPR単位Security結果を再利用しつつ、完成成果物のidentity照合と統合後の境界を確認する負荷が増えるが、個別PRでは検出できない境界不整合をRelease前に停止する。
+- **重複する仕組み**：L-02aからL-02cはPR単位のSecurity検査を担う。S-03はImplementation、Deploy、Product Acceptanceの状態を分離し、V-03はDeploy後の実利用検証と検収を担う。E-06はそれらを置き換えず、Release Candidate全体のSecurity監査、本番投入前の設計、Release判定、backup・migration・Rollback、人間承認を担う。
 - **安全上必須か**：Production保護、永続データの安全性、Secretsの扱い、Rollback可能性、人間承認を維持するために必要。
-- **判定**：KEEP。
-- **削除・再評価条件**：対象環境、データ、Release判定、backup・migration、Health Check、Monitoring、Rollback、人間承認を同等以上に記録・検証できる独立したRelease機構へ置換する場合に再評価する。
-- **関連Issue / 正本文書**：#56、E-06。Issue #56の監査条件とこの項目の判定を追跡する。 正本：docs/deployment-release-design.md、.github/workflows、templates/verification。
+- **判定**：STRENGTHEN。
+- **削除・再評価条件**：Release Candidate全体のSecurity監査、対象identity、停止と再監査、対象環境、データ、Release判定、backup・migration、Health Check、Monitoring、Rollback、人間承認を同等以上に記録・検証できる独立したRelease機構へ置換する場合に再評価する。
+- **関連Issue / 正本文書**：#56、#110、E-06。Issue #110でFull-System Security Audit、identity照合、停止と再監査条件を追加した。正本：docs/deployment-release-design.md、.github/workflows、templates/verification。
 
 ### E-07 RAG Architecture Standard
 

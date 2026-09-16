@@ -194,8 +194,10 @@ Merge後のProduction工程は、対象環境とリスクに応じて次の順�
 ```text
 Merge
   ↓ Release Candidate
+  ↓ RC静的監査
   ↓ Staging Deploy（必要な場合）
-  ↓ E2E / Smoke Test
+  ↓ Staging上のSecurity確認 / E2E / Smoke Test
+  ↓ Full-System Security Audit判定
   ↓ Release判定
   ↓ Production Deploy
   ↓ Post-deploy Health Check
@@ -205,6 +207,7 @@ Merge
 Stagingを省略する場合は、親IssueまたはDesign Decisionに理由と代替確認方法を記録する。
 CloudflareでDockerが不要な構成、Home PC / VPSのself-hosted runnerとDocker Compose、macOS固有アプリのDockerなし運用は、それぞれ候補として比較するが一律に強制しない。
 永続データ、Secrets、backup、migration、Rollbackとデータ互換性をProduction計画に含める。
+Full-System Security AuditはRelease Candidate全体を対象とし、PR単位Security Checkを置き換えない。静的監査と必要なStaging上の確認を同じRelease Candidateへ結び付け、`PASS`または理由と適格性を確認した`NOT_APPLICABLE`の後だけRelease判定へ進む。
 詳細な記録項目は [docs/deployment-release-design.md](deployment-release-design.md) を参照する。
 
 Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオを実行し、計画時の目的・成功条件と照合して検収判定を行う。Plan Reviewで整理した主要予測・失敗仮説は、実利用検証で実績・失敗した前提・不要 / 過剰設計・予期せぬ問題・次回の教訓と照合する。これは既存のProduct Accepted記録項目であり、新しいGateや台帳を追加しない。`Implementation Done`、`Deployed`、`Product Accepted` は別状態として記録する。詳細な検収計画・結果・発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) に従う。

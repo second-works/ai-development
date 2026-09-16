@@ -51,8 +51,10 @@ Health Check / Smoke Testとは別に、利用者として主要ユースケー�
 ```text
 Merge
   ↓ Release Candidate
+  ↓ RC静的監査
   ↓ Staging Deploy（必要な場合）
-  ↓ E2E / Smoke Test
+  ↓ Staging上のSecurity確認 / E2E / Smoke Test
+  ↓ Full-System Security Audit判定
   ↓ Release判定
   ↓ Production Deploy
   ↓ Post-deploy Health Check
@@ -64,7 +66,7 @@ Merge
      └─ Not Accepted / Conditional → 原因分類 → 修正Issue / 改善Issue
 ```
 
-Stagingを省略する場合は、既存のDeployment設計に従って理由と代替確認方法を記録する。E2Eで自動化できる項目は自動化してよいが、UX、操作感、出力の有用性、実データの妥当性などは人間確認の対象として残す。
+Stagingを省略する場合は、既存のDeployment設計に従って理由と代替確認方法を記録する。Full-System Security Auditは`PASS`または理由と適格性を確認した`NOT_APPLICABLE`の後だけRelease判定へ進む。E2Eで自動化できる項目は自動化してよいが、UX、操作感、出力の有用性、実データの妥当性などは人間確認の対象として残す。
 
 MonitoringはPost-deploy Health Check後に開始し、障害時のRollback判断・実行を検収完了まで遅らせない。実利用検証は監視・復旧を妨げない形で行う。
 

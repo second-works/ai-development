@@ -81,6 +81,9 @@ assignees: []
 - Human Approvalが必要な操作と状態:
 - 対象外・例外、残るリスク、代替制御:
 - Release / Production方針、または対象外の理由:
+- Full-System Security Audit対象のRelease Candidate SHA / artifact identity:
+- RC静的監査とStaging上の確認の証拠:
+- Full-System Security Audit結果（PASS / FAIL / NOT_APPLICABLE）と理由:
 
 各項目はチェックだけで済ませず、実際の値と制御内容を記入する。
 
