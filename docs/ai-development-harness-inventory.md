@@ -64,6 +64,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | E-07 | RAG Architecture Standard | E | KEEP | AGENTS.md、docs/architecture/rag-guidelines.md、docs/architecture/rag-design.md |
 | E-08 | Test Design / Safe Test Deletion | E | KEEP | AGENTS.md、テスト実装、Issue / PR |
 | E-09 | Parent Issue Completion | E | KEEP | AGENTS.md、親Issue、子Issue、PR |
+| E-10 | Cloud Agent開発環境確認 | E | KEEP | .cursor/environment.json、.gitignore |
 | C-03 | Adaptive Development Flow | C | SIMPLIFY | docs/adaptive-development-flow.md |
 | C-04 | Human-facing HTML Status Report | C | SIMPLIFY | scripts/render-status-report.py、docs/html-status-report.md |
 | T-01 | CodexとSkills | T | SIMPLIFY | AGENTS.md、.agents/skills |
@@ -219,6 +220,21 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：KEEP。
 - **削除・再評価条件**：子Issue、PR、完了条件、残課題、CI・Security・レビュー、手動確認を同等以上に照合し、親IssueのClose可否を記録できる仕組みへ置換する場合に再評価する。
 - **関連Issue / 正本文書**：#56、E-09。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、親Issue、子Issue、PR。
+
+### E-10 Cloud Agent開発環境確認
+
+- **ETCSLV分類**：Execution
+- **解決する失敗モード**：Cloud Agentがテストに必要なPython、Node.js、Bashを欠いたまま起動すること、または補助scriptの構文不正を実行時まで見逃すこと。
+- **発火条件**：Cloud AgentがRepositoryから開発環境をプロビジョニングするときのinstall段階。
+- **入力 / Context**：`.cursor/environment.json`、PATH上の`python3` / `node` / `bash`、`scripts/collect-github-state.py`、`scripts/render-status-report.py`。
+- **出力 / State変更**：ツールチェーンのversion表示、Python bytecode検証、`__pycache__` / `*.pyc`の生成。必要Toolの不在や構文不正では非0終了する。
+- **決定論的判定可能か**：Toolの存在、versionコマンドの終了状態、`py_compile`の成否は機械判定できる。
+- **実行コスト / 運用負荷**：プロビジョニング時にversion確認3件とPython標準ライブラリの構文確認2ファイルを1回実行する軽量な負荷。
+- **重複する仕組み**：L-01のCIもテスト環境を検証するが、E-10はCloud Agentのプロビジョニング時に必要Toolの不在を早期停止する点が異なる。依存packageのinstallやCIの全テストは重複実行しない。
+- **安全上必須か**：Security、Production、Secretsを保護するハーネスではないが、Cloud Agent上の再現可能な検証入口を確保するために必要。
+- **判定**：KEEP。
+- **削除・再評価条件**：Cloud Agentが同じToolと補助scriptの構文をプロビジョニング前に同等以上に検証し、失敗を停止できる標準機構へ置換した場合に再評価する。
+- **関連Issue / 正本文書**：PR #114、E-10。PR #114のCloud Agent開発環境追加とこの判定を追跡する。正本：`.cursor/environment.json`、`.gitignore`。
 
 ### T-01 CodexとSkills
 
