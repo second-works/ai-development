@@ -157,13 +157,12 @@
 load:
   LOADING
   | LOAD_FAILED
-  | { tag: LOADED, list: EMPTY | NONEMPTY }
+  | { tag: LOADED, list: EMPTY | NONEMPTY, form: IDLE | INVALID | SUBMITTING }
 
 notice: NONE | SAVED | SAVE_FAILED   # load と直交
-form:   IDLE | INVALID | SUBMITTING  # load と直交（LOADED 中の追加フォーム）
 ```
 
-`LOADING` や `LOAD_FAILED` のときに `list` を持たない。`LOADED + EMPTY` はエラーではない。`form=INVALID` でも `list` は消えない。`SAVED` は `LOADED` の上に短い通知を重ねてよい（最後の1件を消した直後は `list=EMPTY` でも可）。
+`LOADING` や `LOAD_FAILED` のときに `list` と `form` を持たない。`LOADED + EMPTY` はエラーではない。`LOADED` 中は `form=INVALID` でも `list` は消えない。`SAVED` は `LOADED` の上に短い通知を重ねてよい（最後の1件を消した直後は `list=EMPTY` でも可）。
 
 ## 主要画面仕様（一覧 = 唯一の主画面）
 
@@ -198,7 +197,8 @@ Todo = {
 - 全体が配列でない、または JSON として壊れている: `load=LOAD_FAILED`。空配列で上書きしない
 - 配列の各要素: 必須フィールド（`id`, `title`, `status`, `createdAt`）が型どおりなら **要素単位で採用**。未知フィールドは捨てて既知フィールドだけ残す（将来キー追加の前方互換）
 - `id` の不変条件: 空でない文字列。配列内で一意。空文字・空白のみは **その要素だけ捨てる**。同じ `id` が複数ある場合は **先に現れた正当な要素だけ残し、後続の重複は捨てる**
-- 必須フィールド欠落・型不正・`title` が空 / 100文字超 / `status` が `ACTIVE` でも `COMPLETED` でもない要素: **その要素だけ捨てる**。他の正当な要素は残す
+- `title` の不変条件: 1〜100文字で、`title === title.trim()` を満たす。trim後が空、前後に空白がある、または100文字を超える場合は **その要素だけ捨てる**。読込時に値を暗黙にtrimして別のTodoへ変換しない
+- 必須フィールド欠落・型不正・`status` が `ACTIVE` でも `COMPLETED` でもない要素: **その要素だけ捨てる**。他の正当な要素は残す
 - 正当な要素が0件: `{ tag: LOADED, list: EMPTY }`。不正要素を捨てた事実は V1 では利用者向け `notice` に出さない（開発者向けログのみ）
 - 内部では検証済み `Todo` だけを持ち、未知フィールドをアプリ状態へ広げない。完了切替・削除は検証済み `id` だけをキーにする
 
