@@ -232,11 +232,13 @@ PRODUCT UIでは、重要なcomponent / patternの選択を、見た目の好み
 ### State Mapping
 
 - Rule ID: `STATE_MAPPING`
-- Condition: データ取得、権限、空結果、エラー、未確認状態、利用不能状態を区別する。
-- Decision: `LOADING`、`READY/NORMAL`、`EMPTY`、`SUCCESS`、`ERROR`、`DISABLED`、`UNAVAILABLE/PERMISSION_DENIED`、`NEEDS_REVIEW`、`UNKNOWN`を意味どおりにcomponentへ割り当てる。
+- Condition: データ取得、権限、空結果、エラー、未確認状態、利用不能状態を区別する。複数componentに影響する共有状態や業務状態では、状態の所有者と変更境界も定義する。
+- Decision: `LOADING`、`READY/NORMAL`、`EMPTY`、`SUCCESS`、`ERROR`、`DISABLED`、`UNAVAILABLE/PERMISSION_DENIED`、`NEEDS_REVIEW`、`UNKNOWN`を意味どおりにcomponentへ割り当てる。共有状態はstate owner / source of truthを一意にし、状態変更は明示されたevent/actionと裁定境界を経由させる。
 - Candidate pattern/component: skeleton、empty state、error message、status、disabled control、recovery actionなどの同等component。
-- Verification: `UNKNOWN != ERROR`、`EMPTY != ERROR`、`UNAVAILABLE != FAILED`、および色以外のstatus cueを確認する。
+- Verification: `UNKNOWN != ERROR`、`EMPTY != ERROR`、`UNAVAILABLE != FAILED`、および色以外のstatus cueを確認する。複雑なinteractionでは `Event -> Current State -> Transition -> Resulting State` を追跡できるようにし、不正、二重実行、cancel/complete競合、navigation中のasync完了、stale response、rapid repeated inputを必要に応じて検証する。
 - Fallback: 状態の意味または遷移が区別できない場合は `NEEDS_DECISION`。
+
+共有状態の変更はcomponent間で互いの内部状態を直接変更せず、案件で採用したowner / coordinator / reducer / store / state machine等の明示された境界を経由させる。ただし、これら特定のpattern、ライブラリ、frameworkを標準として強制しない。単純なlocal stateには不要な状態管理契約を過剰に適用しない。
 
 ### Responsive Priority
 

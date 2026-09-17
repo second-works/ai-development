@@ -111,6 +111,8 @@ assert_order "$AGENTS" '4. 案件 `docs/design.md`' '5. component / library固�
 assert_exact_heading "$STANDARD" '## Component Decision Rules'
 assert_exact_heading "$STANDARD" '### Rule Record Contract'
 assert_order "$STANDARD" '## Component Decision Rules' '## 10. Visual Review / UI Acceptance'
+assert_order "$STANDARD" '### State Mapping' '### Responsive Priority'
+assert_order "$STANDARD" '### State Mapping' 'Event -> Current State -> Transition -> Resulting State'
 for rule in \
   'Primary Action|PRIMARY_ACTION' \
   'Selection Pattern|SELECTION_PATTERN' \
@@ -122,6 +124,53 @@ for rule in \
   'Accessibility|ACCESSIBILITY'; do
   IFS='|' read -r heading rule_id <<< "$rule"
   assert_rule_contract "$heading" "$rule_id"
+done
+state_transition_section="$(awk -v heading='### State Ownership / Transition' '
+  $0 == heading { found=1; next }
+  found && /^### / { exit }
+  found && /^## / { exit }
+  found { print }
+' "$DESIGN_TEMPLATE")"
+if [[ -z "$state_transition_section" ]]; then
+  printf 'missing design template state ownership section\n' >&2
+  exit 1
+fi
+for needle in \
+  '- State / domain:' \
+  '業務状態は競合の有無にかかわらず所有者と遷移を記録する。' \
+  '- Owner / source of truth:' \
+  '- Allowed events/actions:' \
+  '- Allowed transitions:' \
+  '- Invalid transition handling:' \
+  '- Concurrent / async handling:' \
+  '- Verification:'; do
+  if ! grep -Fq -- "$needle" <<< "$state_transition_section"; then
+    printf 'missing state transition field: %s\n' "$needle" >&2
+    exit 1
+  fi
+done
+state_mapping_section="$(awk -v heading='### State Mapping' '
+  $0 == heading { found=1; next }
+  found && /^### / { exit }
+  found && /^## / { exit }
+  found { print }
+' "$STANDARD")"
+if [[ -z "$state_mapping_section" ]]; then
+  printf 'missing PRODUCT UI state mapping section\n' >&2
+  exit 1
+fi
+for needle in \
+  'state owner / source of truth' \
+  'event/actionと裁定境界' \
+  'Event -> Current State -> Transition -> Resulting State' \
+  'stale response' \
+  'rapid repeated input' \
+  'component間で互いの内部状態を直接変更せず' \
+  '特定のpattern、ライブラリ、frameworkを標準として強制しない'; do
+  if ! grep -Fq -- "$needle" <<< "$state_mapping_section"; then
+    printf 'missing state mapping contract: %s\n' "$needle" >&2
+    exit 1
+  fi
 done
 for needle in \
   '### Conflict and Scope Boundary' \
@@ -220,6 +269,7 @@ for needle in \
   '## Color Semantics' \
   '## Components' \
   '## UI States' \
+  '### State Ownership / Transition' \
   '## Responsive Rules' \
   '## Accessibility' \
   '## Open Design Decisions'; do
