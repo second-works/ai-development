@@ -149,6 +149,16 @@ for needle in \
     exit 1
   fi
 done
+state_mapping_section="$(awk -v heading='### State Mapping' '
+  $0 == heading { found=1; next }
+  found && /^### / { exit }
+  found && /^## / { exit }
+  found { print }
+' "$STANDARD")"
+if [[ -z "$state_mapping_section" ]]; then
+  printf 'missing PRODUCT UI state mapping section\n' >&2
+  exit 1
+fi
 for needle in \
   'state owner / source of truth' \
   'event/actionと裁定境界' \
@@ -157,7 +167,10 @@ for needle in \
   'rapid repeated input' \
   'component間で互いの内部状態を直接変更せず' \
   '特定のpattern、ライブラリ、frameworkを標準として強制しない'; do
-  assert_contains "$STANDARD" "$needle"
+  if ! grep -Fq -- "$needle" <<< "$state_mapping_section"; then
+    printf 'missing state mapping contract: %s\n' "$needle" >&2
+    exit 1
+  fi
 done
 for needle in \
   '### Conflict and Scope Boundary' \
