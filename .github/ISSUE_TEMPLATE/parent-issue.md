@@ -59,6 +59,22 @@ assignees: []
 
 > PRODUCT UIの重要判断は上記順序で参照する。判断材料が欠落・矛盾・不足する場合は推測で補完せず `NEEDS_DECISION` としてDesign Decisionへ接続し、実装を停止する。NONE / UTILITYではPRODUCT UI用の必須欄やVisual/UI Acceptanceを強制しない。
 
+# Technical Reference（理解支援・非Gate）
+
+<!-- プロジェクト全体で人間が理解・レビューするために有用な技術だけを選んで記載する。全項目を機械的に埋めない。 -->
+
+- CLI / Shell:
+- Git / GitHub:
+- Web / API / JSON:
+- Runtime / Package:
+- Data / SQL / Migration:
+- Infrastructure / Docker / CI/CD / IaC:
+- その他の主要技術:
+- AI Verification（diff / test / log / CI等、判断根拠として確認するもの）:
+- 公式Reference / 一次資料:
+
+> Technical Referenceは教育・理解支援のためのリファレンスであり、新しいBlocking Gateではない。案件に関係する項目だけを記載し、子IssueにはそのPRで必要な技術・確認ポイントだけを引き継ぐ。AI出力をそのまま正解とせず、実行結果・diff・test・log・CI等の観測可能な証拠で確認する。
+
 # 今回の範囲
 
 - 今回実装する範囲:
