@@ -175,6 +175,30 @@ require_marker "docs/ai-development-harness-inventory.md" "ETCSLV"
 require_marker "docs/ai-development-harness-inventory.md" "schema v3に従ったphase"
 require_marker "docs/ai-development-harness-inventory.md" "Acceptance対象artifact"
 require_marker "docs/ai-development-harness-inventory.md" "現行Deploy target"
+require_marker "docs/ai-development-harness-inventory.md" "### E-10 Cloud Agent開発環境確認"
+require_marker ".cursor/environment.json" "command -v bash >/dev/null"
+
+environment_install="$(python3 -c 'import json, pathlib, sys; print(json.loads(pathlib.Path(sys.argv[1]).read_text())["install"])' "$ROOT/.cursor/environment.json")"
+mock_path="$(mktemp -d)"
+ln -s "$(command -v python3)" "$mock_path/python3"
+ln -s "$(command -v node)" "$mock_path/node"
+ln -s "$(command -v head)" "$mock_path/head"
+if (cd "$ROOT" && PATH="$mock_path" /bin/sh -c "$environment_install") >/dev/null 2>&1; then
+  printf 'Cloud Agent install must fail when bash is unavailable\n' >&2
+  failures=1
+fi
+
+cat > "$mock_path/bash" <<'SH'
+#!/bin/sh
+exit 42
+SH
+chmod +x "$mock_path/bash"
+if (cd "$ROOT" && PATH="$mock_path" /bin/sh -c "$environment_install") >/dev/null 2>&1; then
+  printf 'Cloud Agent install must propagate bash version failure\n' >&2
+  failures=1
+fi
+rm -rf "$mock_path"
+
 require_workflow_run "bash tests/product-ui-standard/run-samples.sh"
 require_workflow_run "bash tests/issue-template-ui/run-samples.sh"
 require_marker ".github/workflows/ci.yml" "PRODUCT UI standard documentation contract"

@@ -1,0 +1,4 @@
+{
+  "name": "ai-development",
+  "install": "python3 --version && node --version && command -v bash >/dev/null && bash --version && python3 -m py_compile scripts/collect-github-state.py scripts/render-status-report.py"
+}
