@@ -127,6 +127,7 @@ for rule in \
 done
 state_transition_section="$(awk -v heading='### State Ownership / Transition' '
   $0 == heading { found=1; next }
+  found && /^### / { exit }
   found && /^## / { exit }
   found { print }
 ' "$DESIGN_TEMPLATE")"
