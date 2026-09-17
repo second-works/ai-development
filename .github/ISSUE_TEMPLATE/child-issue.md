@@ -49,6 +49,18 @@ assignees: []
 
 > PRODUCT UIの重要判断は親Issueの決定と上記順序を引き継ぐ。判断材料が欠落・矛盾・不足する場合は推測で補完せず `NEEDS_DECISION` としてDesign Decisionへ接続し、実装を停止する。NONE / UTILITYではPRODUCT UI用の必須欄やVisual/UI Acceptanceを強制しない。
 
+# Technical Reference（このPRの理解支援・非Gate）
+
+<!-- 親IssueのTechnical Referenceから、このPRの実装・レビューに直接必要な技術だけを選ぶ。関係しないカテゴリは削除または「なし」とする。 -->
+
+- 使用する主要技術 / コマンド:
+- 今回理解すべき仕組み・概念:
+- 変更が影響する境界（API / DB / Runtime / Infrastructure等）:
+- AI Verificationで確認する証拠（diff / test / log / CI / 実行結果等）:
+- 公式Reference / 一次資料:
+
+> これはBlocking Gateではない。AI/Codexの出力をそのまま正解とせず、このPRで何が変わり、どの証拠で正しさを確認できるかをIssue内で把握できる状態にする。Referenceは必要最小限とし、長い教材や一般論をIssueへ複製しない。
+
 # 今回の変更
 
 - 実装内容:
