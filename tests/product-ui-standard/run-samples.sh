@@ -137,6 +137,7 @@ if [[ -z "$state_transition_section" ]]; then
 fi
 for needle in \
   '- State / domain:' \
+  '業務状態は競合の有無にかかわらず所有者と遷移を記録する。' \
   '- Owner / source of truth:' \
   '- Allowed events/actions:' \
   '- Allowed transitions:' \
