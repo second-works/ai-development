@@ -155,7 +155,7 @@ PRODUCT UIのcomponent / pattern判断は、標準 `docs/product-ui-standard.md`
 
 ### State Ownership / Transition
 
-<!-- 複数component、非同期処理、navigation、modal、destructive actionなどで状態競合の可能性がある場合に記録する。単純なlocal stateは過剰に書かない。 -->
+<!-- 複数component、業務状態、非同期処理、navigation、modal、destructive actionなどで記録が必要な場合に使う。業務状態は競合の有無にかかわらず所有者と遷移を記録する。単純なlocal stateは過剰に書かない。 -->
 
 - State / domain:
 - Owner / source of truth:

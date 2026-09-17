@@ -125,6 +125,28 @@ for rule in \
   IFS='|' read -r heading rule_id <<< "$rule"
   assert_rule_contract "$heading" "$rule_id"
 done
+state_transition_section="$(awk -v heading='### State Ownership / Transition' '
+  $0 == heading { found=1; next }
+  found && /^## / { exit }
+  found { print }
+' "$DESIGN_TEMPLATE")"
+if [[ -z "$state_transition_section" ]]; then
+  printf 'missing design template state ownership section\n' >&2
+  exit 1
+fi
+for needle in \
+  '- State / domain:' \
+  '- Owner / source of truth:' \
+  '- Allowed events/actions:' \
+  '- Allowed transitions:' \
+  '- Invalid transition handling:' \
+  '- Concurrent / async handling:' \
+  '- Verification:'; do
+  if ! grep -Fq -- "$needle" <<< "$state_transition_section"; then
+    printf 'missing state transition field: %s\n' "$needle" >&2
+    exit 1
+  fi
+done
 for needle in \
   'state owner / source of truth' \
   'event/actionと裁定境界' \
@@ -233,13 +255,6 @@ for needle in \
   '## Components' \
   '## UI States' \
   '### State Ownership / Transition' \
-  '- State / domain:' \
-  '- Owner / source of truth:' \
-  '- Allowed events/actions:' \
-  '- Allowed transitions:' \
-  '- Invalid transition handling:' \
-  '- Concurrent / async handling:' \
-  '- Verification:' \
   '## Responsive Rules' \
   '## Accessibility' \
   '## Open Design Decisions'; do
