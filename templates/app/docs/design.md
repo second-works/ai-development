@@ -153,6 +153,18 @@ PRODUCT UIのcomponent / pattern判断は、標準 `docs/product-ui-standard.md`
 
 <!-- UNKNOWN != ERROR、EMPTY != ERROR、UNAVAILABLE != FAILED。状態を色だけで表現しない。 -->
 
+### State Ownership / Transition
+
+<!-- 複数component、非同期処理、navigation、modal、destructive actionなどで状態競合の可能性がある場合に記録する。単純なlocal stateは過剰に書かない。 -->
+
+- State / domain:
+- Owner / source of truth:
+- Allowed events/actions:
+- Allowed transitions:
+- Invalid transition handling:
+- Concurrent / async handling:
+- Verification:
+
 ## Responsive Rules
 
 - Breakpoints or behavior changes:

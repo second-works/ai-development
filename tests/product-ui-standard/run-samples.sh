@@ -111,6 +111,8 @@ assert_order "$AGENTS" '4. 案件 `docs/design.md`' '5. component / library固�
 assert_exact_heading "$STANDARD" '## Component Decision Rules'
 assert_exact_heading "$STANDARD" '### Rule Record Contract'
 assert_order "$STANDARD" '## Component Decision Rules' '## 10. Visual Review / UI Acceptance'
+assert_order "$STANDARD" '### State Mapping' '### Responsive Priority'
+assert_order "$STANDARD" '### State Mapping' 'Event -> Current State -> Transition -> Resulting State'
 for rule in \
   'Primary Action|PRIMARY_ACTION' \
   'Selection Pattern|SELECTION_PATTERN' \
@@ -122,6 +124,16 @@ for rule in \
   'Accessibility|ACCESSIBILITY'; do
   IFS='|' read -r heading rule_id <<< "$rule"
   assert_rule_contract "$heading" "$rule_id"
+done
+for needle in \
+  'state owner / source of truth' \
+  'event/actionと裁定境界' \
+  'Event -> Current State -> Transition -> Resulting State' \
+  'stale response' \
+  'rapid repeated input' \
+  'component間で互いの内部状態を直接変更せず' \
+  '特定のpattern、ライブラリ、frameworkを標準として強制しない'; do
+  assert_contains "$STANDARD" "$needle"
 done
 for needle in \
   '### Conflict and Scope Boundary' \
@@ -220,6 +232,14 @@ for needle in \
   '## Color Semantics' \
   '## Components' \
   '## UI States' \
+  '### State Ownership / Transition' \
+  '- State / domain:' \
+  '- Owner / source of truth:' \
+  '- Allowed events/actions:' \
+  '- Allowed transitions:' \
+  '- Invalid transition handling:' \
+  '- Concurrent / async handling:' \
+  '- Verification:' \
   '## Responsive Rules' \
   '## Accessibility' \
   '## Open Design Decisions'; do
