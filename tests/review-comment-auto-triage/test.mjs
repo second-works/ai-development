@@ -121,6 +121,28 @@ test("undecided comments route to a human fallback", async () => {
   assert.equal(result.fallback_reason, "low_confidence");
 });
 
+test("high-risk no-action comments route to a human before no-action recording", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => response({
+          needs_action: { type: "noul", noul: 0.1 },
+          high_risk: { type: "noul", noul: 0.99 },
+        }),
+      },
+    },
+    input: { ...input, existing_decision: null },
+    mode: "limited_automation",
+    minConfidence: 0.1,
+    clock,
+  });
+
+  assert.equal(result.decision, "no_action");
+  assert.equal(result.high_risk, true);
+  assert.equal(result.routed_to, "human");
+  assert.equal(result.fallback_reason, "high_risk");
+});
+
 test("low confidence is an explicit fallback in limited automation", async () => {
   const result = await runDecisionLayer({
     env: {
@@ -183,6 +205,20 @@ test("non-finite route configuration fails closed", async () => {
   assert.equal(result.fallback_reason, "invalid_route_config");
 });
 
+test("invalid input preserves the active execution mode in the fallback", async () => {
+  const result = await runDecisionLayer({
+    env: { AI: { run: async () => response() } },
+    input: { body: "missing comment id" },
+    mode: "limited_automation",
+    minConfidence: 0.1,
+    clock,
+  });
+
+  assert.equal(result.mode, "limited_automation");
+  assert.equal(result.final_result, "fallback");
+  assert.equal(result.fallback_reason, "invalid_comment_id");
+});
+
 test("invalid choice output falls back as an unparseable response", async () => {
   const result = await runDecisionLayer({
     env: {
@@ -237,6 +273,24 @@ test("route derivation never auto-routes security or high priority comments", ()
     highRisk: false,
     confidence: 1,
     minConfidence: 0.1,
+  }), "human");
+  assert.equal(deriveRoute({
+    decision: "no_action",
+    category: "bug",
+    priority: "p2",
+    autoFixable: true,
+    highRisk: true,
+    confidence: 1,
+    minConfidence: 0.1,
+  }), "human");
+  assert.equal(deriveRoute({
+    decision: "no_action",
+    category: "bug",
+    priority: "p2",
+    autoFixable: true,
+    highRisk: false,
+    confidence: 0.5,
+    minConfidence: 0.8,
   }), "human");
   assert.equal(deriveRoute({
     decision: "action_required",

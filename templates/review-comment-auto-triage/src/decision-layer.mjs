@@ -160,13 +160,14 @@ function comparisonWithExisting(comment, result) {
 }
 
 export function deriveRoute({ decision, category, priority, autoFixable, highRisk, confidence, minConfidence }) {
-  if (decision === "no_action") return "record_only";
-  if (decision !== "action_required") return "human";
-  if (highRisk === true) return "human";
-  if (category === "security" || priority === "p0" || priority === "p1") return "human";
   if (!Number.isFinite(minConfidence) || confidence === null || confidence < minConfidence) {
     return "human";
   }
+  if (highRisk === true || category === "security" || priority === "p0" || priority === "p1") {
+    return "human";
+  }
+  if (decision === "no_action") return "record_only";
+  if (decision !== "action_required") return "human";
   return autoFixable ? "codex" : "human";
 }
 
@@ -213,7 +214,7 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
   try {
     comment = normalizeReviewComment(input);
   } catch (error) {
-    return fallbackResult("unknown", error instanceof Error ? error.message : "invalid_input", clock.now() - started);
+    return fallbackResult("unknown", error instanceof Error ? error.message : "invalid_input", clock.now() - started, mode);
   }
 
   if (mode !== "shadow" && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
