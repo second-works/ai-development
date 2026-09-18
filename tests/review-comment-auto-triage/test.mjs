@@ -81,6 +81,46 @@ test("high-risk comments always route to a human", async () => {
   assert.equal(result.fallback_reason, "high_risk");
 });
 
+test("high-risk noul output routes to a human even when other fields look safe", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => response({
+          high_risk: { type: "noul", noul: 0.99 },
+        }),
+      },
+    },
+    input: { ...input, existing_decision: null },
+    mode: "limited_automation",
+    minConfidence: 0.1,
+    clock,
+  });
+
+  assert.equal(result.high_risk, true);
+  assert.equal(result.routed_to, "human");
+  assert.equal(result.fallback_reason, "high_risk");
+});
+
+test("undecided comments route to a human fallback", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => response({
+          needs_action: { type: "noul", noul: 0.5 },
+        }),
+      },
+    },
+    input: { ...input, existing_decision: null },
+    mode: "limited_automation",
+    minConfidence: 0.1,
+    clock,
+  });
+
+  assert.equal(result.decision, "undecided");
+  assert.equal(result.routed_to, "human");
+  assert.equal(result.fallback_reason, "low_confidence");
+});
+
 test("low confidence is an explicit fallback in limited automation", async () => {
   const result = await runDecisionLayer({
     env: {
@@ -130,6 +170,39 @@ test("invalid route configuration fails closed", async () => {
   assert.equal(result.fallback_reason, "invalid_route_config");
 });
 
+test("non-finite route configuration fails closed", async () => {
+  const result = await runDecisionLayer({
+    env: { AI: { run: async () => response() } },
+    input,
+    mode: "limited_automation",
+    minConfidence: Number.NaN,
+    clock,
+  });
+
+  assert.equal(result.final_result, "fallback");
+  assert.equal(result.fallback_reason, "invalid_route_config");
+});
+
+test("invalid choice output falls back as an unparseable response", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => response({
+          category: { type: "choice", choice: "garbage", confidence: 0.99 },
+        }),
+      },
+    },
+    input,
+    mode: "limited_automation",
+    minConfidence: 0.1,
+    clock,
+  });
+
+  assert.equal(result.final_result, "fallback");
+  assert.equal(result.fallback_reason, "unparseable_response");
+  assert.equal(result.routed_to, "human");
+});
+
 test("route derivation never auto-routes security or high priority comments", () => {
   assert.equal(deriveRoute({
     decision: "action_required",
@@ -146,6 +219,33 @@ test("route derivation never auto-routes security or high priority comments", ()
     autoFixable: true,
     confidence: 1,
     minConfidence: 0.1,
+  }), "human");
+  assert.equal(deriveRoute({
+    decision: "action_required",
+    category: "bug",
+    priority: "p2",
+    autoFixable: true,
+    highRisk: true,
+    confidence: 1,
+    minConfidence: 0.1,
+  }), "human");
+  assert.equal(deriveRoute({
+    decision: "undecided",
+    category: "bug",
+    priority: "p2",
+    autoFixable: true,
+    highRisk: false,
+    confidence: 1,
+    minConfidence: 0.1,
+  }), "human");
+  assert.equal(deriveRoute({
+    decision: "action_required",
+    category: "bug",
+    priority: "p2",
+    autoFixable: true,
+    highRisk: false,
+    confidence: 1,
+    minConfidence: Number.NaN,
   }), "human");
 });
 

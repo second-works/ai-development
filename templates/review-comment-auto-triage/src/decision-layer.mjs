@@ -122,14 +122,15 @@ function readNoul(answer) {
 }
 
 function readChoice(answer, allowed) {
-  const value = typeof answer?.choice === "string" && allowed.includes(answer.choice)
+  const valid = typeof answer?.choice === "string" && allowed.includes(answer.choice);
+  const value = valid
     ? answer.choice
     : null;
   const confidence = finiteProbability(answer?.confidence);
   const probabilities = answer?.probabilities && typeof answer.probabilities === "object"
     ? answer.probabilities
     : null;
-  return { value, confidence, probabilities };
+  return { value, confidence, probabilities, valid };
 }
 
 function conservativeConfidence(values) {
@@ -158,10 +159,12 @@ function comparisonWithExisting(comment, result) {
   };
 }
 
-export function deriveRoute({ decision, category, priority, autoFixable, confidence, minConfidence }) {
-  if (decision !== "action_required") return "record_only";
+export function deriveRoute({ decision, category, priority, autoFixable, highRisk, confidence, minConfidence }) {
+  if (decision === "no_action") return "record_only";
+  if (decision !== "action_required") return "human";
+  if (highRisk === true) return "human";
   if (category === "security" || priority === "p0" || priority === "p1") return "human";
-  if (typeof minConfidence !== "number" || confidence === null || confidence < minConfidence) {
+  if (!Number.isFinite(minConfidence) || confidence === null || confidence < minConfidence) {
     return "human";
   }
   return autoFixable ? "codex" : "human";
@@ -213,7 +216,7 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
     return fallbackResult("unknown", error instanceof Error ? error.message : "invalid_input", clock.now() - started);
   }
 
-  if (mode !== "shadow" && (typeof minConfidence !== "number" || minConfidence < 0 || minConfidence > 1)) {
+  if (mode !== "shadow" && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {
     return fallbackResult(comment.comment_id, "invalid_route_config", clock.now() - started, mode);
   }
 
@@ -229,6 +232,9 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
     const highRiskProbability = readNoul(answers.high_risk);
     const category = readChoice(answers.category, CATEGORIES);
     const priority = readChoice(answers.priority, PRIORITIES);
+    if (!category.valid || !priority.valid) {
+      return fallbackResult(comment.comment_id, "unparseable_response", clock.now() - started, mode);
+    }
     const decision = needsActionProbability !== null && needsActionProbability > 0.5
       ? "action_required"
       : needsActionProbability !== null && needsActionProbability < 0.5 ? "no_action" : "undecided";
@@ -248,6 +254,7 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
         category: category.value,
         priority: priority.value,
         autoFixable,
+        highRisk,
         confidence,
         minConfidence,
       });
