@@ -14,7 +14,7 @@ Issue #116のPhase 1向け、Cloudflare Workers AI `typesafe/jev`を使ったDec
 
 ## 入出力
 
-入力の最低要件は`comment_id`と`body`です。`path`、`line`、`diff_hunk`、PRのrepository/number/head SHAは任意の相関情報として受け取ります。`existing_decision`を渡すと、Jev結果との差分を記録します。
+入力の最低要件は`comment_id`と`body`です。`path`、`line`、`diff_hunk`、PRのrepository/number/head SHAは任意の相関情報として受け取ります。`existing_decision`を渡すと、Jev結果との差分を記録します。既存判断は許可されたフィールドと列挙値だけを受け付け、不正なbaselineは`invalid_existing_decision`としてfallbackします。
 
 結果にはIssueの記録項目を含めます。
 

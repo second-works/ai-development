@@ -243,6 +243,20 @@ test("invalid input preserves the active execution mode in the fallback", async 
   assert.equal(result.fallback_reason, "invalid_comment_id");
 });
 
+test("invalid existing decisions never enter shadow comparison", async () => {
+  for (const existing_decision of [[], { category: "not-a-category" }]) {
+    const result = await runDecisionLayer({
+      env: { AI: { run: async () => response() } },
+      input: { ...input, existing_decision },
+      clock,
+    });
+
+    assert.equal(result.final_result, "fallback");
+    assert.equal(result.fallback_reason, "invalid_existing_decision");
+    assert.equal(result.comparison, null);
+  }
+});
+
 test("invalid choice output falls back as an unparseable response", async () => {
   const result = await runDecisionLayer({
     env: {
@@ -281,6 +295,31 @@ test("answer type mismatches fall back as an unparseable response", async () => 
   assert.equal(result.final_result, "fallback");
   assert.equal(result.fallback_reason, "unparseable_response");
   assert.equal(result.routed_to, "human");
+});
+
+test("invalid answer payloads fall back as an unparseable response", async () => {
+  for (const [field, answer] of [
+    ["high_risk", { type: "noul", noul: 2 }],
+    ["category", { type: "choice", choice: "bug", confidence: -0.1 }],
+  ]) {
+    const result = await runDecisionLayer({
+      env: {
+        AI: {
+          run: async () => response({
+            [field]: answer,
+          }),
+        },
+      },
+      input,
+      mode: "limited_automation",
+      minConfidence: 0.1,
+      clock,
+    });
+
+    assert.equal(result.final_result, "fallback");
+    assert.equal(result.fallback_reason, "unparseable_response");
+    assert.equal(result.routed_to, "human");
+  }
 });
 
 test("route derivation never auto-routes security or high priority comments", () => {

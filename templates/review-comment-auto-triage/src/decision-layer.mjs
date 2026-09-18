@@ -2,7 +2,12 @@ const MODEL = "typesafe/jev";
 const MAX_COMMENT_LENGTH = 20_000;
 const CATEGORIES = ["security", "bug", "test", "style", "docs", "other"];
 const PRIORITIES = ["p0", "p1", "p2", "p3"];
+const DECISIONS = ["action_required", "no_action", "undecided"];
 const ROUTES = ["codex", "human", "record_only"];
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 
 function finiteProbability(value) {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
@@ -15,6 +20,33 @@ function requiredString(value, field) {
     throw new Error(`invalid_${field}`);
   }
   return value.trim();
+}
+
+function normalizeExistingDecision(value) {
+  if (value === undefined || value === null) return null;
+  if (!isRecord(value) || Object.keys(value).length === 0) {
+    throw new Error("invalid_existing_decision");
+  }
+
+  const allowedFields = new Set(["decision", "category", "priority", "auto_fixable"]);
+  const normalized = {};
+  for (const [field, fieldValue] of Object.entries(value)) {
+    if (!allowedFields.has(field)) throw new Error("invalid_existing_decision");
+    if (field === "decision" && !DECISIONS.includes(fieldValue)) {
+      throw new Error("invalid_existing_decision");
+    }
+    if (field === "category" && fieldValue !== null && !CATEGORIES.includes(fieldValue)) {
+      throw new Error("invalid_existing_decision");
+    }
+    if (field === "priority" && fieldValue !== null && !PRIORITIES.includes(fieldValue)) {
+      throw new Error("invalid_existing_decision");
+    }
+    if (field === "auto_fixable" && fieldValue !== null && typeof fieldValue !== "boolean") {
+      throw new Error("invalid_existing_decision");
+    }
+    normalized[field] = fieldValue;
+  }
+  return normalized;
 }
 
 /**
@@ -44,9 +76,7 @@ export function normalizeReviewComment(input) {
       ? input.pull_request
       : null,
     head_sha: typeof input.head_sha === "string" ? input.head_sha : null,
-    existing_decision: input.existing_decision && typeof input.existing_decision === "object"
-      ? input.existing_decision
-      : null,
+    existing_decision: normalizeExistingDecision(input.existing_decision),
   };
 }
 
@@ -201,25 +231,26 @@ function fallbackResult(commentId, reason, latencyMs, mode = "shadow") {
   };
 }
 
-const EXPECTED_ANSWER_TYPES = {
-  needs_action: "noul",
-  category: "choice",
-  priority: "choice",
-  auto_fixable: "noul",
-  high_risk: "noul",
-};
+function validNoulAnswer(answer) {
+  return isRecord(answer) && answer.type === "noul" && finiteProbability(answer.noul) !== null;
+}
 
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+function validChoiceAnswer(answer, allowed) {
+  return isRecord(answer)
+    && answer.type === "choice"
+    && typeof answer.choice === "string"
+    && allowed.includes(answer.choice)
+    && finiteProbability(answer.confidence) !== null;
 }
 
 function validResponse(response) {
   const answers = response?.answers;
   if (!isRecord(answers)) return false;
-  return Object.entries(EXPECTED_ANSWER_TYPES).every(([key, type]) => {
-    const answer = answers[key];
-    return isRecord(answer) && answer.type === type;
-  });
+  return validNoulAnswer(answers.needs_action)
+    && validChoiceAnswer(answers.category, CATEGORIES)
+    && validChoiceAnswer(answers.priority, PRIORITIES)
+    && validNoulAnswer(answers.auto_fixable)
+    && validNoulAnswer(answers.high_risk);
 }
 
 export async function runDecisionLayer({ env, input, mode = "shadow", minConfidence = null, clock = performance }) {
@@ -312,4 +343,4 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
   }
 }
 
-export { CATEGORIES, MODEL, PRIORITIES, ROUTES };
+export { CATEGORIES, DECISIONS, MODEL, PRIORITIES, ROUTES };
