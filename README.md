@@ -64,6 +64,7 @@ UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PR
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
 - `.github/ISSUE_TEMPLATE/child-issue.md` — 子Issueテンプレート
 - `templates/app/docs/design.md` — PRODUCT案件のDesign Source of Truth雛形
+- `templates/review-comment-auto-triage` — Review Comment Auto-TriageのShadow Mode PoC雛形
 - `templates/app/docs/framework-decision.md` — 案件ごとのFramework選定記録雛形
 - `templates/planning/web-todo-app-plan.sample.md` — Web Todoアプリの計画書記入例（学習用。Nineが特定Frameworkを標準化した例ではない）
 - `.github/pull_request_template.md` — PRテンプレート
