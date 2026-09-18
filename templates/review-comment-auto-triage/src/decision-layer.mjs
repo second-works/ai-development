@@ -201,11 +201,25 @@ function fallbackResult(commentId, reason, latencyMs, mode = "shadow") {
   };
 }
 
+const EXPECTED_ANSWER_TYPES = {
+  needs_action: "noul",
+  category: "choice",
+  priority: "choice",
+  auto_fixable: "noul",
+  high_risk: "noul",
+};
+
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function validResponse(response) {
   const answers = response?.answers;
-  if (!answers || typeof answers !== "object") return false;
-  return ["needs_action", "category", "priority", "auto_fixable", "high_risk"]
-    .every((key) => answers[key] && typeof answers[key] === "object");
+  if (!isRecord(answers)) return false;
+  return Object.entries(EXPECTED_ANSWER_TYPES).every(([key, type]) => {
+    const answer = answers[key];
+    return isRecord(answer) && answer.type === type;
+  });
 }
 
 export async function runDecisionLayer({ env, input, mode = "shadow", minConfidence = null, clock = performance }) {

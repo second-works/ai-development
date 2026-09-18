@@ -263,6 +263,26 @@ test("invalid choice output falls back as an unparseable response", async () => 
   assert.equal(result.routed_to, "human");
 });
 
+test("answer type mismatches fall back as an unparseable response", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => response({
+          high_risk: { type: "choice", noul: 0.01 },
+        }),
+      },
+    },
+    input,
+    mode: "limited_automation",
+    minConfidence: 0.1,
+    clock,
+  });
+
+  assert.equal(result.final_result, "fallback");
+  assert.equal(result.fallback_reason, "unparseable_response");
+  assert.equal(result.routed_to, "human");
+});
+
 test("route derivation never auto-routes security or high priority comments", () => {
   assert.equal(deriveRoute({
     decision: "action_required",
