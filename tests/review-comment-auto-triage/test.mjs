@@ -489,6 +489,24 @@ test("worker endpoint rejects an oversized request before inference", async () =
   assert.deepEqual(await responseFromWorker.json(), { error: "request_too_large" });
 });
 
+test("worker endpoint returns client input validation failures as 400", async () => {
+  let inferenceCalled = false;
+  const request = new Request("https://example.test/triage", {
+    method: "POST",
+    body: JSON.stringify({ body: "missing comment id" }),
+    headers: { "content-type": "application/json", authorization: "Bearer test-secret" },
+  });
+  const responseFromWorker = await worker.fetch(request, {
+    TRIAGE_SHARED_SECRET: "test-secret",
+    AI: { run: async () => { inferenceCalled = true; return response(); } },
+  });
+  const body = await responseFromWorker.json();
+
+  assert.equal(responseFromWorker.status, 400);
+  assert.equal(body.result.fallback_reason, "invalid_comment_id");
+  assert.equal(inferenceCalled, false);
+});
+
 test("worker endpoint rejects a blank limited-automation confidence threshold", async () => {
   let inferenceCalled = false;
   const request = new Request("https://example.test/triage", {

@@ -2,6 +2,13 @@ import { runDecisionLayer } from "./decision-layer.mjs";
 
 const MAX_REQUEST_BYTES = 64 * 1024;
 const AUTH_SCHEME = "Bearer ";
+const CLIENT_INPUT_FALLBACKS = new Set([
+  "invalid_comment",
+  "invalid_comment_id",
+  "invalid_body",
+  "invalid_existing_decision",
+  "comment_too_large",
+]);
 const encoder = new TextEncoder();
 
 function json(data, status = 200) {
@@ -9,6 +16,14 @@ function json(data, status = 200) {
     status,
     headers: { "content-type": "application/json; charset=utf-8" },
   });
+}
+
+function resultStatus(result) {
+  if (result.final_result !== "fallback") return 200;
+  if (CLIENT_INPUT_FALLBACKS.has(result.fallback_reason)) {
+    return 400;
+  }
+  return 502;
 }
 
 async function hasValidSharedSecret(request, env) {
@@ -82,6 +97,6 @@ export default {
         ? Number.NaN
         : Number(rawMinConfidence);
     const result = await runDecisionLayer({ env, input, mode, minConfidence });
-    return json({ result }, result.final_result === "fallback" ? 502 : 200);
+    return json({ result }, resultStatus(result));
   },
 };
