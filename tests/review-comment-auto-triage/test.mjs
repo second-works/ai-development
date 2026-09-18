@@ -67,6 +67,18 @@ test("limited automation routes only safe, confident, auto-fixable work", async 
   assert.equal(result.final_result, "routed");
 });
 
+test("neutral auto-fixability routes to a human fallback", async () => {
+  const result = await runDecisionLayer({
+    env: { AI: { run: async () => response({ auto_fixable: { type: "noul", noul: 0.5 } }) } },
+    input: { ...input, existing_decision: null },
+    mode: "limited_automation",
+    minConfidence: 0.5,
+  });
+  assert.equal(result.decision, "action_required");
+  assert.equal(result.auto_fixable, null);
+  assert.equal(result.routed_to, "human");
+});
+
 test("high-risk comments always route to a human", async () => {
   const result = await runDecisionLayer({
     env: { AI: { run: async () => response({ category: { type: "choice", choice: "security", confidence: 0.99 } }) } },

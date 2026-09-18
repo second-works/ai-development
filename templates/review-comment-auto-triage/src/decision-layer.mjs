@@ -239,7 +239,11 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
     const decision = needsActionProbability !== null && needsActionProbability > 0.5
       ? "action_required"
       : needsActionProbability !== null && needsActionProbability < 0.5 ? "no_action" : "undecided";
-    const autoFixable = autoFixableProbability === null ? null : autoFixableProbability >= 0.5;
+    const autoFixable = autoFixableProbability === null
+      ? null
+      : autoFixableProbability > 0.5 ? true
+      : autoFixableProbability < 0.5 ? false
+      : null;
     const highRisk = highRiskProbability === null ? null : highRiskProbability >= 0.5;
     const confidence = conservativeConfidence([
       certainty(needsActionProbability),
