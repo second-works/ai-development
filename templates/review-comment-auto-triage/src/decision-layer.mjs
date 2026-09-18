@@ -255,11 +255,14 @@ function validResponse(response) {
 
 export async function runDecisionLayer({ env, input, mode = "shadow", minConfidence = null, clock = performance }) {
   const started = clock.now();
+  const fallbackCommentId = isRecord(input) && typeof input.comment_id === "string" && input.comment_id.trim() !== ""
+    ? input.comment_id.trim()
+    : "unknown";
   let comment;
   try {
     comment = normalizeReviewComment(input);
   } catch (error) {
-    return fallbackResult("unknown", error instanceof Error ? error.message : "invalid_input", clock.now() - started, mode);
+    return fallbackResult(fallbackCommentId, error instanceof Error ? error.message : "invalid_input", clock.now() - started, mode);
   }
 
   if (mode !== "shadow" && (!Number.isFinite(minConfidence) || minConfidence < 0 || minConfidence > 1)) {

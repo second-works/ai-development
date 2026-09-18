@@ -263,6 +263,18 @@ test("invalid input preserves the active execution mode in the fallback", async 
   assert.equal(result.fallback_reason, "invalid_comment_id");
 });
 
+test("input validation fallback retains a valid comment id", async () => {
+  const result = await runDecisionLayer({
+    env: { AI: { run: async () => response() } },
+    input: { comment_id: "review-42", body: "" },
+    clock,
+  });
+
+  assert.equal(result.comment_id, "review-42");
+  assert.equal(result.final_result, "fallback");
+  assert.equal(result.fallback_reason, "invalid_body");
+});
+
 test("invalid existing decisions never enter shadow comparison", async () => {
   for (const existing_decision of [[], { category: "not-a-category" }]) {
     const result = await runDecisionLayer({
