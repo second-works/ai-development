@@ -12,6 +12,18 @@ Issue #116のPhase 1向け、Cloudflare Workers AI `typesafe/jev`を使ったDec
 - `wrangler.jsonc`: `AI` bindingとShadow Modeの最小設定例。
 - `tests/review-comment-auto-triage/test.mjs`: API成功、Shadow Mode、既存判断との差分、低confidence、高リスク、API障害の契約テスト。
 
+## HTTP認証
+
+`/triage`は公開URLからWorkers AIを呼び出せないよう、Bearer tokenによる共有Secret認証を必須とします。Secret未設定時はfail-closedで503を返し、認証失敗時はAI推論を実行せず401を返します。
+
+Secretはソースや`wrangler.jsonc`へ書かず、Wrangler Secretとして登録します。
+
+```sh
+wrangler secret put TRIAGE_SHARED_SECRET
+```
+
+呼び出し側は`Authorization: Bearer <登録したSecret>`を付けます。実運用でサービス間接続を使える場合は、公開HTTP入口を置かずService Binding等の内部経路に限定する構成を優先します。
+
 ## 入出力
 
 入力の最低要件は`comment_id`と`body`です。`path`、`line`、`diff_hunk`、PRのrepository/number/head SHAは任意の相関情報として受け取ります。`existing_decision`を渡すと、Jev結果との差分を記録します。既存判断は許可されたフィールドと列挙値だけを受け付け、不正なbaselineは`invalid_existing_decision`としてfallbackします。
@@ -61,7 +73,7 @@ Cloudflareの`AI.run`レスポンスで確認できる利用量は`input_tokens`
 
 ## 実行例
 
-Cloudflare Workerプロジェクトへコピーした上で、`AI` bindingを設定して`wrangler dev`で実行します。実際のアカウント・Workers AI利用量・レイテンシは、認証済みの検証環境でサンプルレビューコメントを用いて測定します。このリポジトリの契約テストは外部APIを呼ばず、秘密情報を要求しません。
+Cloudflare Workerプロジェクトへコピーした上で、`AI` bindingと`TRIAGE_SHARED_SECRET`を設定して`wrangler dev`で実行します。実際のアカウント・Workers AI利用量・レイテンシは、認証済みの検証環境でサンプルレビューコメントを用いて測定します。このリポジトリの契約テストは外部APIを呼ばず、秘密情報を要求しません。
 
 参照:
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { deriveRoute, runDecisionLayer } from "../../templates/review-comment-auto-triage/src/decision-layer.mjs";
+import { deriveRoute, MODEL, runDecisionLayer } from "../../templates/review-comment-auto-triage/src/decision-layer.mjs";
 import worker from "../../templates/review-comment-auto-triage/src/index.mjs";
 
 const input = {
@@ -52,6 +52,26 @@ test("shadow mode records a decision without routing to Codex", async () => {
   assert.deepEqual(result.usage, { input_tokens: 426, output_tokens: 73 });
   assert.equal(result.neuron_usage.status, "unavailable");
   assert.deepEqual(result.comparison.disagreements, ["category"]);
+});
+
+test("uses the documented Workers AI Jev model id", async () => {
+  let model;
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async (modelName) => {
+          model = modelName;
+          return response();
+        },
+      },
+    },
+    input,
+    clock,
+  });
+
+  assert.equal(result.final_result, "shadow_observation");
+  assert.equal(model, MODEL);
+  assert.equal(model, "typesafe/jev");
 });
 
 test("token usage outside the schema contract is normalized to null", async () => {
@@ -399,9 +419,10 @@ test("worker endpoint accepts a bounded comment and keeps Shadow Mode", async ()
   const request = new Request("https://example.test/triage", {
     method: "POST",
     body: JSON.stringify(input),
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: "Bearer test-secret" },
   });
   const responseFromWorker = await worker.fetch(request, {
+    TRIAGE_SHARED_SECRET: "test-secret",
     AI: { run: async () => response() },
   });
   const body = await responseFromWorker.json();
@@ -410,12 +431,47 @@ test("worker endpoint accepts a bounded comment and keeps Shadow Mode", async ()
   assert.equal(body.result.routed_to, "record_only");
 });
 
+test("worker endpoint rejects unauthenticated requests before inference", async () => {
+  let inferenceCalled = false;
+  const request = new Request("https://example.test/triage", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  const responseFromWorker = await worker.fetch(request, {
+    TRIAGE_SHARED_SECRET: "test-secret",
+    AI: { run: async () => { inferenceCalled = true; return response(); } },
+  });
+
+  assert.equal(responseFromWorker.status, 401);
+  assert.deepEqual(await responseFromWorker.json(), { error: "unauthorized" });
+  assert.equal(inferenceCalled, false);
+});
+
+test("worker endpoint fails closed when the shared secret is not configured", async () => {
+  let inferenceCalled = false;
+  const request = new Request("https://example.test/triage", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  const responseFromWorker = await worker.fetch(request, {
+    AI: { run: async () => { inferenceCalled = true; return response(); } },
+  });
+
+  assert.equal(responseFromWorker.status, 503);
+  assert.deepEqual(await responseFromWorker.json(), { error: "auth_not_configured" });
+  assert.equal(inferenceCalled, false);
+});
+
 test("worker endpoint rejects an oversized request before inference", async () => {
   const request = new Request("https://example.test/triage", {
     method: "POST",
     body: JSON.stringify({ comment_id: "large", body: "x".repeat(65 * 1024) }),
+    headers: { authorization: "Bearer test-secret" },
   });
-  const responseFromWorker = await worker.fetch(request, { AI: { run: async () => response() } });
+  const responseFromWorker = await worker.fetch(request, {
+    TRIAGE_SHARED_SECRET: "test-secret",
+    AI: { run: async () => response() },
+  });
 
   assert.equal(responseFromWorker.status, 400);
   assert.deepEqual(await responseFromWorker.json(), { error: "request_too_large" });
@@ -426,9 +482,10 @@ test("worker endpoint rejects a blank limited-automation confidence threshold", 
   const request = new Request("https://example.test/triage", {
     method: "POST",
     body: JSON.stringify(input),
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", authorization: "Bearer test-secret" },
   });
   const responseFromWorker = await worker.fetch(request, {
+    TRIAGE_SHARED_SECRET: "test-secret",
     TRIAGE_MODE: "limited_automation",
     MIN_CONFIDENCE: " ",
     AI: { run: async () => { inferenceCalled = true; return response(); } },

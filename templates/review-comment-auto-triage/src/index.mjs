@@ -1,12 +1,35 @@
 import { runDecisionLayer } from "./decision-layer.mjs";
 
 const MAX_REQUEST_BYTES = 64 * 1024;
+const AUTH_SCHEME = "Bearer ";
+const encoder = new TextEncoder();
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { "content-type": "application/json; charset=utf-8" },
   });
+}
+
+async function hasValidSharedSecret(request, env) {
+  const expected = env.TRIAGE_SHARED_SECRET;
+  if (typeof expected !== "string" || expected.length === 0) return null;
+
+  const authorization = request.headers.get("authorization");
+  if (!authorization?.startsWith(AUTH_SCHEME)) return false;
+
+  const presented = authorization.slice(AUTH_SCHEME.length);
+  const [expectedDigest, presentedDigest] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(expected)),
+    crypto.subtle.digest("SHA-256", encoder.encode(presented)),
+  ]);
+  const expectedBytes = new Uint8Array(expectedDigest);
+  const presentedBytes = new Uint8Array(presentedDigest);
+  let difference = expectedBytes.length ^ presentedBytes.length;
+  for (let index = 0; index < expectedBytes.length; index += 1) {
+    difference |= expectedBytes[index] ^ presentedBytes[index];
+  }
+  return difference === 0;
 }
 
 async function readBoundedJson(request) {
@@ -38,6 +61,10 @@ export default {
     if (request.method !== "POST" || url.pathname !== "/triage") {
       return json({ error: "not_found" }, 404);
     }
+
+    const authorized = await hasValidSharedSecret(request, env);
+    if (authorized === null) return json({ error: "auth_not_configured" }, 503);
+    if (!authorized) return json({ error: "unauthorized" }, 401);
 
     let input;
     try {
