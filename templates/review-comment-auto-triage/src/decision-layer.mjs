@@ -174,8 +174,8 @@ export function deriveRoute({ decision, category, priority, autoFixable, highRis
 function usageRecord(response) {
   const usage = response?.usage;
   if (!usage || typeof usage !== "object") return null;
-  const inputTokens = Number.isFinite(usage.input_tokens) ? usage.input_tokens : null;
-  const outputTokens = Number.isFinite(usage.output_tokens) ? usage.output_tokens : null;
+  const inputTokens = Number.isInteger(usage.input_tokens) && usage.input_tokens >= 0 ? usage.input_tokens : null;
+  const outputTokens = Number.isInteger(usage.output_tokens) && usage.output_tokens >= 0 ? usage.output_tokens : null;
   return { input_tokens: inputTokens, output_tokens: outputTokens };
 }
 

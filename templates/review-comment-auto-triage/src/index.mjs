@@ -48,9 +48,12 @@ export default {
     }
 
     const mode = env.TRIAGE_MODE === "limited_automation" ? "limited_automation" : "shadow";
-    const minConfidence = env.MIN_CONFIDENCE === undefined
+    const rawMinConfidence = env.MIN_CONFIDENCE;
+    const minConfidence = rawMinConfidence === undefined
       ? null
-      : Number(env.MIN_CONFIDENCE);
+      : typeof rawMinConfidence === "string" && rawMinConfidence.trim() === ""
+        ? Number.NaN
+        : Number(rawMinConfidence);
     const result = await runDecisionLayer({ env, input, mode, minConfidence });
     return json({ result }, result.final_result === "fallback" ? 502 : 200);
   },

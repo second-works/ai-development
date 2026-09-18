@@ -54,6 +54,18 @@ test("shadow mode records a decision without routing to Codex", async () => {
   assert.deepEqual(result.comparison.disagreements, ["category"]);
 });
 
+test("token usage outside the schema contract is normalized to null", async () => {
+  const aiResponse = response();
+  aiResponse.usage = { input_tokens: -1, output_tokens: 1.5 };
+  const result = await runDecisionLayer({
+    env: { AI: { run: async () => aiResponse } },
+    input,
+    clock,
+  });
+
+  assert.deepEqual(result.usage, { input_tokens: null, output_tokens: null });
+});
+
 test("limited automation routes only safe, confident, auto-fixable work", async () => {
   const result = await runDecisionLayer({
     env: { AI: { run: async () => response() } },
@@ -348,4 +360,23 @@ test("worker endpoint rejects an oversized request before inference", async () =
 
   assert.equal(responseFromWorker.status, 400);
   assert.deepEqual(await responseFromWorker.json(), { error: "request_too_large" });
+});
+
+test("worker endpoint rejects a blank limited-automation confidence threshold", async () => {
+  let inferenceCalled = false;
+  const request = new Request("https://example.test/triage", {
+    method: "POST",
+    body: JSON.stringify(input),
+    headers: { "content-type": "application/json" },
+  });
+  const responseFromWorker = await worker.fetch(request, {
+    TRIAGE_MODE: "limited_automation",
+    MIN_CONFIDENCE: " ",
+    AI: { run: async () => { inferenceCalled = true; return response(); } },
+  });
+  const body = await responseFromWorker.json();
+
+  assert.equal(responseFromWorker.status, 502);
+  assert.equal(body.result.fallback_reason, "invalid_route_config");
+  assert.equal(inferenceCalled, false);
 });
