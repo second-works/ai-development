@@ -24,6 +24,8 @@ GitHub上の実装完了と本番投入可能な状態は分けて扱う。Relea
 
 実装・Deployの完了と、利用者が当初の目的を達成したことも分けて扱う。実利用検証、検収計画、判定、発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) を正本とする。
 
+検証では、テストを実行したこととRequirementを検証できたことを分け、重要なRequirement・主要リスクを `Requirement → Risk → Test → Result → Evidence` で追跡する。`VERIFIED / FAILED / NOT_VERIFIED / BLOCKED / SKIPPED` と残存リスクの要約は同文書の `Verification Evidence Contract / Residual Risk Summary` に従い、既存のCI、Security、Review、Current State、Product Acceptanceを置き換えない。
+
 ## 1.1 Adaptive Development Flow
 
 変更のリスクは [Risk Tier正本文書](adaptive-development-flow.md) の `LOW / MEDIUM / HIGH` で判定する。既定値MEDIUM、混在は最大Tier、安全影響不明やGate変更はHIGH。LOWは実行動作・API・依存・workflow・安全ルールを変えない文言や表示だけに限定する。
@@ -263,6 +265,8 @@ Codex Code Reviewを、CI成功後・人間の最終確認前の標準品質ゲ�
 Codex Code Reviewの指摘は、Severityだけでなく検証可能な証拠と今回PRとの因果関係を記録する。P0 / P1、および `BLOCKING` 候補のP2には、Location、Claim、Trigger、Expected、Actual、PR Causality、Acceptance Criteria、Reproductionまたは決定的な静的根拠、Confidence、Dispositionを含める。
 
 `BLOCKING` 判定には、Issue受入条件・契約・安全条件との関係、具体的な入力・状態・実行経路、今回PR差分との因果を要求する。Evidence不足の指摘をSeverityだけでBLOCKING扱いにしない。再現可能な問題は、可能な限り修正前に失敗し修正後に成功するテストまたは再現手順を残し、実行再現が困難なSecurity・競合状態・契約違反・型/schema不整合は決定的な静的根拠で検証できる。
+
+これはレビュー指摘の契約である。受入条件・主要リスクの検証結果は [Verification Evidence Contract](acceptance-verification.md#5-verification-evidence-contract--residual-risk-summary) に記録し、レビュー指摘と同じ行を複製しない。
 
 ### SeverityとMerge条件
 

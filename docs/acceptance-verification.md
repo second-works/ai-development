@@ -125,7 +125,50 @@ PRODUCTのAcceptance記録には、既存の検収記録に加えて次を記録
 
 Visual ReviewまたはUI Acceptanceが`Not Accepted`の場合は、Product Acceptanceを`Accepted`にしない。`Conditional`の場合は、受入条件、期限、未解決事項を既存の検収記録へ接続する。
 
-## 5. 検収記録
+## 5. Verification Evidence Contract / Residual Risk Summary
+
+### 5.1 Verification Evidence Contract
+
+Acceptance Verificationと標準検証の記録では、テストを実行したことと、要求・リスクを検証できたことを分けて扱う。重要な受入条件・主要リスクごとに、次の1行を証跡の正本へ一度だけ保存する。
+
+| Requirement / acceptance condition | Risk being checked | Test / verification method | Result | Evidence | Reason / follow-up |
+| --- | --- | --- | --- | --- | --- |
+| 受入条件または要求 | 確認対象のリスク | 実行したテスト・確認方法 | `VERIFIED` / `FAILED` / `NOT_VERIFIED` / `BLOCKED` / `SKIPPED` | CI run、test、log、screenshot、manual check等 | `VERIFIED`以外の理由、追跡Issue、再実施条件 |
+
+`Result`はテストの終了コードではなく、Requirementが満たされ、Riskを確認できたかを表す。
+
+- `VERIFIED`: 方法を実行し、EvidenceがRequirementとRiskの確認を十分に示している。
+- `FAILED`: 方法を実行し、EvidenceがRequirementまたは受入条件を満たしていないことを示している。成功件数へ含めず、影響、残存リスク、追跡先またはHuman Decision Requiredを記録する。
+- `NOT_VERIFIED`: 確認を試みたが、RequirementまたはRiskを満たしたと判断できる証拠が不足している。成功件数へ含めない。
+- `BLOCKED`: 前提、環境、権限、外部サービス等のため実行または判定ができない。成功件数へ含めず、解除条件またはHuman Decision Requiredを記録する。
+- `SKIPPED`: 事前に対象外または今回実施しないと判断して実行しなかった。理由、影響、追跡先を記録し、成功件数へ含めない。
+
+テストコマンドの実行成功はEvidenceの一部にすぎず、それだけで`VERIFIED`にしない。Evidenceがないもの、結果が変わったもの、対象SHA・環境・対象artifactを特定できないものも`VERIFIED`にしない。`BLOCKED` / `SKIPPED`を、未実行のまま成功した工程として表示・集計・完了判定へ反映してはならない。
+
+### 5.2 Residual Risk Summary
+
+PRまたは最終確認では、詳細な証跡を複製せず、正本への参照と次の短いサマリーだけを残す。
+
+- `Verified`: RequirementとEvidenceの参照。
+- `Not Verified`: 未検証のRequirement、理由、追跡先。
+- `Failed`: 実行済みの確認で未達となったRequirement、影響、残存リスク、追跡先またはHuman Decision Required。
+- `Blocked / Skipped`: 実施できなかったRequirement、解除条件または対象外理由。
+- `Known Remaining Risk`: 既知の残存リスクと影響。
+- `Human Decision Required`: 人間が判断・承認・再検証する事項。
+
+サマリーの記載だけで`FAILED`、`NOT_VERIFIED`、`BLOCKED`、`SKIPPED`を承認済みとは扱わない。既存のCurrent State、Product Acceptance、CI、Security、Reviewの正本を置き換えず、参照または短い要約として接続する。
+
+### 5.3 Quality Rule Promotion
+
+検証漏れ、実障害、レビュー漏れ等から再発防止ルールを提案する場合は、次の順で既存の仕組みへ接続する。
+
+```text
+finding → cause classification → proposed rule → human decision → CI / lint / schema / skill / template
+```
+
+原因分類は`AI判断ミス`、`Context不足`、`Rule不足`、`Test不足`等を用いる。提案を自動で恒久化せず、適用範囲、誤検知リスク、既存契約との重複を人間が確認する。新しいQA Agent、Human Approval Gate、または大規模な工程をこの契約から追加しない。
+
+## 6. 検収記録
 
 検収結果は、同じ結果を再現・追跡できる場所へ一度だけ保存する。最低限、次を記録する。
 
@@ -152,7 +195,7 @@ Plan vs Realityは、実利用検証の結果をProduct Acceptedの記録とし�
 
 検収を実施していない場合は、`Not run` と実施できない理由、実施予定のタイミングを記録する。`Conditional` の場合は、受入条件、期限、未解決事項を明記する。
 
-## 6. 発見事項の分類と次の扱い
+## 7. 発見事項の分類と次の扱い
 
 検収で見つかった事項は、当初の計画と実装済み仕様への影響で分類する。
 
@@ -165,13 +208,13 @@ Plan vs Realityは、実利用検証の結果をProduct Acceptedの記録とし�
 
 `IMPROVEMENT / FUTURE` を元PRのレビュー修正ループへ戻さない。`ACCEPTANCE BLOCKER / DEFECT` も、Merge済みPRへ無制限に変更を追加せず、原因・影響・対応Issueを明示して追跡可能にする。
 
-## 7. Design Decision Escalation
+## 8. Design Decision Escalation
 
 実利用検証で、技術選定、データ保存方式、UX前提、Deployment構成などの設計前提そのものが目的に適合しないと判明した場合は、局所修正を続けない。
 
 停止 → 原因と影響の整理 → 選択肢と推奨案の提示 → Design Decisionの再判断 → 必要な新Issueの作成、の順で人間へ戻す。既存の `Design Decision Escalation` と `1 Issue / 1 PR`、人間によるMerge判断を維持する。
 
-## 8. 完了チェック
+## 9. 完了チェック
 
 - [ ] `Implementation Done`、`Deployed`、`Product Accepted` を別状態として記録した
 - [ ] 計画時に検収計画を定義した

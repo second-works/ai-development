@@ -480,17 +480,17 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 ### V-03 Acceptance Verification
 
 - **ETCSLV分類**：Verification
-- **解決する失敗モード**：実装やDeployが成功しただけで、利用者の目的を達成したと判断すること、または計画時の予測・失敗仮説と実績の差分を次回計画へ戻せないこと。
+- **解決する失敗モード**：実装やDeployが成功しただけで、利用者の目的を達成したと判断すること、テスト実行をRequirement検証と混同すること、または計画時の予測・失敗仮説と実績の差分を次回計画へ戻せないこと。
 - **発火条件**：ReleaseまたはProduction Deploy後、検収を実施するとき。
 - **入力 / Context**：利用目的、対象ユーザー、実利用シナリオ、成功条件、実データ、環境、計画時の主要予測、設計判断の失敗仮説、設計価値と代替案優位性の確認条件。
-- **出力 / State変更**：Accepted、Not Accepted、Conditional、発見事項の分類、Plan vs Reality（実績、失敗した前提、不要 / 過剰設計、予期せぬ問題、次回の教訓）。
+- **出力 / State変更**：Verification Evidence（Requirement、Risk、Test、Result、Evidence）、Residual Risk Summary、Accepted、Not Accepted、Conditional、発見事項の分類、Plan vs Reality（実績、失敗した前提、不要 / 過剰設計、予期せぬ問題、次回の教訓）。
 - **決定論的判定可能か**：開始条件、成功条件、環境は検証できる。利用者の有用性は人間が確認する。
-- **実行コスト / 運用負荷**：Deploy確認とは別工程。計画時の予測・失敗仮説と実績の差分を既存のProduct Accepted記録へ追加し、受入条件を同じ文面で複数文書へ複製しない。
+- **実行コスト / 運用負荷**：Deploy確認とは別工程。既存のAcceptance Verificationへ最小契約を追加し、PRには正本参照とResidual Risk Summaryだけを記録する。計画時の予測・失敗仮説と実績の差分を既存のProduct Accepted記録へ追加し、受入条件を同じ文面で複数文書へ複製しない。
 - **重複する仕組み**：S-03 Implementation / Deploy状態と関係するが、V-03は利用者目的の実利用検証であり、状態記録を代替しない。
 - **安全上必須か**：Product Acceptanceを実装完了と混同しないために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：利用者の目的、成功条件、計画と実績の差分を同等に確認できる運用へ移行する場合に再評価する。
-- **関連Issue / 正本文書**：#56、#58、V-03。Issue #56の監査条件とIssue #58のPlan vs Reality記録を追跡する。 正本：docs/acceptance-verification.md。
+- **関連Issue / 正本文書**：#56、#58、#119、V-03。Issue #56の監査条件とIssue #58のPlan vs Reality記録を追跡する。 正本：docs/acceptance-verification.md。
 
 ### C-04 Human-facing HTML Status Report
 
@@ -568,3 +568,4 @@ ETCSLV分類:
 - docs/safe-auto-fix-auto-merge.md：自動修正の安全条件
 - docs/github-repository-security-baseline.md：GitHub側の防御
 - docs/acceptance-verification.md：実利用検証と検収
+- Verification Evidence ContractとResidual Risk Summaryは同文書内でAcceptance Verificationへ接続し、Current State、CI、Security、Reviewを置き換えない
