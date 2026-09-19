@@ -133,11 +133,12 @@ Acceptance Verificationと標準検証の記録では、テストを実行した
 
 | Requirement / acceptance condition | Risk being checked | Test / verification method | Result | Evidence | Reason / follow-up |
 | --- | --- | --- | --- | --- | --- |
-| 受入条件または要求 | 確認対象のリスク | 実行したテスト・確認方法 | `VERIFIED` / `NOT_VERIFIED` / `BLOCKED` / `SKIPPED` | CI run、test、log、screenshot、manual check等 | `VERIFIED`以外の理由、追跡Issue、再実施条件 |
+| 受入条件または要求 | 確認対象のリスク | 実行したテスト・確認方法 | `VERIFIED` / `FAILED` / `NOT_VERIFIED` / `BLOCKED` / `SKIPPED` | CI run、test、log、screenshot、manual check等 | `VERIFIED`以外の理由、追跡Issue、再実施条件 |
 
 `Result`はテストの終了コードではなく、Requirementが満たされ、Riskを確認できたかを表す。
 
 - `VERIFIED`: 方法を実行し、EvidenceがRequirementとRiskの確認を十分に示している。
+- `FAILED`: 方法を実行し、EvidenceがRequirementまたは受入条件を満たしていないことを示している。成功件数へ含めず、影響、残存リスク、追跡先またはHuman Decision Requiredを記録する。
 - `NOT_VERIFIED`: 確認を試みたが、RequirementまたはRiskを満たしたと判断できる証拠が不足している。成功件数へ含めない。
 - `BLOCKED`: 前提、環境、権限、外部サービス等のため実行または判定ができない。成功件数へ含めず、解除条件またはHuman Decision Requiredを記録する。
 - `SKIPPED`: 事前に対象外または今回実施しないと判断して実行しなかった。理由、影響、追跡先を記録し、成功件数へ含めない。
@@ -150,11 +151,12 @@ PRまたは最終確認では、詳細な証跡を複製せず、正本への参
 
 - `Verified`: RequirementとEvidenceの参照。
 - `Not Verified`: 未検証のRequirement、理由、追跡先。
+- `Failed`: 実行済みの確認で未達となったRequirement、影響、残存リスク、追跡先またはHuman Decision Required。
 - `Blocked / Skipped`: 実施できなかったRequirement、解除条件または対象外理由。
 - `Known Remaining Risk`: 既知の残存リスクと影響。
 - `Human Decision Required`: 人間が判断・承認・再検証する事項。
 
-サマリーの記載だけで`NOT_VERIFIED`、`BLOCKED`、`SKIPPED`を承認済みとは扱わない。既存のCurrent State、Product Acceptance、CI、Security、Reviewの正本を置き換えず、参照または短い要約として接続する。
+サマリーの記載だけで`FAILED`、`NOT_VERIFIED`、`BLOCKED`、`SKIPPED`を承認済みとは扱わない。既存のCurrent State、Product Acceptance、CI、Security、Reviewの正本を置き換えず、参照または短い要約として接続する。
 
 ### 5.3 Quality Rule Promotion
 

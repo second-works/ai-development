@@ -24,6 +24,7 @@ for marker in \
   'Risk being checked' \
   'Test / verification method' \
   'VERIFIED' \
+  'FAILED' \
   'NOT_VERIFIED' \
   'BLOCKED' \
   'SKIPPED' \
@@ -41,6 +42,7 @@ for marker in \
   'Verification Evidence / Residual Risk Summary' \
   'Verification Evidence record / source' \
   'Verified:' \
+  'Failed:' \
   'Not Verified:' \
   'Blocked / Skipped:' \
   'Known Remaining Risk:' \

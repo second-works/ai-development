@@ -24,7 +24,7 @@ GitHub上の実装完了と本番投入可能な状態は分けて扱う。Relea
 
 実装・Deployの完了と、利用者が当初の目的を達成したことも分けて扱う。実利用検証、検収計画、判定、発見事項の分類は [docs/acceptance-verification.md](acceptance-verification.md) を正本とする。
 
-検証では、テストを実行したこととRequirementを検証できたことを分け、重要なRequirement・主要リスクを `Requirement → Risk → Test → Result → Evidence` で追跡する。`VERIFIED / NOT_VERIFIED / BLOCKED / SKIPPED` と残存リスクの要約は同文書の `Verification Evidence Contract / Residual Risk Summary` に従い、既存のCI、Security、Review、Current State、Product Acceptanceを置き換えない。
+検証では、テストを実行したこととRequirementを検証できたことを分け、重要なRequirement・主要リスクを `Requirement → Risk → Test → Result → Evidence` で追跡する。`VERIFIED / FAILED / NOT_VERIFIED / BLOCKED / SKIPPED` と残存リスクの要約は同文書の `Verification Evidence Contract / Residual Risk Summary` に従い、既存のCI、Security、Review、Current State、Product Acceptanceを置き換えない。
 
 ## 1.1 Adaptive Development Flow
 

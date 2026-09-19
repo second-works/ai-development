@@ -60,6 +60,7 @@ CI、Security、Reviewは別々に確認し、対象SHAがPR headと一致する
 
 - Verification Evidence record / source（`Requirement → Risk → Test → Result → Evidence`）:
 - Verified:
+- Failed:
 - Not Verified:
 - Blocked / Skipped:
 - Known Remaining Risk:
