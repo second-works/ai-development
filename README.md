@@ -61,6 +61,7 @@ UIを持つ案件は、UI Level（`NONE / UTILITY / PRODUCT`）を宣言し、PR
 - `docs/plan-authoring.md` — 会話から計画書を書く手順（READMEには手順全文を置かない）
 - `docs/plan-review-gate.md` — 計画書の実装前Plan Review正本文書
 - `docs/ai-execution-state.md` — schema v3のCurrent State契約と読み取り専用GitHub観測の利用手順
+- `docs/instruction-architecture-inventory.md` — AGENTS / Skills / docs / CI / Issue / configの配置判断とread-only smoke test
 - `scripts/collect-github-state.py` — Issue / PR / head SHA / workflow / reviewをJSONへ読み取り専用で収集する補助script
 - `docs/deployment-release-design.md` — Deployment as Code・Release / Production設計標準
 - `.github/ISSUE_TEMPLATE/parent-issue.md` — 親Issueテンプレート
