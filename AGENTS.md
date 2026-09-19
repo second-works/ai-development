@@ -374,6 +374,8 @@ Disposition:
 再現可能な問題は、可能な限り修正前に失敗し修正後に成功するテストまたは再現手順を残す。Security、競合状態、契約違反、型・schema不整合など、実行再現が困難でも静的に成立を説明できる問題では、決定的な静的根拠を使用できる。
 Evidence不足の指摘をSeverityだけで `BLOCKING` と扱わない。P2は必ず `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類し、非BLOCKING P2は分類と記録後に追加修正ループへ戻さない。
 
+Review Evidence Contractはレビュー指摘の成立条件とPR因果を記録する契約であり、受入条件・主要リスクの検証結果を記録する契約ではない。後者は [Verification Evidence Contract / Residual Risk Summary](docs/acceptance-verification.md#5-verification-evidence-contract--residual-risk-summary) を正本とし、両者を同じ証跡として二重管理しない。
+
 ## Rule Promotion
 
 同種の妥当なレビュー指摘が複数PRで反復する場合は、反復性、誤検知リスク、適用範囲を確認して機械判定可能性を評価する。

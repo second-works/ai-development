@@ -54,6 +54,17 @@ Closes #
 
 CI、Security、Reviewは別々に確認し、対象SHAがPR headと一致することを確認する。Current Stateの正本は [AI Execution State](../blob/main/docs/ai-execution-state.md)。
 
+# Verification Evidence / Residual Risk Summary
+
+詳細な証跡は [Verification Evidence Contract](../blob/main/docs/acceptance-verification.md#5-verification-evidence-contract--residual-risk-summary) に一度だけ保存し、ここでは参照先と最小サマリーを記録する。テスト実行の成功だけをRequirementの`VERIFIED`としない。
+
+- Verification Evidence record / source（`Requirement → Risk → Test → Result → Evidence`）:
+- Verified:
+- Not Verified:
+- Blocked / Skipped:
+- Known Remaining Risk:
+- Human Decision Required:
+
 # Harness（追加・変更時のみ）
 
 - 台帳ID / 判定:

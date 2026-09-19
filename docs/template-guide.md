@@ -129,7 +129,7 @@ MergeはProduction Deployを意味しません。CI、PR単位Security Check、F
 
 親Issueの計画段階で、解決したい課題、対象ユーザー、実利用シナリオ、成功条件、失敗条件、検証環境、実データ / fixture、人間確認項目、検収タイミングを定義します。
 
-Deploy後は、Health Check / Smoke Testとは別に主要ユースケースを最初から最後まで実行し、計画時の成功条件と照合します。`Implementation Done`、`Deployed`、`Product Accepted` は別状態です。検収結果は `Accepted` / `Not Accepted` / `Conditional` で記録し、発見事項は `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類します。
+Deploy後は、Health Check / Smoke Testとは別に主要ユースケースを最初から最後まで実行し、計画時の成功条件と照合します。`Implementation Done`、`Deployed`、`Product Accepted` は別状態です。検収結果は `Accepted` / `Not Accepted` / `Conditional` で記録し、発見事項は `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類します。重要なRequirement・主要リスクの検証証跡と残存リスク要約は、[Verification Evidence Contract](acceptance-verification.md#5-verification-evidence-contract--residual-risk-summary)に従って記録します。
 
 新要求や改善案を、元PRのレビュー修正ループへ無制限に戻しません。必要に応じて別Issue候補として次サイクルへ送り、設計前提の誤りは `Design Decision Escalation` へ戻します。
 
@@ -167,7 +167,7 @@ Plan Reviewは子Issue品質チェックを置き換えません。Issue化後�
 
 ファイル: `.github/pull_request_template.md`
 
-PRには対応Issue、差分、判断、レビュー上の注意点、Risk Tierと安全境界、対象SHA、標準検証・CI・Security・Codex Reviewの結果、残課題だけを記録する。GitHubから確認できる変更ファイル一覧は再掲しない。修正時は既存PR branchと修正後SHAを記録し、詳細なP2分類・Evidence・Safe Auto-Fix条件は正本文書を参照する。
+PRには対応Issue、差分、判断、レビュー上の注意点、Risk Tierと安全境界、対象SHA、標準検証・CI・Security・Codex Reviewの結果、残課題だけを記録する。GitHubから確認できる変更ファイル一覧は再掲しない。修正時は既存PR branchと修正後SHAを記録し、詳細なP2分類・Evidence・Safe Auto-Fix条件は正本文書を参照する。検証証跡は正本への参照と、Verified / Not Verified / Blocked・Skipped / Known Remaining Risk / Human Decision Requiredの短い要約をPRへ記録する。
 
 CI、Security、Reviewは別ゲートであり、最終Mergeは人間が判断する。
 

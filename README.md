@@ -36,6 +36,8 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 レビュー指摘はReview Evidence Contract（Location、Trigger、Expected、Actual、PR Causality、Acceptance Criteria、Reproductionまたは決定的な静的根拠、Disposition）を伴って判断します。証拠不足の指摘をSeverityだけでBLOCKING扱いにしません。
 
+受入条件・主要リスクの検証は、テスト実行とRequirementの検証を分けて [Verification Evidence Contract / Residual Risk Summary](docs/acceptance-verification.md#5-verification-evidence-contract--residual-risk-summary) に記録します。`VERIFIED / NOT_VERIFIED / BLOCKED / SKIPPED`を区別し、既存のCI、Security、Review、Current State、Product Acceptanceを置き換えません。
+
 レビュー指摘の修正ではrepo-local Skill `.agents/skills/pr-review-fix/` を利用できます。Codexへ `PR #XXのレビュー修正を進めて` と依頼すると、既存PRのhead branch固定、同一branchへの修正/push、SHA一致確認、CI/セキュリティチェック待機、更新後headへの再レビュー確認までを行い、Merge前で停止します。
 
 詳細は [`docs/nine-standard-ai-development-flow.md`](docs/nine-standard-ai-development-flow.md) を参照してください。
