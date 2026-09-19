@@ -33,45 +33,59 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 
 ## AGENTS.md section inventory
 
-| `AGENTS.md` section | 判定 | 正本または参照先 | 今回の扱い / 判断理由 |
-| --- | --- | --- | --- |
-| `Purpose` | `RESIDENT` | `docs/instruction-architecture-inventory.md` | このリポジトリと配置台帳の入口。短いまま残す。 |
-| `Core Rules` | `RESIDENT` | Issue / PR rule、各正本文書 | すべての作業で必要な基本禁止事項だけを常駐させる。詳細分離は子Issue候補。 |
-| `AI生成ドキュメント原則` | `RESIDENT` | Issue / PR template | 文書生成時の常時判断。定型の重複は増やさない。 |
-| `Adaptive Development Flow / Risk Tier` | `ENTRYPOINT` | `docs/adaptive-development-flow.md` | 判定詳細は正本文書へ。AGENTSにはHIGH停止条件を残す。 |
-| `Design / State Modeling` | `RESIDENT` | 各案件の型・schema・信頼境界 | 言語横断の設計原則で、現時点の専用正本がないため残す。専用文書化は子Issue候補。 |
-| `Structured Current State` | `ENTRYPOINT` | `docs/ai-execution-state.md` | schema、enum、遷移は正本文書へ委譲する。 |
-| `GitHub上の言語` | `RESIDENT` | README、Issue / PR template | 外部へ出す文章の基本方針であり、常時必要。 |
-| `Plan Review Gate` | `ENTRYPOINT` | `docs/plan-review-gate.md` | 判定と出力形式は正本文書へ委譲する。 |
-| `Framework Decision` | `ENTRYPOINT` | `docs/architecture/framework-decision.md` | UI / Runtime案件の発火条件と停止入口だけを残す。 |
-| `AI / Codex Reference Contract` | `RESIDENT` | `docs/product-ui-standard.md`、案件 `docs/design.md` | PRODUCT UIの重要判断前に必要な参照順序。詳細は正本文書へ。 |
-| `Child Issue Quality Gate` | `ENTRYPOINT` | `docs/issue-quality-check.md` | MUST / SHOULD / Scoreは正本文書へ委譲する。 |
-| `Issue Selection` | `RESIDENT` | GitHub Issue | 依存と優先順位が不明なときの停止条件。 |
-| `Issue / PR Rule` | `RESIDENT` | Issue / PR template | 作業単位と実装前確認の共通入口。 |
-| `RAG Architecture Standard` | `ENTRYPOINT` | `docs/architecture/rag-guidelines.md` | RAG採用時だけ詳細を取得する。案件固有の `rag-design.md` は任意のプロジェクト成果物で、template本体の必須ファイルではない。 |
-| `Test Design / Safe Test Deletion` | `ENTRYPOINT` | `docs/nine-standard-ai-development-flow.md`、各プロジェクトのtests | テスト変更時に必要な責務移行条件。専用正本化は子Issue候補。 |
-| `Implementation Workflow` | `ENTRYPOINT` | `docs/nine-standard-ai-development-flow.md` | 手順全文を常駐させず、Issue単位の入口と停止条件を残す。 |
-| `Standard Verification Gate` | `ENTRYPOINT` | `templates/verification/verify.sh`、`docs/template-guide.md` | template本体と生成先プロジェクトの境界を明示する。 |
-| `Parent Issue Completion` | `ENTRYPOINT` | `docs/nine-standard-ai-development-flow.md` | 親Issue完了時だけ参照する。 |
-| `GitHub Actions CI` | `ENTRYPOINT` | `.github/workflows/ci.yml`、`templates/github-actions/` | 実行コマンドはworkflow / templateを正本とする。 |
-| `Code Review Rules` | `ENTRYPOINT` | `docs/nine-standard-ai-development-flow.md` | レビュー起動と探索範囲は短く保ち、手順詳細は正本文書へ。 |
-| `Review Evidence Contract` | `CANONICAL_DETAIL` | `AGENTS.md`、PR template | 現在の唯一の正本。別文書化は責務重複を確認してから子Issue化する。 |
-| `Rule Promotion` | `ENTRYPOINT` | `docs/nine-standard-ai-development-flow.md` | 反復指摘を機械判定へ昇格する入口。自動昇格はしない。 |
-| `Harness Minimalism` | `ENTRYPOINT` | `docs/ai-development-harness-inventory.md` | 台帳と再評価条件は正本文書へ委譲する。 |
-| `GitHub Guardrails` | `ENTRYPOINT` | `docs/github-repository-security-baseline.md` | Ruleset等の詳細はSecurity正本へ。 |
-| `Dependabot` | `ENTRYPOINT` | `templates/dependabot/`、`docs/template-guide.md` | template選択と運用詳細を分離する。 |
-| `Secrets` | `RESIDENT` | `docs/ai-agent-security-boundary.md` | 漏えい禁止と停止条件は常駐させる。詳細はSecurity正本へ。 |
-| `AI Agent Security Boundary` | `ENTRYPOINT` | `docs/ai-agent-security-boundary.md` | 境界判定の詳細は正本文書へ委譲する。 |
-| `CodeQL / Code Scanning` | `ENTRYPOINT` | `docs/github-repository-security-baseline.md`、`templates/github-actions/codeql.yml` | 利用可否とworkflowを参照する。 |
-| `Security Preflight` | `ENTRYPOINT` | `templates/security/security-preflight.sh` | template本体と生成先 `scripts/security-preflight.sh` を区別する。 |
-| `Full-System Security Audit` | `ENTRYPOINT` | `docs/deployment-release-design.md` | Release Candidate時だけ取得する。 |
-| `Before PR` | `ENTRYPOINT` | `docs/template-guide.md`、PR template | 標準検証の実行入口を示し、工程詳細はtemplateへ委譲する。 |
-| `PR Description` | `INPUT_CONTRACT` | `.github/pull_request_template.md` | PRの今回値を入力する欄。AGENTSには必須項目の境界だけを残す。 |
-| `Prohibited Actions` | `RESIDENT` | `docs/ai-agent-security-boundary.md` | 常時適用の禁止事項と停止条件。 |
-| `Human Decision Points` | `RESIDENT` | Issue / PR | AIが推測で決めてはいけない境界。 |
-| `Standard Codex Instruction` | `ENTRYPOINT` | `README.md`、`docs/template-guide.md` | 実行依頼の例であり、常時ルールではない。詳細移動は子Issue候補。 |
+| `AGENTS.md` section | 現在の分類 | 再配置候補 | 旧→新の参照経路（候補） | 正本または参照先 | 今回の扱い / 判断理由 |
+| --- | --- | --- | --- | --- | --- |
+| `Purpose` | `RESIDENT` | `KEEP` | `AGENTS.md#Purpose` → `AGENTS.md#Purpose` | `docs/instruction-architecture-inventory.md` | 台帳入口として短いまま残す。 |
+| `Core Rules` | `RESIDENT` | `SHORTEN+REFERENCE` | `AGENTS.md#Core Rules` → 短い常駐規則 → Issue / 各正本文書 | Issue / PR rule、各正本文書 | 基本禁止事項だけを常駐し、工程詳細は正本へ移す候補。 |
+| `AI生成ドキュメント原則` | `RESIDENT` | `KEEP` | `AGENTS.md#AI生成ドキュメント原則` → 同節 | Issue / PR template | 文書生成時の常時判断。 |
+| `Adaptive Development Flow / Risk Tier` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Adaptive Development Flow / Risk Tier` → `docs/adaptive-development-flow.md` | `docs/adaptive-development-flow.md` | HIGH停止条件は残し、判定詳細を委譲する。 |
+| `Design / State Modeling` | `RESIDENT` | `MOVE` | `AGENTS.md#Design / State Modeling` → 将来 `docs/design-state-modeling.md`（子Issue） | 各案件の型・schema・信頼境界 | 専用正本がないため今回は維持し、作成後に短い入口へする。 |
+| `Structured Current State` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Structured Current State` → `docs/ai-execution-state.md` | `docs/ai-execution-state.md` | schema、enum、遷移は正本へ。 |
+| `GitHub上の言語` | `RESIDENT` | `KEEP` | `AGENTS.md#GitHub上の言語` → 同節 | README、Issue / PR template | 外部文章の常時方針。 |
+| `Plan Review Gate` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Plan Review Gate` → `docs/plan-review-gate.md` | `docs/plan-review-gate.md` | 判定と出力形式は正本へ。 |
+| `Framework Decision` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Framework Decision` → `docs/architecture/framework-decision.md` | `docs/architecture/framework-decision.md` | 発火条件だけを残す。 |
+| `AI / Codex Reference Contract` | `RESIDENT` | `SHORTEN+REFERENCE` | `AGENTS.md#AI / Codex Reference Contract` → `docs/product-ui-standard.md` / 案件 `docs/design.md` | `docs/product-ui-standard.md`、案件 `docs/design.md` | PRODUCT UIの参照順序を短く保つ。 |
+| `Child Issue Quality Gate` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Child Issue Quality Gate` → `docs/issue-quality-check.md` | `docs/issue-quality-check.md` | MUST / SHOULD / Scoreは正本へ。 |
+| `Issue Selection` | `RESIDENT` | `KEEP` | `AGENTS.md#Issue Selection` → 同節 | GitHub Issue | 依存不明時の停止条件。 |
+| `Issue / PR Rule` | `RESIDENT` | `KEEP` | `AGENTS.md#Issue / PR Rule` → 同節 | Issue / PR template | 作業単位と実装前確認の共通入口。 |
+| `RAG Architecture Standard` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#RAG Architecture Standard` → `docs/architecture/rag-guidelines.md` → 案件 `rag-design.md` | `docs/architecture/rag-guidelines.md` | template本体に案件固有空ファイルは置かない。 |
+| `Test Design / Safe Test Deletion` | `ENTRYPOINT` | `MOVE` | `AGENTS.md#Test Design / Safe Test Deletion` → 将来専用test-design doc（子Issue） | `docs/nine-standard-ai-development-flow.md`、各プロジェクトのtests | 専用正本化までは現行参照を維持する。 |
+| `Implementation Workflow` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Implementation Workflow` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 手順全文を常駐させない。 |
+| `Standard Verification Gate` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Standard Verification Gate` → `templates/verification/verify.sh` / `docs/template-guide.md` | `templates/verification/verify.sh`、`docs/template-guide.md` | template本体と生成先の境界を明示する。 |
+| `Parent Issue Completion` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Parent Issue Completion` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 親Issue完了時だけ取得する。 |
+| `GitHub Actions CI` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#GitHub Actions CI` → `.github/workflows/ci.yml` / `templates/github-actions/` | `.github/workflows/ci.yml`、`templates/github-actions/` | 実行コマンドはworkflow / templateを正本とする。 |
+| `Code Review Rules` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Code Review Rules` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 起動と探索範囲だけを常駐させる。 |
+| `Review Evidence Contract` | `CANONICAL_DETAIL` | `KEEP` | `AGENTS.md#Review Evidence Contract` → 同節 → PR template | `AGENTS.md` | 唯一の正本。templateは今回値の入力欄。 |
+| `Rule Promotion` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Rule Promotion` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 自動昇格しない入口。 |
+| `Harness Minimalism` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Harness Minimalism` → `docs/ai-development-harness-inventory.md` | `docs/ai-development-harness-inventory.md` | 台帳と再評価条件を正本へ。 |
+| `GitHub Guardrails` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#GitHub Guardrails` → `docs/github-repository-security-baseline.md` | `docs/github-repository-security-baseline.md` | Ruleset等の詳細をSecurity正本へ。 |
+| `Dependabot` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Dependabot` → `templates/dependabot/` / `docs/template-guide.md` | `templates/dependabot/`、`docs/template-guide.md` | template選択と運用詳細を分離する。 |
+| `Secrets` | `RESIDENT` | `KEEP` | `AGENTS.md#Secrets` → 同節 → `docs/ai-agent-security-boundary.md` | `docs/ai-agent-security-boundary.md` | 漏えい禁止と停止条件は常駐。 |
+| `AI Agent Security Boundary` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#AI Agent Security Boundary` → `docs/ai-agent-security-boundary.md` | `docs/ai-agent-security-boundary.md` | 境界判定詳細を委譲する。 |
+| `CodeQL / Code Scanning` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#CodeQL / Code Scanning` → Security baseline / CodeQL template | `docs/github-repository-security-baseline.md`、`templates/github-actions/codeql.yml` | 利用可否とworkflowを参照する。 |
+| `Security Preflight` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Security Preflight` → `templates/security/security-preflight.sh` → 生成先 `scripts/security-preflight.sh` | `templates/security/security-preflight.sh` | template本体と生成先を区別する。 |
+| `Full-System Security Audit` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Full-System Security Audit` → `docs/deployment-release-design.md` | `docs/deployment-release-design.md` | Release Candidate時だけ取得する。 |
+| `Before PR` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Before PR` → `docs/template-guide.md` / PR template | `docs/template-guide.md`、PR template | 標準検証の入口を示す。 |
+| `PR Description` | `INPUT_CONTRACT` | `MOVE` | `AGENTS.md#PR Description` → `.github/pull_request_template.md` | `.github/pull_request_template.md` | 詳細な今回値はtemplateへ集約する候補。 |
+| `Prohibited Actions` | `RESIDENT` | `KEEP` | `AGENTS.md#Prohibited Actions` → 同節 | `docs/ai-agent-security-boundary.md` | 常時適用の禁止事項と停止条件。 |
+| `Human Decision Points` | `RESIDENT` | `KEEP` | `AGENTS.md#Human Decision Points` → 同節 | Issue / PR | AIが推測で決めない境界。 |
+| `Standard Codex Instruction` | `ENTRYPOINT` | `MOVE` | `AGENTS.md#Standard Codex Instruction` → README / `docs/template-guide.md` | README、`docs/template-guide.md` | 実行依頼例を正本へ移す候補。 |
 
-本表は `AGENTS.md` の現行35セクションをすべて列挙する。`RESIDENT` とした項目でも、将来専用正本と参照テストが整えば短縮候補になる。
+本表は `AGENTS.md` の現行35セクションをすべて列挙する。`MOVE` と `SHORTEN+REFERENCE` は候補であり、今回のPRでは実行しない。実行する子Issueでは、表の旧→新経路、適用漏れ、サイズ差分、失敗時の停止を更新してから移動する。
+
+## Overlap, contradiction, and source-of-truth ledger
+
+| ID | 検出した重複・競合 | 関係する層 | 正本 / 判断 | 結果と後続 |
+| --- | --- | --- | --- | --- |
+| IA-01 | 開発フローが `AGENTS.md`、README、template guide、標準フローに現れる。 | AGENTS / README / docs / template | `docs/nine-standard-ai-development-flow.md` を詳細正本、AGENTSは発火入口、README / templateは利用導線。 | 意味上の矛盾なし。`Implementation Workflow` を `SHORTEN+REFERENCE` 候補にする。 |
+| IA-02 | Review Evidenceの要求がAGENTSとPR templateに現れる。 | AGENTS / PR template | `AGENTS.md#Review Evidence Contract` が唯一の詳細正本。PR templateは今回値を入力する契約。 | 正本競合を解消済み。専用doc化は別Issueで重複を再評価する。 |
+| IA-03 | 検証入口がAGENTS、`templates/verification/verify.sh`、template CIに現れる。 | AGENTS / templates / CI | 生成先の実行正本は `scripts/verify.sh`、template本体は `templates/verification/verify.sh`、このrepositoryの実行記録は `.github/workflows/ci.yml`。 | 対象リポジトリと生成先を混同しない。CIがtemplate内の未実行workflowを成功扱いしない。 |
+| IA-04 | Securityの説明がAGENTS、security boundary doc、Preflight script、Security workflowに分散する。 | AGENTS / docs / scripts / CI | 判断基準は `docs/ai-agent-security-boundary.md`、機械判定はPreflight scriptとSecurity workflow。 | 意味上の矛盾なし。Secrets停止条件はRESIDENTのまま維持する。 |
+| IA-05 | Current Stateの概要がAGENTSと詳細schemaに現れる。 | AGENTS / docs | `docs/ai-execution-state.md` がschema / enum /遷移の正本。 | `Structured Current State` は `SHORTEN+REFERENCE` 候補。 |
+| IA-06 | RAGの共通規則と案件固有設計が混同され得る。 | AGENTS / docs / Issue | 共通正本は `docs/architecture/rag-guidelines.md`、`rag-design.md` はRAG採用案件だけの成果物。 | template repositoryに空の `rag-design.md` を作らない。 |
+| IA-07 | Codex configとCursor configを共通ルールとして固定する誘惑がある。 | config / Issue / docs | host・version・secret・network境界を伴う設定は案件Design Decisionが正本。 | `.codex/config.toml` とoverride機構は採用判断を子Issueへ延期する。 |
+
+この棚卸しでは、上表以外に既存Gateを弱める意味上の矛盾は検出しなかった。未決定項目を「矛盾なし」と扱わず、後続欄に明示した。
 
 ## Layer boundary
 
@@ -106,7 +120,23 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 5. **Read-only boundary**: read-only確認ではbranch、commit、push、PR、Issueコメントを作成しない。確認前後のGit状態が一致する。
 6. **Runtime evidence**: 利用可能なCodexの実機または公式仕様で確認できない `/status`、`/debug-config` 等のコマンドを、標準手順として固定しない。
 
-このshell smoke testはCodex自身の全runtimeを再現するものではない。source map、参照経路、禁止された書き込みの不在、Git状態不変という決定可能な境界をCIで固定し、実機でしか確認できない適用結果は人間が読むIssue / PR証跡へ残す。
+このshell smoke testはCodex自身の全runtimeを再現するものではない。source map、参照経路、禁止された書き込みの不在、Git状態不変という決定可能な境界をCIで固定し、実機でしか確認できない適用結果は次のAgent実行記録で補完する。
+
+### Agent-executed protocol
+
+1. 新しいread-only Agent sessionで、対象Issue、対象commit、root `AGENTS.md` を提示する。branch、commit、push、PR、Issueコメントの作成を禁止する。
+2. Agentに、現在適用中のinstruction source、Issue実装前に必要なGate、repo-local Skillの適用scope、Framework / Plan Review / Securityなどの発火条件と参照先を列挙させる。
+3. Agentは根拠にしたsource pathまたはGitHub URLを示し、実在確認できないruntime commandを標準手順として提案しない。
+4. 実行者は、前後の `HEAD`、branch、refs、working treeが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
+
+### Execution record
+
+- 実行日: 2026-09-20。
+- 対象: Issue #121、commit `5b962f7d23f6665d6e5807cf2916d163866d5358`。
+- 実読したsource: root `AGENTS.md` のCode Review / Review Evidence Contract、Issue #121、`docs/nine-standard-ai-development-flow.md`、本台帳。
+- 結果: root AGENTSの常駐停止条件、Issue基準、HIGHリスク停止、CI → Security → Codex Review → Human Mergeの順序を列挙し、詳細参照先とrepo-local Skillのscopeを区別できた。
+- read-only境界: この記録のAgent確認ではGitHub閲覧、`git diff`、`git status`、shell contract testだけを実行し、branch / commit / push / PR / Issueコメントを作成しなかった。
+- 限界: この記録は特定sessionの実行証拠であり、将来のhostやCodex versionへ無条件に一般化しない。runtime設定の標準化には別のDesign Decisionが必要である。
 
 ## Deferred decisions and follow-up boundary
 

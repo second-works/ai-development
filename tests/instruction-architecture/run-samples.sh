@@ -19,6 +19,11 @@ fi
   exit 1
 }
 
+before_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
+before_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
+before_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname)')"
+before_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
+
 [[ -f "$inventory" ]] || {
   printf 'instruction architecture inventory is missing: %s\n' "$inventory" >&2
   exit 1
@@ -38,6 +43,11 @@ require "docs/instruction-architecture-inventory.md" '## Decision First'
 require "docs/instruction-architecture-inventory.md" '変更前の `AGENTS.md`: **47,136 bytes**'
 require "docs/instruction-architecture-inventory.md" '変更後 `AGENTS.md`: 47,438 bytes（`+302 bytes`）'
 require "docs/instruction-architecture-inventory.md" '現行35セクションをすべて列挙する'
+require "docs/instruction-architecture-inventory.md" '## Overlap, contradiction, and source-of-truth ledger'
+require "docs/instruction-architecture-inventory.md" 'IA-01'
+require "docs/instruction-architecture-inventory.md" '正本競合を解消済み'
+require "docs/instruction-architecture-inventory.md" '## Agent-executed protocol'
+require "docs/instruction-architecture-inventory.md" '### Execution record'
 require "docs/instruction-architecture-inventory.md" '## Read-only smoke test'
 require "docs/instruction-architecture-inventory.md" 'branch、commit、push、PR、Issueコメントを作成しない'
 require "docs/instruction-architecture-inventory.md" '`AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/`'
@@ -45,10 +55,18 @@ require "docs/instruction-architecture-inventory.md" '`docs/architecture/rag-des
 
 while IFS= read -r section; do
   [[ -n "$section" ]] || continue
-  grep -Fq -- "| \`$section\` |" "$inventory" || {
+  row="$(grep -F -- "| \`$section\` |" "$inventory" || true)"
+  [[ -n "$row" ]] || {
     printf 'AGENTS section is not recorded in inventory: %s\n' "$section" >&2
     exit 1
   }
+  case "$row" in
+    *'| `KEEP` |'*|*'| `SHORTEN+REFERENCE` |'*|*'| `MOVE` |'*|*'| `MERGE` |'*) ;;
+    *)
+      printf 'AGENTS section has no relocation candidate: %s\n' "$section" >&2
+      exit 1
+      ;;
+  esac
 done < <(sed -n 's/^## \(.*\)$/\1/p' "$agents")
 
 for path in \
@@ -76,12 +94,16 @@ for path in \
   }
 done
 
-before="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
 grep -Fq -- '## Read-only smoke test' "$inventory"
 grep -Fq -- '## Deferred decisions and follow-up boundary' "$inventory"
-after="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
-[[ "$before" == "$after" ]] || {
-  printf 'read-only smoke test changed the Git working tree\n' >&2
+grep -Fq -- '## Overlap, contradiction, and source-of-truth ledger' "$inventory"
+grep -Fq -- '## Agent-executed protocol' "$inventory"
+after_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
+after_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
+after_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname)')"
+after_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
+[[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_status" == "$after_status" ]] || {
+  printf 'read-only smoke test changed HEAD, branch, refs, or the Git working tree\n' >&2
   exit 1
 }
 
