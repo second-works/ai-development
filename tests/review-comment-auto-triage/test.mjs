@@ -97,6 +97,53 @@ test("defaults Jev calls to the default AI Gateway", async () => {
   assert.deepEqual(options, { gateway: { id: "default" } });
 });
 
+
+test("unwraps Cloudflare result envelopes before validating Jev answers", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => ({ result: response() }),
+      },
+    },
+    input,
+    clock,
+  });
+
+  assert.equal(result.final_result, "shadow_observation");
+  assert.equal(result.category, "bug");
+  assert.deepEqual(result.usage, { input_tokens: 426, output_tokens: 73 });
+});
+
+test("unwraps nested Cloudflare REST-style result envelopes", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => ({ result: { result: response() } }),
+      },
+    },
+    input,
+    clock,
+  });
+
+  assert.equal(result.final_result, "shadow_observation");
+  assert.equal(result.priority, "p2");
+});
+
+test("still falls back on unknown Jev response shapes", async () => {
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async () => ({ unexpected: { answers: response().answers } }),
+      },
+    },
+    input,
+    clock,
+  });
+
+  assert.equal(result.final_result, "fallback");
+  assert.equal(result.fallback_reason, "unparseable_response");
+});
+
 test("token usage outside the schema contract is normalized to null", async () => {
   const aiResponse = response();
   aiResponse.usage = { input_tokens: -1, output_tokens: 1.5 };
