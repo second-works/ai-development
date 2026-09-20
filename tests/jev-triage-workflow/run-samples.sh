@@ -47,3 +47,9 @@ grep -Fq -- '--slurp' "$WORKFLOW"
 grep -Fq -- "--jq 'add'" "$WORKFLOW"
 
 echo "JEV triage workflow contract: PASS"
+
+# environment secret boundary contract
+grep -Fq 'environment: jev-triage-production' "$WORKFLOW"
+grep -Fq 'WORKFLOW_REF: ${{ github.ref_name }}' "$WORKFLOW"
+grep -Fq 'DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}' "$WORKFLOW"
+grep -Fq 'JEV Triage must be dispatched from the repository default branch' "$WORKFLOW"
