@@ -141,6 +141,10 @@ import os
 import urllib.error
 import urllib.request
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
 endpoint = os.environ["JEV_ENDPOINT"]
 token = os.environ["JEV_TRIAGE_TOKEN"]
 request = urllib.request.Request(
@@ -152,8 +156,9 @@ request = urllib.request.Request(
         "authorization": "Bearer " + token,
     },
 )
+opener = urllib.request.build_opener(NoRedirect)
 try:
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with opener.open(request, timeout=20) as response:
         print(response.status)
 except urllib.error.HTTPError as exc:
     print(exc.code)
