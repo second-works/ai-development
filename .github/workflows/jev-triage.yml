@@ -21,14 +21,22 @@ jobs:
     name: JEV Shadow Triage
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment: jev-triage-production
 
     steps:
       - name: Validate inputs
         env:
           PR_NUMBER: ${{ inputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ inputs.head_sha }}
+          WORKFLOW_REF: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
+
+          if [[ "$WORKFLOW_REF" != "$DEFAULT_BRANCH" ]]; then
+            echo "::error::JEV Triage must be dispatched from the repository default branch"
+            exit 1
+          fi
 
           if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
             echo "::error::pr_number must be numeric"
