@@ -169,9 +169,9 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 ### Latest verification record
 
 - 実行日: 2026-09-20。
-- 対象: Issue #121、最新commit `43c17867ca63750aa51580ee532c2c9c9c9cdc8`。
-- 実行: `tests/*/run-samples.sh`、`node tests/review-comment-auto-triage/test.mjs`、`git diff --check`。
-- 結果: ローカル契約テストとNode.jsテストはPASS（27 tests passed）、差分検査もPASS。
+- 対象: Issue #121、競合解消後の最新commit `418e7c9fa22ece4cf358564aae3983e2bba67e65`。
+- 実行: `bash tests/instruction-architecture/run-samples.sh`、`bash tests/pr-review-fix-jev/run-samples.sh`、`bash tests/app-template/run-samples.sh`、shell syntax、`git diff --check`。
+- 結果: 競合解消後のInstruction Architecture、JEV、app-template契約テスト、shell syntax、差分検査はPASS。Deployment / Security Preflightのローカル実行はmacOSのGit実行環境制限で未完了とし、GitHub CI / Securityで再検証する。
 - GitHub証跡: 最新headに対するCI / Security workflowとCodex Reviewは、この記録作成時点では未観測または未完了であり、PASSとは扱わない。
 
 ## Verification record
