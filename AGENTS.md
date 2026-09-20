@@ -6,6 +6,8 @@
 
 各プロジェクトでこのテンプレートを利用する場合、GitHub Issueを実装仕様の基準とし、CodexなどのAIエージェントはIssue単位で安全に作業を進める。
 
+Instructionの配置判断とread-only smoke testは[Instruction Architecture Inventory](docs/instruction-architecture-inventory.md)に記録する。ここでは常時必要な停止条件と参照入口を保ち、詳細仕様・反復手順・機械判定をそれぞれの正本へ委譲する。
+
 ## Core Rules
 
 - GitHub Issueを仕様の基準とする。

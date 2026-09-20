@@ -24,7 +24,7 @@ jobs:
           node-version: 22
 
       - name: Shell syntax
-        run: bash -n templates/verification/verify.sh templates/security/security-preflight.sh templates/app/bin/setup templates/app/bin/doctor tests/verification/run-samples.sh tests/app-template/run-samples.sh tests/acceptance-verification/run-samples.sh tests/verification-evidence/run-samples.sh tests/security-preflight/run-samples.sh tests/review-evidence/run-samples.sh tests/agent-security-boundary/run-samples.sh tests/harness-minimalism/run-samples.sh tests/product-ui-standard/run-samples.sh tests/issue-template-ui/run-samples.sh tests/document-concision/run-samples.sh tests/review-comment-auto-triage/run-samples.sh .agents/skills/pr-review-fix/scripts/triage-with-jev.sh tests/pr-review-fix-jev/run-samples.sh
+        run: bash -n templates/verification/verify.sh templates/security/security-preflight.sh templates/app/bin/setup templates/app/bin/doctor tests/verification/run-samples.sh tests/app-template/run-samples.sh tests/acceptance-verification/run-samples.sh tests/verification-evidence/run-samples.sh tests/security-preflight/run-samples.sh tests/review-evidence/run-samples.sh tests/agent-security-boundary/run-samples.sh tests/harness-minimalism/run-samples.sh tests/product-ui-standard/run-samples.sh tests/issue-template-ui/run-samples.sh tests/document-concision/run-samples.sh tests/instruction-architecture/run-samples.sh tests/review-comment-auto-triage/run-samples.sh .agents/skills/pr-review-fix/scripts/triage-with-jev.sh tests/pr-review-fix-jev/run-samples.sh
 
       - name: Verification samples
         run: tests/verification/run-samples.sh
@@ -34,6 +34,9 @@ jobs:
 
       - name: AI-generated document concision contract
         run: bash tests/document-concision/run-samples.sh
+
+      - name: Instruction architecture and read-only smoke test contract
+        run: bash tests/instruction-architecture/run-samples.sh
 
       - name: Issue template UI Level documentation contract
         run: bash tests/issue-template-ui/run-samples.sh
