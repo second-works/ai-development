@@ -76,6 +76,18 @@ wrangler secret put TRIAGE_SHARED_SECRET
 
 Cloudflareの`AI.run`レスポンスで確認できる利用量は`input_tokens`/`output_tokens`です。Neuron値や単価はレスポンスから推測せず、`neuron_usage`を未提供として記録し、Cloudflare側の請求・使用量観測と別に検証します。
 
+## Billing / Spend Limit fallback
+
+JEV / AI Gatewayが利用できない場合も、PRレビュー工程全体は停止させません。Decision Layerは安全な理由コードだけを返し、`pr-review-fix` はCodex baselineへfallbackします。
+
+- `credits_exhausted`: Unified Billingのプリペイドクレジット不足
+- `spend_limit`: AI GatewayのSpend Limit到達
+- `rate_limited`: 一般的な429 / rate limit
+- `billing_unavailable`: Unified Billing / payment設定の異常
+- `api_failure`: 上記に分類できないAI推論障害
+
+上流の生エラーメッセージは監査ログへ保存せず、分類コードだけを残します。Spend LimitはCloudflare仕様上429で拒否されますが、429だけでSpend Limitと断定せず、エラーメッセージにSpend/Budget情報がある場合だけ `spend_limit` と分類し、それ以外は `rate_limited` とします。
+
 ## 安全境界
 
 - Shadow ModeではCodex、GitHub、CI、Reviewerへ外部送信・書き込みを行いません。
