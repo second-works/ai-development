@@ -1,6 +1,6 @@
 ---
 name: pr-review-fix
-description: 既存GitHub PRのCodex Code Review指摘を、同じPRのhead branchへ安全に修正・pushし、SHA一致確認と再検証後にレビューを収束させる。ユーザーが「PR #XXのレビュー修正を進めて」などと依頼したときに使う。新規remote branch/PR作成やMergeには使わない。
+description: 既存GitHub PRのCodex Code Review指摘を、JEV Shadow Triageを補助Decision Layerとして使いながら、同じPRのhead branchへ安全に修正・pushし、SHA一致確認と再検証後にレビューを収束させる。ユーザーが「PR #XXのレビュー修正を進めて」などと依頼したときに使う。新規remote branch/PR作成やMergeには使わない。
 ---
 
 # PR Review Fix
@@ -77,6 +77,33 @@ Issue範囲内で、修正が小さく、副作用が限定的で、今回直す
 ### DISMISS
 
 誤検知、根拠不足、スタイル差、重複指摘、すでに解消済みのもの。
+
+## JEV Decision Layer
+
+Codexレビューコメントの分類前に、既存のReview Comment Auto-Triage（Cloudflare Workers AI `typesafe/jev`）を**補助Decision Layer**として利用できる。
+
+JEVはレビュー判断を置き換えない。既定はShadow Modeであり、Skillの既存分類を正本とする。
+
+- JEVの出力は常に `authoritative=false` として扱う。
+- 有効な最終分類のsourceは `effective_disposition_source=baseline` とし、既存のP0/P1/P2/P3ルールとReview Evidence Contractで決定する。
+- JEVはコード修正、GitHub書き込み、thread resolve、再レビュー依頼、Mergeを実行しない。
+- 呼び出し先は `JEV_TRIAGE_URL`、Bearer Secretは `JEV_TRIAGE_TOKEN` で与える。どちらかが未設定ならJEVをskipし、既存レビュー工程を継続する。
+- Skill側のShadow観測用confidence閾値は `JEV_MIN_CONFIDENCE` とし、未設定時は `0.80` を使う。
+- Workerが `mode=shadow` 以外を返した場合は、その結果を自動ルーティングに使わずfallbackする。
+- API障害、401/5xx、malformed response、低confidence、`high_risk=true`、`security`、P0/P1は既存Skill判断へfallbackする。
+- 現在head SHAに紐づくCodex review commentだけをJEVへ渡す。古いSHAの未解決threadは従来どおりReview Evidence Contractで判定する。
+- JEV監査ログにはcomment id、判定メタデータ、候補分類、latency/token usage等だけを保存し、レビュー本文、diff、Bearer Secretを保存しない。
+
+JEV出力は次の**候補分類**へ正規化する。候補はShadow観測用であり、これだけを理由に修正・停止・Merge判定を行わない。
+
+- P0 / P1 / security / high risk: `BLOCKING`候補 + baseline fallback
+- `decision=no_action`: `DISMISS`候補
+- P3のaction required: `FOLLOW-UP`候補
+- P2のaction requiredかつ `auto_fixable=true`: `IN-SCOPE FIX`候補
+- P2のaction requiredかつ `auto_fixable=false`: `FOLLOW-UP`候補
+- undecided / low confidence / API failure / non-shadow response: 候補を参考情報に留めbaseline fallback
+
+Shadow Modeの観測結果が既存分類と不一致でも、自動的に既存分類を変更しない。50〜100件程度の評価結果を蓄積し、限定自動化へ進む場合は別Design Decisionとする。
 
 ## FOLLOW-UPの記録・参照
 
@@ -288,8 +315,13 @@ REPO_PATH="${REPO#*/}"
 
 gh pr view <PR番号> --repo "$REPO" --comments
 
+REVIEW_COMMENTS_FILE="$RUNTIME_DIR/review-comments.json"
+
 gh api --hostname "$HOST" --paginate --slurp \
-  "repos/$REPO_PATH/pulls/<PR番号>/comments?per_page=100"
+  "repos/$REPO_PATH/pulls/<PR番号>/comments?per_page=100" \
+  >"$REVIEW_COMMENTS_FILE"
+
+cat "$REVIEW_COMMENTS_FILE"
 
 gh api --hostname "$HOST" --paginate --slurp \
   "repos/$REPO_PATH/pulls/<PR番号>/reviews?per_page=100"
@@ -306,6 +338,27 @@ PR本文の `Closes #XX` 等からIssueを確認し、Issue本文を仕様基準
 - Issue範囲外: FOLLOW-UPまたは停止して報告
 - 仕様曖昧: 推測せず人間へ確認
 
+### 3.5. JEV Shadow Triageを実行
+
+現在headのCodex review commentをJEVへ送り、候補分類を監査ログへ保存する。
+
+```bash
+JEV_TRIAGE_SCRIPT="$RUNTIME_DIR/scripts/triage-with-jev.sh"
+JEV_LOG="$RUNTIME_DIR/jev-triage-initial.jsonl"
+
+bash "$JEV_TRIAGE_SCRIPT" \
+  "$REPO" <PR番号> "$BEFORE_SHA" \
+  "$REVIEW_COMMENTS_FILE" "$JEV_LOG"
+```
+
+標準出力の `JEV_STATUS` / 候補件数 / fallback件数を記録する。
+
+- `JEV_STATUS=SHADOW_COMPLETE`: Shadow観測結果を分類時の補助証拠として参照する。
+- `SKIPPED_UNCONFIGURED` または `FALLBACK_*`: JEVだけを理由に停止せず、既存分類へfallbackする。
+- `fallback_required=true` のコメントはJEV候補を自動修正判断に使わない。
+- `jev_disposition_candidate` は候補であり、最終Dispositionではない。
+- JEVログへレビュー本文・diff・Bearer Secretが含まれていないことを維持する。
+
 ### 4. 指摘を分類
 
 現在有効な指摘を以下へ整理する。
@@ -315,6 +368,8 @@ PR本文の `Closes #XX` 等からIssueを確認し、Issue本文を仕様基準
 - P3: 原則FOLLOW-UPまたはDISMISS
 
 P2をBLOCKINGと判定する場合は、具体的な失敗条件・再現経路・PR差分との因果・Issue受入条件との関係を記録する。
+
+JEVの`jev_disposition_candidate`は補助情報として比較するが、`authoritative=false`のため単独では最終分類を変更しない。JEVがfallbackしたコメントは従来ルールだけで分類する。
 
 ### 5. 同じhead branch上で修正
 
@@ -465,7 +520,22 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 - `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。P2のみの指摘は完了条件を阻害しない。
 - timeout: 再レビュー待ちとして停止。
 
-`REVIEW_PASSED` でもP2が報告された場合:
+`REVIEW_PASSED` でもP2が報告された場合、分類前に現在headのreview commentを再取得してJEV Shadow Triageも再実行する。
+
+```bash
+REVIEW_COMMENTS_FILE="$RUNTIME_DIR/review-comments-$EXPECTED_SHA.json"
+JEV_LOG="$RUNTIME_DIR/jev-triage-$EXPECTED_SHA.jsonl"
+
+gh api --hostname "$HOST" --paginate --slurp \
+  "repos/$REPO_PATH/pulls/<PR番号>/comments?per_page=100" \
+  >"$REVIEW_COMMENTS_FILE"
+
+bash "$RUNTIME_DIR/scripts/triage-with-jev.sh" \
+  "$REPO" <PR番号> "$EXPECTED_SHA" \
+  "$REVIEW_COMMENTS_FILE" "$JEV_LOG"
+```
+
+JEV未設定・失敗・low confidence・high risk・non-shadow responseでもレビュー工程は継続し、既存分類へfallbackする。
 
 1. 各P2を `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類する。P2のみでは停止せず、分類結果を記録する。
 2. BLOCKINGだけ修正する。
@@ -507,6 +577,7 @@ CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを
 - PR番号 / repository / head branch
 - 修正前後SHA / push SHA
 - P0 / P1 / P2の件数と分類
+- JEV Shadow Triageのstatus、候補分類件数、fallback件数
 - BLOCKING残件
 - FOLLOW-UP / DISMISS項目
 - Issue受入条件の充足状況
@@ -534,3 +605,5 @@ AI-Memory-RAG PR #39では、P2修正後に新たなP2が発生し続け、レ�
 - force push
 - `@codex address that feedback`
 - 代替branch / follow-up PR作成
+- JEV候補だけを根拠にBLOCKING確定・自動修正・thread resolve・Merge判定すること
+- JEV Workerが`limited_automation`を返した場合に、そのrouteをこのSkillから実行すること
