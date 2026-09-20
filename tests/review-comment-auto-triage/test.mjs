@@ -54,13 +54,16 @@ test("shadow mode records a decision without routing to Codex", async () => {
   assert.deepEqual(result.comparison.disagreements, ["category"]);
 });
 
-test("uses the documented Workers AI Jev model id", async () => {
+test("uses the documented Jev model id through AI Gateway", async () => {
   let model;
+  let options;
   const result = await runDecisionLayer({
     env: {
+      AI_GATEWAY_ID: "jev-review",
       AI: {
-        run: async (modelName) => {
+        run: async (modelName, _input, runOptions) => {
           model = modelName;
+          options = runOptions;
           return response();
         },
       },
@@ -72,6 +75,26 @@ test("uses the documented Workers AI Jev model id", async () => {
   assert.equal(result.final_result, "shadow_observation");
   assert.equal(model, MODEL);
   assert.equal(model, "typesafe/jev");
+  assert.deepEqual(options, { gateway: { id: "jev-review" } });
+});
+
+test("defaults Jev calls to the default AI Gateway", async () => {
+  let options;
+  const result = await runDecisionLayer({
+    env: {
+      AI: {
+        run: async (_modelName, _input, runOptions) => {
+          options = runOptions;
+          return response();
+        },
+      },
+    },
+    input,
+    clock,
+  });
+
+  assert.equal(result.final_result, "shadow_observation");
+  assert.deepEqual(options, { gateway: { id: "default" } });
 });
 
 test("token usage outside the schema contract is normalized to null", async () => {
