@@ -74,10 +74,23 @@ fi
 # ingress diagnostic contract
 grep -Fq 'JEV_PROBE_UNAUTH_STATUS=' "$WORKFLOW"
 grep -Fq 'JEV_PROBE_AUTH_STATUS=' "$WORKFLOW"
-grep -Fq -- '--output /dev/null' "$WORKFLOW"
-grep -Fq -- "--write-out '%{http_code}'" "$WORKFLOW"
-grep -Fq -- '--data '"'"'{}'"'"'' "$WORKFLOW"
+[[ "$(grep -Fc -- '--output /dev/null' "$WORKFLOW")" -eq 2 ]]
+[[ "$(grep -Fc -- "--write-out '%{http_code}'" "$WORKFLOW")" -eq 2 ]]
+[[ "$(grep -Fc -- '--data '"'"'{}'"'"'' "$WORKFLOW")" -eq 2 ]]
 grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"' "$WORKFLOW"
+
+unauth_probe="$(
+  awk '/JEV_PROBE_UNAUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
+)"
+auth_probe="$(
+  awk '/JEV_PROBE_AUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
+)"
+
+printf '%s\n' "$unauth_probe" | grep -Fq -- '--output /dev/null'
+printf '%s\n' "$auth_probe" | grep -Fq -- '--output /dev/null'
+printf '%s\n' "$unauth_probe" | grep -Fq -- "--write-out '%{http_code}'"
+printf '%s\n' "$auth_probe" | grep -Fq -- "--write-out '%{http_code}'"
+printf '%s\n' "$auth_probe" | grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"'
 
 if grep -Eq 'curl .*--verbose|curl .* -v( |$)' "$WORKFLOW"; then
   echo "diagnostic curl must not enable verbose output" >&2
