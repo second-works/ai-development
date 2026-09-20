@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WORKFLOW=".github/workflows/jev-triage.yml"
+
+[[ -f "$WORKFLOW" ]]
+
+grep -Fq 'ref: ${{ github.event.repository.default_branch }}' "$WORKFLOW"
+grep -Fq '"github.com/${GITHUB_REPOSITORY}"' "$WORKFLOW"
+grep -Fq 'PR head SHA changed before JEV call; refusing stale revision' "$WORKFLOW"
+
+secret_refs="$(grep -Fc 'JEV_TRIAGE_TOKEN: ${{ secrets.JEV_TRIAGE_TOKEN }}' "$WORKFLOW")"
+[[ "$secret_refs" -eq 1 ]]
+
+run_line="$(grep -n '^      - name: Run JEV Shadow Triage$' "$WORKFLOW" | cut -d: -f1)"
+secret_line="$(grep -nF 'JEV_TRIAGE_TOKEN: ${{ secrets.JEV_TRIAGE_TOKEN }}' "$WORKFLOW" | cut -d: -f1)"
+upload_line="$(grep -n '^      - name: Upload sanitized JEV result$' "$WORKFLOW" | cut -d: -f1)"
+checkout_line="$(grep -n '^      - name: Checkout trusted default branch$' "$WORKFLOW" | cut -d: -f1)"
+
+[[ "$secret_line" -gt "$run_line" ]]
+[[ "$secret_line" -lt "$upload_line" ]]
+[[ "$secret_line" -gt "$checkout_line" ]]
+
+first_verify="$(grep -n 'ACTUAL_HEAD_SHA=.*gh api' "$WORKFLOW" | sed -n '1p' | cut -d: -f1)"
+second_verify="$(grep -n 'ACTUAL_HEAD_SHA=.*gh api' "$WORKFLOW" | sed -n '2p' | cut -d: -f1)"
+triage_call="$(grep -n 'triage-with-jev.sh' "$WORKFLOW" | tail -1 | cut -d: -f1)"
+
+[[ -n "$first_verify" ]]
+[[ -n "$second_verify" ]]
+[[ "$second_verify" -lt "$triage_call" ]]
+
+echo "JEV triage workflow contract: PASS"
