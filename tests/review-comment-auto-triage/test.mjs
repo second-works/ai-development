@@ -464,6 +464,21 @@ test("classifies AI Gateway spend limits separately from generic rate limiting",
   assert.equal(rateResult.fallback_reason, "rate_limited");
 });
 
+test("does not misclassify load balancer failures as exhausted credits", async () => {
+  const upstreamError = Object.assign(
+    new Error("load balancer found zero healthy origins"),
+    { status: 503 },
+  );
+  const result = await runDecisionLayer({
+    env: { AI: { run: async () => { throw upstreamError; } } },
+    input,
+    clock,
+  });
+
+  assert.equal(result.final_result, "fallback");
+  assert.equal(result.fallback_reason, "api_failure");
+});
+
 test("classifies billing configuration failures without exposing provider details", async () => {
   const billingError = new Error("Unified Billing unavailable: SECRET-BILLING-DETAIL");
   const result = await runDecisionLayer({
