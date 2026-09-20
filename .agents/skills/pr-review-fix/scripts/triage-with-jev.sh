@@ -23,6 +23,14 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+USER_AGENT = "ai-development-jev-triage/1.0"
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+HTTP_OPENER = urllib.request.build_opener(NoRedirect)
+
 repo_identity, pr_number_raw, head_sha, comments_path, output_path = sys.argv[1:]
 
 if repo_identity.count("/") < 2:
@@ -323,12 +331,13 @@ for comment in current:
         headers={
             "content-type": "application/json",
             "authorization": "Bearer " + token,
+            "user-agent": USER_AGENT,
         },
     )
 
     result = None
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
+        with HTTP_OPENER.open(request, timeout=20) as response:
             response_body = response.read()
         result = decode_structured_result(response_body, comment_id)
         if result is None:
