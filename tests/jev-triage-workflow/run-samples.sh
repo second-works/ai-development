@@ -91,6 +91,11 @@ printf '%s\n' "$auth_probe" | grep -Fq -- '--output /dev/null'
 printf '%s\n' "$unauth_probe" | grep -Fq -- "--write-out '%{http_code}'"
 printf '%s\n' "$auth_probe" | grep -Fq -- "--write-out '%{http_code}'"
 printf '%s\n' "$auth_probe" | grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"'
+if printf '%s\n' "$unauth_probe" | grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"'; then
+  echo "unauthenticated diagnostic probe must not send the Bearer token" >&2
+  exit 1
+fi
+[[ "$(grep -Fc -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"' "$WORKFLOW")" -eq 1 ]]
 
 if grep -Eq 'curl .*--verbose|curl .* -v( |$)' "$WORKFLOW"; then
   echo "diagnostic curl must not enable verbose output" >&2
