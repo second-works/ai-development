@@ -146,7 +146,9 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 3. Agentは根拠にしたsource pathまたはGitHub URLを示し、実在確認できないruntime commandを標準手順として提案しない。
 4. 実行者は、前後の `HEAD`、branch、refsとdangling symbolic refを含むcommon ref storage・worktree-local ref storage・参照先、working tree、index entryと`assume-unchanged` / `skip-worktree` flagが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
 
-### Execution record
+### Execution record (historical session)
+
+以下は初回のread-only Agent sessionに対する記録であり、対象SHAはそのセッション時点のものです。PRの最新headに対する検証結果は、直後のLatest verification recordに分けて記録します。
 
 - 実行日: 2026-09-20。
 - 対象: Issue #121、commit `5b962f7d23f6665d6e5807cf2916d163866d5358`。
@@ -163,6 +165,14 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 - `Design / State Modeling` と `Test Design / Safe Test Deletion` の専用正本化は、既存の標準フローとの重複を確認して子Issue化する。
 - `docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録であり、template repositoryへ空ファイルを追加しない。
 - Codex設定層のtemplate化は、対象host、version drift、適用スコープ、secret / network境界を確認できるDesign Decisionができるまで行わない。
+
+### Latest verification record
+
+- 実行日: 2026-09-20。
+- 対象: Issue #121、最新commit `43c17867ca63750aa51580ee532c2c9c9c9cdc8`。
+- 実行: `tests/*/run-samples.sh`、`node tests/review-comment-auto-triage/test.mjs`、`git diff --check`。
+- 結果: ローカル契約テストとNode.jsテストはPASS（27 tests passed）、差分検査もPASS。
+- GitHub証跡: 最新headに対するCI / Security workflowとCodex Reviewは、この記録作成時点では未観測または未完了であり、PASSとは扱わない。
 
 ## Verification record
 
