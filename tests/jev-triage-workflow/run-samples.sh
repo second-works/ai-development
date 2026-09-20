@@ -62,3 +62,11 @@ if printf '%s\n' "$normalized_workflow" \
   echo "slurp must not be combined with gh api --jq" >&2
   exit 1
 fi
+
+# summary quoting contract
+grep -Fq "printf -- '- Repository: \`%s\`\\n' \"\$GITHUB_REPOSITORY\"" "$WORKFLOW"
+grep -Fq "printf -- '- Head SHA: \`%s\`\\n' \"\$HEAD_SHA\"" "$WORKFLOW"
+if grep -Eq 'echo ".*\`\$[A-Z_]+\`"' "$WORKFLOW"; then
+  echo "summary must not use shell command substitution for Markdown backticks" >&2
+  exit 1
+fi

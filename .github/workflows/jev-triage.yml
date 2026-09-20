@@ -119,9 +119,9 @@ jobs:
           {
             echo "## JEV Shadow Triage"
             echo
-            echo "- Repository: `$GITHUB_REPOSITORY`"
-            echo "- PR: #$PR_NUMBER"
-            echo "- Head SHA: `$HEAD_SHA`"
+            printf -- '- Repository: `%s`\n' "$GITHUB_REPOSITORY"
+            printf -- '- PR: #%s\n' "$PR_NUMBER"
+            printf -- '- Head SHA: `%s`\n' "$HEAD_SHA"
             echo
             echo '### Result'
             while IFS='=' read -r key value; do
