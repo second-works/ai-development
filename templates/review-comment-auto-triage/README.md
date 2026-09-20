@@ -12,6 +12,21 @@ Issue #116のPhase 1向け、Cloudflare Workers AI `typesafe/jev`を使ったDec
 - `wrangler.jsonc`: `AI` bindingとShadow Modeの最小設定例。
 - `tests/review-comment-auto-triage/test.mjs`: API成功、Shadow Mode、既存判断との差分、低confidence、高リスク、API障害の契約テスト。
 
+## AI Gateway
+
+`typesafe/jev` はCloudflareのThird-party modelです。Workers AI bindingから呼び出す際はAI Gatewayを指定します。
+
+このPoCは `AI_GATEWAY_ID` を参照し、未設定時は `default` Gatewayを使用します。
+
+```json
+"vars": {
+  "TRIAGE_MODE": "shadow",
+  "AI_GATEWAY_ID": "default"
+}
+```
+
+Cloudflare Dashboardの **AI > AI Gateway** でGatewayを作成し、Third-party model利用に必要なUnified Billingとクレジット残高を設定してください。Gateway IDを変更する場合は `AI_GATEWAY_ID` を同じ値にします。
+
 ## HTTP認証
 
 `/triage`は公開URLからWorkers AIを呼び出せないよう、Bearer tokenによる共有Secret認証を必須とします。Secret未設定時はfail-closedで503を返し、認証失敗時はAI推論を実行せず401を返します。
