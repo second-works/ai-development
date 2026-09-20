@@ -96,6 +96,30 @@ cat >"$COMMENTS" <<'JSON'
       "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
     },
     {
+      "id": 110,
+      "body": "Malicious usage payload.",
+      "path": "src/j.js",
+      "line": 100,
+      "commit_id": "abc123",
+      "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
+    },
+    {
+      "id": 111,
+      "body": "Malicious comparison payload.",
+      "path": "src/k.js",
+      "line": 110,
+      "commit_id": "abc123",
+      "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
+    },
+    {
+      "id": 112,
+      "body": "Mismatched comment id.",
+      "path": "src/l.js",
+      "line": 120,
+      "commit_id": "abc123",
+      "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
+    },
+    {
       "id": 999,
       "body": "Old commit must be ignored.",
       "path": "src/old.js",
@@ -153,12 +177,34 @@ class Handler(BaseHTTPRequestHandler):
             "auto_fixable": True,
             "high_risk": False,
             "confidence": 0.95,
+            "suggested_route": "record_only",
+            "routed_to": "record_only",
             "final_result": "shadow_observation",
             "fallback_reason": None,
             "latency_ms": 12,
             "usage": {"input_tokens": 10, "output_tokens": 5},
+            "neuron_usage": {
+                "status": "unavailable",
+                "reason": "AI.run response exposes token usage, not Neurons",
+            },
             "comparison": None,
         }
+
+        if cid == "110":
+            result["usage"] = {
+                "input_tokens": 10,
+                "output_tokens": 5,
+                "secret": "SECRET-MARKER-USAGE",
+            }
+        elif cid == "111":
+            result["comparison"] = {
+                "baseline_present": True,
+                "disagreement_count": 0,
+                "disagreements": [],
+                "secret": "SECRET-MARKER-COMPARISON",
+            }
+        elif cid == "112":
+            result["comment_id"] = "other-comment"
 
         if cid == "102":
             result["decision"] = "no_action"
@@ -202,12 +248,12 @@ export JEV_MIN_CONFIDENCE="0.80"
 
 OUTPUT="$(bash "$SCRIPT" "github.com/second-works/ai-development" 123 abc123 "$COMMENTS" "$LOG")"
 grep -Fq "JEV_STATUS=SHADOW_COMPLETE" <<<"$OUTPUT"
-grep -Fq "JEV_OBSERVED_COUNT=9" <<<"$OUTPUT"
+grep -Fq "JEV_OBSERVED_COUNT=12" <<<"$OUTPUT"
 grep -Fq "JEV_BLOCKING_CANDIDATE_COUNT=2" <<<"$OUTPUT"
 grep -Fq "JEV_IN_SCOPE_FIX_CANDIDATE_COUNT=3" <<<"$OUTPUT"
 grep -Fq "JEV_FOLLOW_UP_CANDIDATE_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_DISMISS_CANDIDATE_COUNT=1" <<<"$OUTPUT"
-grep -Fq "JEV_FALLBACK_COUNT=6" <<<"$OUTPUT"
+grep -Fq "JEV_FALLBACK_COUNT=9" <<<"$OUTPUT"
 
 python3 - "$LOG" <<'PY'
 import json
@@ -217,7 +263,7 @@ path = sys.argv[1]
 records = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
 by_id = {r["comment_id"]: r for r in records}
 
-assert len(records) == 9
+assert len(records) == 12
 assert by_id["101"]["jev_disposition_candidate"] == "IN-SCOPE FIX"
 assert by_id["101"]["fallback_required"] is False
 assert by_id["102"]["jev_disposition_candidate"] == "DISMISS"
@@ -230,11 +276,23 @@ assert by_id["106"]["fallback_reason"] == "high_risk"
 assert by_id["107"]["fallback_reason"] == "non_shadow_response"
 assert by_id["108"]["fallback_reason"] == "http_503"
 assert by_id["109"]["fallback_reason"] == "malformed_response"
+assert by_id["110"]["fallback_reason"] == "malformed_response"
+assert by_id["111"]["fallback_reason"] == "malformed_response"
+assert by_id["112"]["fallback_reason"] == "malformed_response"
+assert by_id["110"]["usage"] is None
+assert by_id["111"]["comparison"] is None
 assert all(r["authoritative"] is False for r in records)
 assert all(r["effective_disposition_source"] == "baseline" for r in records)
 
 text = open(path, encoding="utf-8").read()
-for forbidden in ["SECRET-MARKER", "secret-diff-marker", "test-secret", "authorization"]:
+for forbidden in [
+    "SECRET-MARKER",
+    "SECRET-MARKER-USAGE",
+    "SECRET-MARKER-COMPARISON",
+    "secret-diff-marker",
+    "test-secret",
+    "authorization",
+]:
     assert forbidden not in text
 PY
 
