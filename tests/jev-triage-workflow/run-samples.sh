@@ -70,3 +70,21 @@ if grep -Eq 'echo ".*\`\$[A-Z_]+\`"' "$WORKFLOW"; then
   echo "summary must not use shell command substitution for Markdown backticks" >&2
   exit 1
 fi
+
+# ingress diagnostic contract
+grep -Fq 'JEV_PROBE_UNAUTH_STATUS=' "$WORKFLOW"
+grep -Fq 'JEV_PROBE_AUTH_STATUS=' "$WORKFLOW"
+grep -Fq -- '--output /dev/null' "$WORKFLOW"
+grep -Fq -- "--write-out '%{http_code}'" "$WORKFLOW"
+grep -Fq -- '--data '"'"'{}'"'"'' "$WORKFLOW"
+grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"' "$WORKFLOW"
+
+if grep -Eq 'curl .*--verbose|curl .* -v( |$)' "$WORKFLOW"; then
+  echo "diagnostic curl must not enable verbose output" >&2
+  exit 1
+fi
+
+if grep -Fq '/tmp/jev-probe' "$WORKFLOW"; then
+  echo "diagnostic response bodies must not be written to files" >&2
+  exit 1
+fi
