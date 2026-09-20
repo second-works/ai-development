@@ -22,12 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
-    env:
-      JEV_TRIAGE_URL: ${{ vars.JEV_TRIAGE_URL }}
-      JEV_TRIAGE_TOKEN: ${{ secrets.JEV_TRIAGE_TOKEN }}
-
     steps:
-      - name: Validate inputs and configuration
+      - name: Validate inputs
         env:
           PR_NUMBER: ${{ inputs.pr_number }}
           EXPECTED_HEAD_SHA: ${{ inputs.head_sha }}
@@ -41,16 +37,6 @@ jobs:
 
           if [[ ! "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::head_sha must be a full 40-character lowercase commit SHA"
-            exit 1
-          fi
-
-          if [[ -z "${JEV_TRIAGE_URL:-}" ]]; then
-            echo "::error::JEV_TRIAGE_URL repository variable is not configured"
-            exit 1
-          fi
-
-          if [[ -z "${JEV_TRIAGE_TOKEN:-}" ]]; then
-            echo "::error::JEV_TRIAGE_TOKEN Actions secret is not configured"
             exit 1
           fi
 
@@ -68,10 +54,10 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout exact PR head
+      - name: Checkout trusted default branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.head_sha }}
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Fetch review comments
@@ -86,13 +72,32 @@ jobs:
       - name: Run JEV Shadow Triage
         id: triage
         env:
+          GH_TOKEN: ${{ github.token }}
+          JEV_TRIAGE_URL: ${{ vars.JEV_TRIAGE_URL }}
+          JEV_TRIAGE_TOKEN: ${{ secrets.JEV_TRIAGE_TOKEN }}
           PR_NUMBER: ${{ inputs.pr_number }}
           HEAD_SHA: ${{ inputs.head_sha }}
         run: |
           set -euo pipefail
 
+          if [[ -z "${JEV_TRIAGE_URL:-}" ]]; then
+            echo "::error::JEV_TRIAGE_URL repository variable is not configured"
+            exit 1
+          fi
+
+          if [[ -z "${JEV_TRIAGE_TOKEN:-}" ]]; then
+            echo "::error::JEV_TRIAGE_TOKEN Actions secret is not configured"
+            exit 1
+          fi
+
+          ACTUAL_HEAD_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+          if [[ "$ACTUAL_HEAD_SHA" != "$HEAD_SHA" ]]; then
+            echo "::error::PR head SHA changed before JEV call; refusing stale revision"
+            exit 1
+          fi
+
           OUTPUT="$(
-            .agents/skills/pr-review-fix/scripts/triage-with-jev.sh               "$GITHUB_REPOSITORY"               "$PR_NUMBER"               "$HEAD_SHA"               /tmp/review-comments.json               /tmp/jev-results.jsonl
+            .agents/skills/pr-review-fix/scripts/triage-with-jev.sh               "github.com/${GITHUB_REPOSITORY}"               "$PR_NUMBER"               "$HEAD_SHA"               /tmp/review-comments.json               /tmp/jev-results.jsonl
           )"
 
           printf '%s\n' "$OUTPUT"             | grep -E '^JEV_(STATUS|OBSERVED_COUNT|BLOCKING_CANDIDATES|IN_SCOPE_FIX_CANDIDATES|FOLLOW_UP_CANDIDATES|DISMISS_CANDIDATES|FALLBACK_COUNT|FALLBACK_REQUIRED|FALLBACK_REASONS|CREDITS_EXHAUSTED_COUNT|SPEND_LIMIT_COUNT|RATE_LIMITED_COUNT|BILLING_UNAVAILABLE_COUNT)='             | tee /tmp/jev-summary.env
