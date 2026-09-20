@@ -1,0 +1,133 @@
+name: JEV Triage
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number"
+        required: true
+        type: string
+      head_sha:
+        description: "Expected PR head SHA"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  triage:
+    name: JEV Shadow Triage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: jev-triage-production
+
+    steps:
+      - name: Validate inputs
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.head_sha }}
+          WORKFLOW_REF: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$WORKFLOW_REF" != "$DEFAULT_BRANCH" ]]; then
+            echo "::error::JEV Triage must be dispatched from the repository default branch"
+            exit 1
+          fi
+
+          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "::error::pr_number must be numeric"
+            exit 1
+          fi
+
+          if [[ ! "$EXPECTED_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::head_sha must be a full 40-character lowercase commit SHA"
+            exit 1
+          fi
+
+      - name: Verify current PR head
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          EXPECTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+
+          ACTUAL_HEAD_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+          if [[ "$ACTUAL_HEAD_SHA" != "$EXPECTED_HEAD_SHA" ]]; then
+            echo "::error::PR head SHA changed; refusing to triage a stale revision"
+            exit 1
+          fi
+
+      - name: Checkout trusted default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Fetch review comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+
+          gh api             --paginate             --slurp             "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments"             --jq 'add'             > /tmp/review-comments.json
+
+      - name: Run JEV Shadow Triage
+        id: triage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JEV_TRIAGE_URL: ${{ vars.JEV_TRIAGE_URL }}
+          JEV_TRIAGE_TOKEN: ${{ secrets.JEV_TRIAGE_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${JEV_TRIAGE_URL:-}" ]]; then
+            echo "::error::JEV_TRIAGE_URL repository variable is not configured"
+            exit 1
+          fi
+
+          if [[ -z "${JEV_TRIAGE_TOKEN:-}" ]]; then
+            echo "::error::JEV_TRIAGE_TOKEN Actions secret is not configured"
+            exit 1
+          fi
+
+          ACTUAL_HEAD_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+          if [[ "$ACTUAL_HEAD_SHA" != "$HEAD_SHA" ]]; then
+            echo "::error::PR head SHA changed before JEV call; refusing stale revision"
+            exit 1
+          fi
+
+          OUTPUT="$(
+            .agents/skills/pr-review-fix/scripts/triage-with-jev.sh               "github.com/${GITHUB_REPOSITORY}"               "$PR_NUMBER"               "$HEAD_SHA"               /tmp/review-comments.json               /tmp/jev-results.jsonl
+          )"
+
+          printf '%s\n' "$OUTPUT"             | grep -E '^JEV_(STATUS|OBSERVED_COUNT|BLOCKING_CANDIDATE_COUNT|IN_SCOPE_FIX_CANDIDATE_COUNT|FOLLOW_UP_CANDIDATE_COUNT|DISMISS_CANDIDATE_COUNT|FALLBACK_COUNT|FALLBACK_REQUIRED|FALLBACK_REASONS|CREDITS_EXHAUSTED_COUNT|SPEND_LIMIT_COUNT|RATE_LIMITED_COUNT|BILLING_UNAVAILABLE_COUNT)='             | tee /tmp/jev-summary.env
+
+          {
+            echo "## JEV Shadow Triage"
+            echo
+            echo "- Repository: `$GITHUB_REPOSITORY`"
+            echo "- PR: #$PR_NUMBER"
+            echo "- Head SHA: `$HEAD_SHA`"
+            echo
+            echo '### Result'
+            while IFS='=' read -r key value; do
+              [[ -n "$key" ]] || continue
+              printf -- '- `%s`: `%s`\n' "$key" "$value"
+            done < /tmp/jev-summary.env
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sanitized JEV result
+        uses: actions/upload-artifact@v4
+        with:
+          name: jev-triage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: /tmp/jev-results.jsonl
+          if-no-files-found: error
+          retention-days: 7
