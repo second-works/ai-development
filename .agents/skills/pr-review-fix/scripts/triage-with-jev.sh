@@ -16,6 +16,7 @@ command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 not found" >&2; exi
 
 python3 - "$REPO_IDENTITY" "$PR_NUMBER" "$HEAD_SHA" "$REVIEW_COMMENTS_FILE" "$OUTPUT_JSONL" <<'PY'
 import json
+import math
 import os
 import sys
 import urllib.error
@@ -201,7 +202,7 @@ def valid_probability(value):
     return value is None or (is_number(value) and 0 <= value <= 1)
 
 def valid_nonnegative_number(value):
-    return is_number(value) and value >= 0
+    return is_number(value) and math.isfinite(value) and value >= 0
 
 def valid_nullable_bool(value):
     return value is None or isinstance(value, bool)
