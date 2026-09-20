@@ -152,6 +152,14 @@ cat >"$COMMENTS" <<'JSON'
       "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
     },
     {
+      "id": 117,
+      "body": "429 with a non-fallback JEV body must still use baseline.",
+      "path": "src/q.js",
+      "line": 170,
+      "commit_id": "abc123",
+      "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
+    },
+    {
       "id": 999,
       "body": "Old commit must be ignored.",
       "path": "src/old.js",
@@ -258,6 +266,17 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
             return
 
+        if cid == "117":
+            # Valid schema, but not an explicit fallback: non-2xx must still
+            # force the local HTTP fallback and Codex baseline.
+            body = json.dumps({"result": result}).encode()
+            self.send_response(429)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+
         if cid == "102":
             result["decision"] = "no_action"
             result["auto_fixable"] = False
@@ -312,18 +331,19 @@ export JEV_MIN_CONFIDENCE="0.80"
 
 OUTPUT="$(bash "$SCRIPT" "github.com/second-works/ai-development" 123 abc123 "$COMMENTS" "$LOG")"
 grep -Fq "JEV_STATUS=SHADOW_COMPLETE" <<<"$OUTPUT"
-grep -Fq "JEV_OBSERVED_COUNT=16" <<<"$OUTPUT"
+grep -Fq "JEV_OBSERVED_COUNT=17" <<<"$OUTPUT"
 grep -Fq "JEV_BLOCKING_CANDIDATE_COUNT=2" <<<"$OUTPUT"
 grep -Fq "JEV_IN_SCOPE_FIX_CANDIDATE_COUNT=3" <<<"$OUTPUT"
 grep -Fq "JEV_FOLLOW_UP_CANDIDATE_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_DISMISS_CANDIDATE_COUNT=1" <<<"$OUTPUT"
-grep -Fq "JEV_FALLBACK_COUNT=13" <<<"$OUTPUT"
+grep -Fq "JEV_FALLBACK_COUNT=14" <<<"$OUTPUT"
 grep -Fq "JEV_CREDITS_EXHAUSTED_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_SPEND_LIMIT_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_RATE_LIMITED_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_BILLING_UNAVAILABLE_COUNT=1" <<<"$OUTPUT"
 grep -Fq "credits_exhausted:1" <<<"$OUTPUT"
 grep -Fq "spend_limit:1" <<<"$OUTPUT"
+grep -Fq "http_429:1" <<<"$OUTPUT"
 
 python3 - "$LOG" <<'PY'
 import json
@@ -333,7 +353,7 @@ path = sys.argv[1]
 records = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
 by_id = {r["comment_id"]: r for r in records}
 
-assert len(records) == 16
+assert len(records) == 17
 assert by_id["101"]["jev_disposition_candidate"] == "IN-SCOPE FIX"
 assert by_id["101"]["fallback_required"] is False
 assert by_id["102"]["jev_disposition_candidate"] == "DISMISS"
@@ -353,7 +373,10 @@ assert by_id["113"]["fallback_reason"] == "credits_exhausted"
 assert by_id["114"]["fallback_reason"] == "spend_limit"
 assert by_id["115"]["fallback_reason"] == "rate_limited"
 assert by_id["116"]["fallback_reason"] == "billing_unavailable"
-assert all(by_id[cid]["effective_disposition_source"] == "baseline" for cid in ["113", "114", "115", "116"])
+assert by_id["117"]["fallback_reason"] == "http_429"
+assert by_id["117"]["fallback_required"] is True
+assert by_id["117"]["jev_disposition_candidate"] is None
+assert all(by_id[cid]["effective_disposition_source"] == "baseline" for cid in ["113", "114", "115", "116", "117"])
 assert by_id["110"]["usage"] is None
 assert by_id["111"]["comparison"] is None
 assert all(r["authoritative"] is False for r in records)

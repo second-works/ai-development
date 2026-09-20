@@ -335,11 +335,17 @@ for comment in current:
             records.append(fallback_record(comment_id, "malformed_response"))
             continue
     except urllib.error.HTTPError as exc:
-        # The Worker intentionally returns structured fallback results with non-2xx
-        # status codes. Parse only the validated result contract and discard raw
-        # upstream error text so secrets/provider details never reach the audit log.
+        # Non-2xx is always a degraded JEV path. Accept the Worker's structured
+        # body only when it is itself an explicit fallback result; a schema-valid
+        # shadow_observation on 4xx/5xx must never clear fallback_required.
+        # Raw upstream error text is discarded so secrets/provider details never
+        # reach the audit log.
         result = decode_structured_result(exc.read(), comment_id)
-        if result is None:
+        if (
+            result is None
+            or result.get("final_result") != "fallback"
+            or result.get("fallback_reason") is None
+        ):
             records.append(fallback_record(comment_id, "http_" + str(exc.code)))
             continue
     except Exception:
