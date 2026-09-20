@@ -78,7 +78,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | ID | 検出した重複・競合 | 関係する層 | 正本 / 判断 | 結果と後続 |
 | --- | --- | --- | --- | --- |
 | IA-01 | 開発フローが `AGENTS.md`、README、template guide、標準フローに現れる。 | AGENTS / README / docs / template | `docs/nine-standard-ai-development-flow.md` を詳細正本、AGENTSは発火入口、README / templateは利用導線。 | 意味上の矛盾なし。`Implementation Workflow` を `SHORTEN+REFERENCE` 候補にする。 |
-| IA-02 | Review Evidence Contractが、詳細正本、詳細複製、実行・状態・templateの要約または入力欄に分散する。完全な出現層と責務は直後のIA-02 layer mapに列挙する。 | AGENTS / README / docs / Skill / PR template | 現行の詳細正本は `AGENTS.md#Review Evidence Contract` とする。詳細複製は正本競合、意図的要約は適用文脈だけを担い、PR templateは今回値の入力契約である。 | 正本競合は未解消として記録する。詳細複製は正本参照入口へ短縮する子Issueの対象とし、要約層は正本を再定義しない責務を維持する。 |
+| IA-02 | Review Evidence Contractが、詳細正本、詳細複製、実行・状態・templateの要約または入力欄、機械判定に分散する。完全な出現層と責務は直後のIA-02 layer mapに列挙する。 | AGENTS / README / docs / Skill / tests / PR template | 現行の詳細正本は `AGENTS.md#Review Evidence Contract` とする。詳細複製は正本競合、意図的要約は適用文脈だけを担い、テストは意味を定義しない機械判定、PR templateは今回値の入力契約である。 | 正本競合は未解消として記録する。詳細複製は正本参照入口へ短縮する子Issueの対象とし、要約層は正本を再定義せず、テスト層は正本変更と同一PRで期待値を更新する。 |
 | IA-03 | 検証入口がAGENTS、`templates/verification/verify.sh`、template CIに現れる。 | AGENTS / templates / CI | 生成先の実行正本は `scripts/verify.sh`、template本体は `templates/verification/verify.sh`、このrepositoryの実行記録は `.github/workflows/ci.yml`。 | 対象リポジトリと生成先を混同しない。CIがtemplate内の未実行workflowを成功扱いしない。 |
 | IA-04 | Securityの説明がAGENTS、security boundary doc、Preflight script、Security workflowに分散する。 | AGENTS / docs / scripts / CI | 判断基準は `docs/ai-agent-security-boundary.md`、機械判定はPreflight scriptとSecurity workflow。 | 意味上の矛盾なし。Secrets停止条件はRESIDENTのまま維持する。 |
 | IA-05 | Current Stateの概要がAGENTSと詳細schemaに現れる。 | AGENTS / docs | `docs/ai-execution-state.md` がschema / enum /遷移の正本。 | `Structured Current State` は `SHORTEN+REFERENCE` 候補。 |
@@ -87,7 +87,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 
 ### IA-02 Review Evidence layer map
 
-`rg -n "Review Evidence Contract|成立条件.*期待結果|V-02 Review Evidence" README.md docs .agents .github` で見つかる出現層を、正本競合か、正本を代替しない文脈要約か、今回値の入力欄かで区別する。単なる正本への参照も含め、以下の層をIA-02の判断対象から除外しない。
+`rg -n "Review Evidence Contract|成立条件.*期待結果|V-02 Review Evidence|PR Causality|Evidence不足" README.md docs .agents .github tests` で見つかる出現層を、正本競合か、正本を代替しない文脈要約か、機械判定か、今回値の入力欄かで区別する。単なる正本への参照も含め、以下の層をIA-02の判断対象から除外しない。
 
 | 層 | 現在のpath / 役割 | 現在の扱い | 判断と後続 |
 | --- | --- | --- | --- |
@@ -98,6 +98,8 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | project template要約 | `docs/template-guide.md`。生成先projectのreview記録にReview Evidenceを使うことを短いchecklistで案内する。 | `ENTRYPOINT_SUMMARY` | 意図的な概要として `KEEP`。生成先の詳細契約ではなく、詳細fieldは `AGENTS.md#Review Evidence Contract` を参照する。 |
 | Harness台帳要約 | `docs/ai-development-harness-inventory.md#V-02`。V-02の入力、四分類、停止・再評価条件を、Harnessが担う失敗モードと運用コストの文脈で記録する。 | `INTENTIONAL_INVENTORY_SUMMARY` | `KEEP`。Review Evidenceのfield schemaやSeverity判定の正本にはせず、Harnessの採否・再評価の説明だけを担う。V-02を変更する子Issueでは正本との整合を確認する。 |
 | State連携要約 | `docs/ai-execution-state.md`。Current StateにP2分類とevidence参照を保存する際の連携条件を示す。 | `STATE_INTEGRATION_SUMMARY` | `KEEP`。State schemaの更新手順だけを担い、Review Evidenceの成立条件・field schemaを再定義しない。 |
+| 機械判定 | `tests/review-evidence/run-samples.sh`。AGENTS、Skill、標準フロー、PR templateの必須field、BLOCKING条件、P2収束条件を検査する。 | `MECHANICAL_CHECK` | `KEEP`。正本ではなく期待値を検査する層であり、正本または詳細複製を短縮する同一PRで期待値を更新する。 |
+| 機械判定の参照 | `tests/instruction-architecture/run-samples.sh`、`tests/template-simplification/run-samples.sh`、`tests/verification-evidence/run-samples.sh`。台帳の出現層、PR template、Verification Evidenceとの接続を検査する。 | `MECHANICAL_CHECK` | `KEEP`。Review Evidenceの語句を参照してもfield schemaを定義しない。正本変更時は `tests/review-evidence/run-samples.sh` と併せて同一PRで更新・実行する。 |
 | 今回値の入力欄 | `.github/pull_request_template.md`。レビューround、Finding、Disposition、根拠URLなどをPRごとに記録する。 | `INPUT_CONTRACT` | `KEEP`。正本のfield意味を変更せず、今回の値を受け取る欄だけを担う。 |
 
 この棚卸しでは、上表以外に既存Gateを弱める意味上の矛盾は検出しなかった。未決定項目を「矛盾なし」と扱わず、後続欄に明示した。
@@ -132,7 +134,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 2. **Gate enumeration**: 任意のIssueに対して、実装前のRisk / Design Decision / Security Boundary、標準検証、CI / Security / Review、Human Mergeの入口を列挙できる。
 3. **Scope**: repo-local Skillは対象ディレクトリと作業目的が一致した場合だけ適用され、全作業の常駐ルールへ昇格していない。
 4. **Triggered retrieval**: Framework、Plan Review、Acceptance、Security、RAGなどの詳細は、発火条件と正本文書の対応をたどれる。
-5. **Read-only boundary**: read-only確認ではbranch、commit、push、PR、Issueコメントを作成しない。確認前後のHEAD、branch、refs（symbolic refの参照先を含む）、status、index entryと`assume-unchanged` / `skip-worktree` flag、worktree内容が一致する。
+5. **Read-only boundary**: read-only確認ではbranch、commit、push、PR、Issueコメントを作成しない。確認前後のHEAD、branch、refs（dangling symbolic refを含むref storageと参照先）、status、index entryと`assume-unchanged` / `skip-worktree` flag、worktree内容が一致する。
 6. **Runtime evidence**: 利用可能なCodexの実機または公式仕様で確認できない `/status`、`/debug-config` 等のコマンドを、標準手順として固定しない。
 
 このshell smoke testはCodex自身の全runtimeを再現するものではない。source map、参照経路、禁止された書き込みの不在、Git状態不変という決定可能な境界をCIで固定し、実機でしか確認できない適用結果は次のAgent実行記録で補完する。
@@ -142,7 +144,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 1. 新しいread-only Agent sessionで、対象Issue、対象commit、root `AGENTS.md` を提示する。branch、commit、push、PR、Issueコメントの作成を禁止する。
 2. Agentに、現在適用中のinstruction source、Issue実装前に必要なGate、repo-local Skillの適用scope、Framework / Plan Review / Securityなどの発火条件と参照先を列挙させる。
 3. Agentは根拠にしたsource pathまたはGitHub URLを示し、実在確認できないruntime commandを標準手順として提案しない。
-4. 実行者は、前後の `HEAD`、branch、refsとsymbolic refの参照先、working tree、index entryと`assume-unchanged` / `skip-worktree` flagが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
+4. 実行者は、前後の `HEAD`、branch、refsとdangling symbolic refを含むref storage・参照先、working tree、index entryと`assume-unchanged` / `skip-worktree` flagが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
 
 ### Execution record
 
@@ -156,7 +158,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 ## Deferred decisions and follow-up boundary
 
 - `AGENTS.md` の詳細を実際に `docs/` へ移す場合は、移動前後の参照経路、適用漏れ、サイズ差分、失敗時の停止を別PRで検証する。
-- `Review Evidence Contract` の専用文書化は、IA-02 layer mapに列挙した `AGENTS.md`、README、`docs/nine-standard-ai-development-flow.md`、`docs/template-guide.md`、`docs/ai-development-harness-inventory.md#V-02`、`docs/ai-execution-state.md`、`.agents/skills/pr-review-fix/SKILL.md`、PR templateの責務を確認してから判断する。まず詳細複製であるdocs側とSkill側を正本参照入口へ短縮し、意図的要約が正本を再定義しないことを検証する。
+- `Review Evidence Contract` の専用文書化は、IA-02 layer mapに列挙した `AGENTS.md`、README、`docs/nine-standard-ai-development-flow.md`、`docs/template-guide.md`、`docs/ai-development-harness-inventory.md#V-02`、`docs/ai-execution-state.md`、`.agents/skills/pr-review-fix/SKILL.md`、`tests/review-evidence/run-samples.sh`、その参照契約テスト群、PR templateの責務を確認してから判断する。まず詳細複製であるdocs側とSkill側を正本参照入口へ短縮し、意図的要約が正本を再定義せず、同一PRでテスト期待値を更新・実行することを検証する。
 - `Parent Issue Completion` は、子Issue checkbox、全体完了条件、残課題切り出し、人間確認を収容する実在の正本文書ができるまで `AGENTS.md` に維持する。
 - `Design / State Modeling` と `Test Design / Safe Test Deletion` の専用正本化は、既存の標準フローとの重複を確認して子Issue化する。
 - `docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録であり、template repositoryへ空ファイルを追加しない。

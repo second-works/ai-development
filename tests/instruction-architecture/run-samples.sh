@@ -36,9 +36,24 @@ digest_stream() {
   fi
 }
 
+git_dir="$("$git_bin" -C "$ROOT" rev-parse --path-format=absolute --git-dir)"
+
+snapshot_ref_storage() {
+  local -a paths=()
+  [[ -d "$git_dir/refs" ]] && paths+=(refs)
+  [[ -e "$git_dir/packed-refs" ]] && paths+=(packed-refs)
+  if ((${#paths[@]} == 0)); then
+    printf '<no-ref-storage>\n'
+    return
+  fi
+  "$tar_bin" -C "$git_dir" -cf - "${paths[@]}" | digest_stream
+}
+
 before_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 before_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 before_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname) %(symref)')"
+# Raw ref storage captures dangling symbolic refs omitted by for-each-ref.
+before_ref_storage="$(snapshot_ref_storage)"
 before_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
 # --stage records index entries, and -v includes assume-unchanged / skip-worktree flags.
 before_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
@@ -73,6 +88,9 @@ require "docs/instruction-architecture-inventory.md" '`docs/ai-development-harne
 require "docs/instruction-architecture-inventory.md" '`docs/ai-execution-state.md`'
 require "docs/instruction-architecture-inventory.md" '`docs/nine-standard-ai-development-flow.md`'
 require "docs/instruction-architecture-inventory.md" '`.agents/skills/pr-review-fix/SKILL.md`'
+require "docs/instruction-architecture-inventory.md" '`tests/review-evidence/run-samples.sh`'
+require "docs/instruction-architecture-inventory.md" '`tests/template-simplification/run-samples.sh`'
+require "docs/instruction-architecture-inventory.md" '`tests/verification-evidence/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '正本競合は未解消として記録する'
 require "docs/instruction-architecture-inventory.md" 'docs側とSkill側を正本参照入口へ短縮'
 require "docs/instruction-architecture-inventory.md" '`Parent Issue Completion` | `ENTRYPOINT` | `KEEP`'
@@ -81,7 +99,7 @@ require "docs/instruction-architecture-inventory.md" '### Execution record'
 require "docs/instruction-architecture-inventory.md" '## Read-only smoke test'
 require "docs/instruction-architecture-inventory.md" 'branch、commit、push、PR、Issueコメントを作成しない'
 require "docs/instruction-architecture-inventory.md" 'index entryと`assume-unchanged` / `skip-worktree` flag'
-require "docs/instruction-architecture-inventory.md" 'symbolic refの参照先'
+require "docs/instruction-architecture-inventory.md" 'dangling symbolic refを含むref storage'
 require "docs/instruction-architecture-inventory.md" '`AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/`'
 require "docs/instruction-architecture-inventory.md" '`docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録'
 
@@ -133,11 +151,12 @@ grep -Fq -- '## Agent-executed protocol' "$inventory"
 after_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 after_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 after_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname) %(symref)')"
+after_ref_storage="$(snapshot_ref_storage)"
 after_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
 after_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
 after_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
-[[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_status" == "$after_status" && "$before_index" == "$after_index" && "$before_worktree" == "$after_worktree" ]] || {
-  printf 'read-only smoke test changed HEAD, branch, refs or symbolic ref targets, index entries or flags, or worktree contents\n' >&2
+[[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_ref_storage" == "$after_ref_storage" && "$before_status" == "$after_status" && "$before_index" == "$after_index" && "$before_worktree" == "$after_worktree" ]] || {
+  printf 'read-only smoke test changed HEAD, branch, refs or ref storage, index entries or flags, or worktree contents\n' >&2
   exit 1
 }
 
