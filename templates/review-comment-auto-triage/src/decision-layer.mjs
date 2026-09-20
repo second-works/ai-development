@@ -226,7 +226,7 @@ function classifyAiFailure(error) {
   const status = aiErrorStatus(error);
   const message = String(error?.message ?? error ?? "").toLowerCase();
 
-  const mentionsCredit = /credit|balance/.test(message);
+  const mentionsCredit = /\b(?:credits?|balance)\b/.test(message);
   const creditUnavailable = /insufficient|exhausted|depleted|empty|zero|not enough|no remaining/.test(message);
   if (mentionsCredit && creditUnavailable) return "credits_exhausted";
 
