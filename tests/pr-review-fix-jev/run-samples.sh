@@ -80,6 +80,22 @@ cat >"$COMMENTS" <<'JSON'
       "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
     },
     {
+      "id": 108,
+      "body": "Upstream failure.",
+      "path": "src/h.js",
+      "line": 80,
+      "commit_id": "abc123",
+      "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
+    },
+    {
+      "id": 109,
+      "body": "Malformed response.",
+      "path": "src/i.js",
+      "line": 90,
+      "commit_id": "abc123",
+      "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
+    },
+    {
       "id": 999,
       "body": "Old commit must be ignored.",
       "path": "src/old.js",
@@ -113,6 +129,19 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("content-length") or "0")
         data = json.loads(self.rfile.read(length))
         cid = str(data["comment_id"])
+
+        if cid == "108":
+            self.send_response(503)
+            self.end_headers()
+            return
+        if cid == "109":
+            body = json.dumps({"unexpected": True}).encode()
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
 
         result = {
             "comment_id": cid,
@@ -173,12 +202,12 @@ export JEV_MIN_CONFIDENCE="0.80"
 
 OUTPUT="$(bash "$SCRIPT" "github.com/second-works/ai-development" 123 abc123 "$COMMENTS" "$LOG")"
 grep -Fq "JEV_STATUS=SHADOW_COMPLETE" <<<"$OUTPUT"
-grep -Fq "JEV_OBSERVED_COUNT=7" <<<"$OUTPUT"
+grep -Fq "JEV_OBSERVED_COUNT=9" <<<"$OUTPUT"
 grep -Fq "JEV_BLOCKING_CANDIDATE_COUNT=2" <<<"$OUTPUT"
 grep -Fq "JEV_IN_SCOPE_FIX_CANDIDATE_COUNT=2" <<<"$OUTPUT"
 grep -Fq "JEV_FOLLOW_UP_CANDIDATE_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_DISMISS_CANDIDATE_COUNT=1" <<<"$OUTPUT"
-grep -Fq "JEV_FALLBACK_COUNT=4" <<<"$OUTPUT"
+grep -Fq "JEV_FALLBACK_COUNT=6" <<<"$OUTPUT"
 
 python3 - "$LOG" <<'PY'
 import json
@@ -188,7 +217,7 @@ path = sys.argv[1]
 records = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
 by_id = {r["comment_id"]: r for r in records}
 
-assert len(records) == 7
+assert len(records) == 9
 assert by_id["101"]["jev_disposition_candidate"] == "IN-SCOPE FIX"
 assert by_id["101"]["fallback_required"] is False
 assert by_id["102"]["jev_disposition_candidate"] == "DISMISS"
@@ -199,6 +228,8 @@ assert by_id["105"]["fallback_reason"] == "low_confidence"
 assert by_id["106"]["jev_disposition_candidate"] == "BLOCKING"
 assert by_id["106"]["fallback_reason"] == "high_risk"
 assert by_id["107"]["fallback_reason"] == "non_shadow_response"
+assert by_id["108"]["fallback_reason"] == "http_503"
+assert by_id["109"]["fallback_reason"] == "malformed_response"
 assert all(r["authoritative"] is False for r in records)
 assert all(r["effective_disposition_source"] == "baseline" for r in records)
 
@@ -221,5 +252,23 @@ export JEV_MIN_CONFIDENCE="not-a-number"
 INVALID_CONF="$(bash "$SCRIPT" "github.com/second-works/ai-development" 123 abc123 "$COMMENTS" "$TMP_DIR/invalid-conf.jsonl")"
 grep -Fq "JEV_STATUS=FALLBACK_INVALID_CONFIDENCE" <<<"$INVALID_CONF"
 grep -Fq "JEV_FALLBACK_REQUIRED=1" <<<"$INVALID_CONF"
+
+
+SKILL_FILE="$ROOT_DIR/.agents/skills/pr-review-fix/SKILL.md"
+for marker in \
+  "## JEV Decision Layer" \
+  "JEV_TRIAGE_URL" \
+  "JEV_TRIAGE_TOKEN" \
+  "JEV_MIN_CONFIDENCE" \
+  "authoritative=false" \
+  "effective_disposition_source=baseline" \
+  "triage-with-jev.sh" \
+  "Shadow Mode" \
+  "JEV候補だけを根拠にBLOCKING確定"; do
+  grep -Fq -- "$marker" "$SKILL_FILE" || {
+    printf 'missing JEV Skill contract marker: %s\n' "$marker" >&2
+    exit 1
+  }
+done
 
 printf 'pr-review-fix JEV shadow integration contract passed\n'
