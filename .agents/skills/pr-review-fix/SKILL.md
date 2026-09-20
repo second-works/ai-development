@@ -91,6 +91,7 @@ JEVはレビュー判断を置き換えない。既定はShadow Modeであり、
 - Skill側のShadow観測用confidence閾値は `JEV_MIN_CONFIDENCE` とし、未設定時は `0.80` を使う。
 - Workerが `mode=shadow` 以外を返した場合は、その結果を自動ルーティングに使わずfallbackする。
 - API障害、401/5xx、malformed response、低confidence、`high_risk=true`、`security`、P0/P1は既存Skill判断へfallbackする。
+- Unified Billingのクレジット不足は `credits_exhausted`、Spend Limit到達は `spend_limit`、一般429は `rate_limited`、課金設定異常は `billing_unavailable` として理由コードを残す。これらはJEVだけを無効化し、レビュー工程はCodex baselineで継続する。
 - JEVのHTTP 200応答も信頼せず、`decision-result.schema.json`相当の型・enum・必須項目・余剰項目禁止・nested object契約を満たす場合だけ参照する。不正応答は`malformed_response`としてbaselineへfallbackし、未検証フィールドを監査ログへ転記しない。
 - 現在head SHAに紐づくCodex review commentだけをJEVへ渡す。古いSHAの未解決threadは従来どおりReview Evidence Contractで判定する。
 - JEV監査ログにはcomment id、判定メタデータ、候補分類、latency/token usage等だけを保存し、レビュー本文、diff、Bearer Secretを保存しない。
@@ -352,10 +353,15 @@ bash "$JEV_TRIAGE_SCRIPT" \
   "$REVIEW_COMMENTS_FILE" "$JEV_LOG"
 ```
 
-標準出力の `JEV_STATUS` / 候補件数 / fallback件数を記録する。
+標準出力の `JEV_STATUS` / 候補件数 / fallback件数 / `JEV_FALLBACK_REASONS` を記録する。
 
 - `JEV_STATUS=SHADOW_COMPLETE`: Shadow観測結果を分類時の補助証拠として参照する。
 - `SKIPPED_UNCONFIGURED` または `FALLBACK_*`: JEVだけを理由に停止せず、既存分類へfallbackする。
+- `JEV_CREDITS_EXHAUSTED_COUNT>0`: 「JEV: 利用不可（Cloudflare AI Gatewayクレジット不足）— Codex baselineで継続」と報告する。
+- `JEV_SPEND_LIMIT_COUNT>0`: 「JEV: 利用不可（AI Gateway Spend Limit到達）— Codex baselineで継続」と報告する。
+- `JEV_RATE_LIMITED_COUNT>0`: 「JEV: 一時利用不可（AI Gateway rate limit）— Codex baselineで継続」と報告する。
+- `JEV_BILLING_UNAVAILABLE_COUNT>0`: 「JEV: 利用不可（Unified Billing設定/課金エラー）— Codex baselineで継続」と報告する。
+- 上記理由コードが複数ある場合は、件数とともにすべて報告する。生のCloudflareエラー本文は表示・保存しない。
 - `fallback_required=true` のコメントはJEV候補を自動修正判断に使わない。
 - `jev_disposition_candidate` は候補であり、最終Dispositionではない。
 - JEVログへレビュー本文・diff・Bearer Secretが含まれていないことを維持する。
@@ -578,7 +584,8 @@ CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを
 - PR番号 / repository / head branch
 - 修正前後SHA / push SHA
 - P0 / P1 / P2の件数と分類
-- JEV Shadow Triageのstatus、候補分類件数、fallback件数
+- JEV Shadow Triageのstatus、候補分類件数、fallback件数、`JEV_FALLBACK_REASONS`
+- JEVがfallbackした場合の利用者向け理由（クレジット不足 / Spend Limit / rate limit / billing / その他API障害）と「Codex baselineで継続した」こと
 - BLOCKING残件
 - FOLLOW-UP / DISMISS項目
 - Issue受入条件の充足状況
