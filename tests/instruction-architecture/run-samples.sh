@@ -19,10 +19,29 @@ fi
   exit 1
 }
 
+tar_bin="$(command -v tar)"
+[[ -n "$tar_bin" ]] || {
+  printf 'a working tar executable is required for the read-only smoke test\n' >&2
+  exit 1
+}
+
+digest_stream() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | awk '{print $1}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print $1}'
+  else
+    printf 'a SHA-256 executable is required for the read-only smoke test\n' >&2
+    return 1
+  fi
+}
+
 before_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 before_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 before_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname)')"
 before_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
+before_index="$("$git_bin" -C "$ROOT" ls-files --stage -z | digest_stream)"
+before_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
 
 [[ -f "$inventory" ]] || {
   printf 'instruction architecture inventory is missing: %s\n' "$inventory" >&2
@@ -45,7 +64,10 @@ require "docs/instruction-architecture-inventory.md" '変更後 `AGENTS.md`: 47,
 require "docs/instruction-architecture-inventory.md" '現行35セクションをすべて列挙する'
 require "docs/instruction-architecture-inventory.md" '## Overlap, contradiction, and source-of-truth ledger'
 require "docs/instruction-architecture-inventory.md" 'IA-01'
-require "docs/instruction-architecture-inventory.md" '正本競合を解消済み'
+require "docs/instruction-architecture-inventory.md" 'IA-02'
+require "docs/instruction-architecture-inventory.md" '`docs/nine-standard-ai-development-flow.md`、PR template'
+require "docs/instruction-architecture-inventory.md" '正本競合は未解消として記録する'
+require "docs/instruction-architecture-inventory.md" '`Parent Issue Completion` | `ENTRYPOINT` | `KEEP`'
 require "docs/instruction-architecture-inventory.md" '## Agent-executed protocol'
 require "docs/instruction-architecture-inventory.md" '### Execution record'
 require "docs/instruction-architecture-inventory.md" '## Read-only smoke test'
@@ -102,8 +124,10 @@ after_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 after_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 after_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname)')"
 after_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
-[[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_status" == "$after_status" ]] || {
-  printf 'read-only smoke test changed HEAD, branch, refs, or the Git working tree\n' >&2
+after_index="$("$git_bin" -C "$ROOT" ls-files --stage -z | digest_stream)"
+after_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
+[[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_status" == "$after_status" && "$before_index" == "$after_index" && "$before_worktree" == "$after_worktree" ]] || {
+  printf 'read-only smoke test changed HEAD, branch, refs, index, or worktree contents\n' >&2
   exit 1
 }
 

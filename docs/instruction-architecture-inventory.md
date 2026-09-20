@@ -52,10 +52,10 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | `Test Design / Safe Test Deletion` | `ENTRYPOINT` | `MOVE` | `AGENTS.md#Test Design / Safe Test Deletion` → 将来専用test-design doc（子Issue） | `docs/nine-standard-ai-development-flow.md`、各プロジェクトのtests | 専用正本化までは現行参照を維持する。 |
 | `Implementation Workflow` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Implementation Workflow` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 手順全文を常駐させない。 |
 | `Standard Verification Gate` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Standard Verification Gate` → `templates/verification/verify.sh` / `docs/template-guide.md` | `templates/verification/verify.sh`、`docs/template-guide.md` | template本体と生成先の境界を明示する。 |
-| `Parent Issue Completion` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Parent Issue Completion` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 親Issue完了時だけ取得する。 |
+| `Parent Issue Completion` | `ENTRYPOINT` | `KEEP` | `AGENTS.md#Parent Issue Completion` → `AGENTS.md#Parent Issue Completion` | `AGENTS.md#Parent Issue Completion` | 子Issue checkbox、全体完了条件、残課題切り出し、人間確認を含む実在の移動先はまだない。正本を収容する子Issueが完了するまで現行の発火入口と詳細契約を維持する。 |
 | `GitHub Actions CI` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#GitHub Actions CI` → `.github/workflows/ci.yml` / `templates/github-actions/` | `.github/workflows/ci.yml`、`templates/github-actions/` | 実行コマンドはworkflow / templateを正本とする。 |
 | `Code Review Rules` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Code Review Rules` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 起動と探索範囲だけを常駐させる。 |
-| `Review Evidence Contract` | `CANONICAL_DETAIL` | `KEEP` | `AGENTS.md#Review Evidence Contract` → 同節 → PR template | `AGENTS.md` | 唯一の正本。templateは今回値の入力欄。 |
+| `Review Evidence Contract` | `CANONICAL_DETAIL` | `KEEP` | `AGENTS.md#Review Evidence Contract` → 同節 → PR template | `AGENTS.md#Review Evidence Contract` | 現行の詳細正本。`docs/nine-standard-ai-development-flow.md` の詳細複製はIA-02で未解消として追跡し、PR templateは今回値の入力欄に限る。 |
 | `Rule Promotion` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Rule Promotion` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 自動昇格しない入口。 |
 | `Harness Minimalism` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Harness Minimalism` → `docs/ai-development-harness-inventory.md` | `docs/ai-development-harness-inventory.md` | 台帳と再評価条件を正本へ。 |
 | `GitHub Guardrails` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#GitHub Guardrails` → `docs/github-repository-security-baseline.md` | `docs/github-repository-security-baseline.md` | Ruleset等の詳細をSecurity正本へ。 |
@@ -78,7 +78,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | ID | 検出した重複・競合 | 関係する層 | 正本 / 判断 | 結果と後続 |
 | --- | --- | --- | --- | --- |
 | IA-01 | 開発フローが `AGENTS.md`、README、template guide、標準フローに現れる。 | AGENTS / README / docs / template | `docs/nine-standard-ai-development-flow.md` を詳細正本、AGENTSは発火入口、README / templateは利用導線。 | 意味上の矛盾なし。`Implementation Workflow` を `SHORTEN+REFERENCE` 候補にする。 |
-| IA-02 | Review Evidenceの要求がAGENTSとPR templateに現れる。 | AGENTS / PR template | `AGENTS.md#Review Evidence Contract` が唯一の詳細正本。PR templateは今回値を入力する契約。 | 正本競合を解消済み。専用doc化は別Issueで重複を再評価する。 |
+| IA-02 | Review Evidenceの詳細要求が `AGENTS.md`、`docs/nine-standard-ai-development-flow.md`、PR templateに現れる。 | AGENTS / docs / PR template | 現行の詳細正本は `AGENTS.md#Review Evidence Contract` とする。`docs/nine-standard-ai-development-flow.md` には同じ必須field・BLOCKING条件・Verification Evidence境界の詳細複製が残る。PR templateは今回値の入力契約。 | 正本競合は未解消として記録する。`Review Evidence Contract` は `KEEP` とし、別Issueでdocs側を参照入口へ短縮してから、正本の配置変更を再評価する。 |
 | IA-03 | 検証入口がAGENTS、`templates/verification/verify.sh`、template CIに現れる。 | AGENTS / templates / CI | 生成先の実行正本は `scripts/verify.sh`、template本体は `templates/verification/verify.sh`、このrepositoryの実行記録は `.github/workflows/ci.yml`。 | 対象リポジトリと生成先を混同しない。CIがtemplate内の未実行workflowを成功扱いしない。 |
 | IA-04 | Securityの説明がAGENTS、security boundary doc、Preflight script、Security workflowに分散する。 | AGENTS / docs / scripts / CI | 判断基準は `docs/ai-agent-security-boundary.md`、機械判定はPreflight scriptとSecurity workflow。 | 意味上の矛盾なし。Secrets停止条件はRESIDENTのまま維持する。 |
 | IA-05 | Current Stateの概要がAGENTSと詳細schemaに現れる。 | AGENTS / docs | `docs/ai-execution-state.md` がschema / enum /遷移の正本。 | `Structured Current State` は `SHORTEN+REFERENCE` 候補。 |
@@ -141,7 +141,8 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 ## Deferred decisions and follow-up boundary
 
 - `AGENTS.md` の詳細を実際に `docs/` へ移す場合は、移動前後の参照経路、適用漏れ、サイズ差分、失敗時の停止を別PRで検証する。
-- `Review Evidence Contract` の専用文書化は、PR templateと `AGENTS.md` の責務重複を確認してから判断する。
+- `Review Evidence Contract` の専用文書化は、`AGENTS.md`、`docs/nine-standard-ai-development-flow.md`、PR templateの責務重複を確認し、docs側を参照入口へ短縮してから判断する。
+- `Parent Issue Completion` は、子Issue checkbox、全体完了条件、残課題切り出し、人間確認を収容する実在の正本文書ができるまで `AGENTS.md` に維持する。
 - `Design / State Modeling` と `Test Design / Safe Test Deletion` の専用正本化は、既存の標準フローとの重複を確認して子Issue化する。
 - `docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録であり、template repositoryへ空ファイルを追加しない。
 - Codex設定層のtemplate化は、対象host、version drift、適用スコープ、secret / network境界を確認できるDesign Decisionができるまで行わない。
