@@ -100,7 +100,7 @@ jobs:
             .agents/skills/pr-review-fix/scripts/triage-with-jev.sh               "github.com/${GITHUB_REPOSITORY}"               "$PR_NUMBER"               "$HEAD_SHA"               /tmp/review-comments.json               /tmp/jev-results.jsonl
           )"
 
-          printf '%s\n' "$OUTPUT"             | grep -E '^JEV_(STATUS|OBSERVED_COUNT|BLOCKING_CANDIDATES|IN_SCOPE_FIX_CANDIDATES|FOLLOW_UP_CANDIDATES|DISMISS_CANDIDATES|FALLBACK_COUNT|FALLBACK_REQUIRED|FALLBACK_REASONS|CREDITS_EXHAUSTED_COUNT|SPEND_LIMIT_COUNT|RATE_LIMITED_COUNT|BILLING_UNAVAILABLE_COUNT)='             | tee /tmp/jev-summary.env
+          printf '%s\n' "$OUTPUT"             | grep -E '^JEV_(STATUS|OBSERVED_COUNT|BLOCKING_CANDIDATE_COUNT|IN_SCOPE_FIX_CANDIDATE_COUNT|FOLLOW_UP_CANDIDATE_COUNT|DISMISS_CANDIDATE_COUNT|FALLBACK_COUNT|FALLBACK_REQUIRED|FALLBACK_REASONS|CREDITS_EXHAUSTED_COUNT|SPEND_LIMIT_COUNT|RATE_LIMITED_COUNT|BILLING_UNAVAILABLE_COUNT)='             | tee /tmp/jev-summary.env
 
           {
             echo "## JEV Shadow Triage"
