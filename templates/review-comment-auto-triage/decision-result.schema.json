@@ -43,7 +43,7 @@
     "final_result": { "enum": ["shadow_observation", "recorded", "routed", "fallback"] },
     "fallback_reason": {
       "type": ["string", "null"],
-      "enum": ["invalid_comment_id", "invalid_body", "comment_too_large", "invalid_comment", "invalid_existing_decision", "invalid_route_config", "unparseable_response", "api_failure", "high_risk", "low_confidence", null]
+      "enum": ["invalid_comment_id", "invalid_body", "comment_too_large", "invalid_comment", "invalid_existing_decision", "invalid_route_config", "unparseable_response", "credits_exhausted", "spend_limit", "rate_limited", "billing_unavailable", "api_failure", "high_risk", "low_confidence", null]
     },
     "latency_ms": { "type": "number", "minimum": 0 },
     "usage": {
