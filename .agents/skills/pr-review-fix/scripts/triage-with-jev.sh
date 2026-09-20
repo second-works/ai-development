@@ -155,6 +155,139 @@ def fallback_record(comment_id, reason, candidate=None):
         "comparison": None,
     }
 
+RESULT_KEYS = {
+    "comment_id",
+    "model",
+    "mode",
+    "decision",
+    "category",
+    "priority",
+    "auto_fixable",
+    "high_risk",
+    "confidence",
+    "suggested_route",
+    "routed_to",
+    "final_result",
+    "fallback_reason",
+    "latency_ms",
+    "usage",
+    "neuron_usage",
+    "comparison",
+}
+DECISIONS = {"action_required", "no_action", "undecided"}
+CATEGORIES = {"security", "bug", "test", "style", "docs", "other", None}
+PRIORITIES = {"p0", "p1", "p2", "p3", None}
+ROUTES = {"codex", "human", "record_only"}
+FINAL_RESULTS = {"shadow_observation", "recorded", "routed", "fallback"}
+FALLBACK_REASONS = {
+    "invalid_comment_id",
+    "invalid_body",
+    "comment_too_large",
+    "invalid_comment",
+    "invalid_existing_decision",
+    "invalid_route_config",
+    "unparseable_response",
+    "api_failure",
+    "high_risk",
+    "low_confidence",
+    None,
+}
+DISAGREEMENT_FIELDS = {"decision", "category", "priority", "auto_fixable"}
+
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+def valid_probability(value):
+    return value is None or (is_number(value) and 0 <= value <= 1)
+
+def valid_nonnegative_number(value):
+    return is_number(value) and value >= 0
+
+def valid_nullable_bool(value):
+    return value is None or isinstance(value, bool)
+
+def validate_usage(value):
+    if value is None:
+        return True
+    if not isinstance(value, dict) or set(value) != {"input_tokens", "output_tokens"}:
+        return False
+    for key in ("input_tokens", "output_tokens"):
+        token_count = value.get(key)
+        if token_count is not None and (
+            not isinstance(token_count, int) or isinstance(token_count, bool) or token_count < 0
+        ):
+            return False
+    return True
+
+def validate_neuron_usage(value):
+    return (
+        isinstance(value, dict)
+        and set(value) == {"status", "reason"}
+        and value.get("status") == "unavailable"
+        and isinstance(value.get("reason"), str)
+        and bool(value.get("reason").strip())
+    )
+
+def validate_comparison(value):
+    if value is None:
+        return True
+    if not isinstance(value, dict) or set(value) != {
+        "baseline_present",
+        "disagreement_count",
+        "disagreements",
+    }:
+        return False
+    if value.get("baseline_present") is not True:
+        return False
+    count = value.get("disagreement_count")
+    disagreements = value.get("disagreements")
+    if not isinstance(count, int) or isinstance(count, bool) or count < 0:
+        return False
+    if not isinstance(disagreements, list):
+        return False
+    if any(item not in DISAGREEMENT_FIELDS for item in disagreements):
+        return False
+    return count == len(disagreements)
+
+def validate_jev_result(result, expected_comment_id):
+    if not isinstance(result, dict) or set(result) != RESULT_KEYS:
+        return False
+    if result.get("comment_id") != expected_comment_id:
+        return False
+    if result.get("model") != "typesafe/jev":
+        return False
+    if result.get("mode") not in {"shadow", "limited_automation"}:
+        return False
+    if result.get("decision") not in DECISIONS:
+        return False
+    if result.get("category") not in CATEGORIES:
+        return False
+    if result.get("priority") not in PRIORITIES:
+        return False
+    if not valid_nullable_bool(result.get("auto_fixable")):
+        return False
+    if not valid_nullable_bool(result.get("high_risk")):
+        return False
+    if not valid_probability(result.get("confidence")):
+        return False
+    if result.get("suggested_route") not in ROUTES:
+        return False
+    if result.get("routed_to") not in ROUTES:
+        return False
+    if result.get("final_result") not in FINAL_RESULTS:
+        return False
+    if result.get("fallback_reason") not in FALLBACK_REASONS:
+        return False
+    if not valid_nonnegative_number(result.get("latency_ms")):
+        return False
+    if not validate_usage(result.get("usage")):
+        return False
+    if not validate_neuron_usage(result.get("neuron_usage")):
+        return False
+    if not validate_comparison(result.get("comparison")):
+        return False
+    return True
+
 for comment in current:
     comment_id = str(comment.get("id"))
     payload = {
@@ -182,8 +315,11 @@ for comment in current:
         with urllib.request.urlopen(request, timeout=20) as response:
             response_body = response.read()
         decoded = json.loads(response_body.decode("utf-8"))
-        result = decoded.get("result") if isinstance(decoded, dict) else None
-        if not isinstance(result, dict):
+        if not isinstance(decoded, dict) or set(decoded) != {"result"}:
+            records.append(fallback_record(comment_id, "malformed_response"))
+            continue
+        result = decoded.get("result")
+        if not validate_jev_result(result, comment_id):
             records.append(fallback_record(comment_id, "malformed_response"))
             continue
     except urllib.error.HTTPError as exc:
