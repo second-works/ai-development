@@ -55,7 +55,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | `Parent Issue Completion` | `ENTRYPOINT` | `KEEP` | `AGENTS.md#Parent Issue Completion` → `AGENTS.md#Parent Issue Completion` | `AGENTS.md#Parent Issue Completion` | 子Issue checkbox、全体完了条件、残課題切り出し、人間確認を含む実在の移動先はまだない。正本を収容する子Issueが完了するまで現行の発火入口と詳細契約を維持する。 |
 | `GitHub Actions CI` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#GitHub Actions CI` → `.github/workflows/ci.yml` / `templates/github-actions/` | `.github/workflows/ci.yml`、`templates/github-actions/` | 実行コマンドはworkflow / templateを正本とする。 |
 | `Code Review Rules` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Code Review Rules` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 起動と探索範囲だけを常駐させる。 |
-| `Review Evidence Contract` | `CANONICAL_DETAIL` | `KEEP` | `AGENTS.md#Review Evidence Contract` → 同節 → `docs/nine-standard-ai-development-flow.md` / `.agents/skills/pr-review-fix/SKILL.md` / PR template | `AGENTS.md#Review Evidence Contract` | 現行の詳細正本。`docs/nine-standard-ai-development-flow.md` と `.agents/skills/pr-review-fix/SKILL.md` の詳細複製はIA-02で未解消として追跡し、PR templateは今回値の入力欄に限る。 |
+| `Review Evidence Contract` | `CANONICAL_DETAIL` | `KEEP` | `AGENTS.md#Review Evidence Contract` → 同節 → 詳細複製（標準フロー / Skill）・意図的要約（README / template guide / harness inventory / execution state）・PR template | `AGENTS.md#Review Evidence Contract` | 現行の詳細正本。全出現層と、詳細複製を短縮する順序、意図的要約が正本を上書きしない境界はIA-02で追跡する。PR templateは今回値の入力欄に限る。 |
 | `Rule Promotion` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Rule Promotion` → `docs/nine-standard-ai-development-flow.md` | `docs/nine-standard-ai-development-flow.md` | 自動昇格しない入口。 |
 | `Harness Minimalism` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Harness Minimalism` → `docs/ai-development-harness-inventory.md` | `docs/ai-development-harness-inventory.md` | 台帳と再評価条件を正本へ。 |
 | `GitHub Guardrails` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#GitHub Guardrails` → `docs/github-repository-security-baseline.md` | `docs/github-repository-security-baseline.md` | Ruleset等の詳細をSecurity正本へ。 |
@@ -78,12 +78,27 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | ID | 検出した重複・競合 | 関係する層 | 正本 / 判断 | 結果と後続 |
 | --- | --- | --- | --- | --- |
 | IA-01 | 開発フローが `AGENTS.md`、README、template guide、標準フローに現れる。 | AGENTS / README / docs / template | `docs/nine-standard-ai-development-flow.md` を詳細正本、AGENTSは発火入口、README / templateは利用導線。 | 意味上の矛盾なし。`Implementation Workflow` を `SHORTEN+REFERENCE` 候補にする。 |
-| IA-02 | Review Evidenceの詳細要求が `AGENTS.md`、`docs/nine-standard-ai-development-flow.md`、`.agents/skills/pr-review-fix/SKILL.md`、PR templateに現れる。 | AGENTS / docs / Skill / PR template | 現行の詳細正本は `AGENTS.md#Review Evidence Contract` とする。`docs/nine-standard-ai-development-flow.md` と `.agents/skills/pr-review-fix/SKILL.md` には、必須field・BLOCKING条件・P2分類・Verification Evidence境界を含む詳細複製が残る。PR templateは今回値の入力契約。 | 正本競合は未解消として記録する。`Review Evidence Contract` は `KEEP` とし、別Issueでdocs側とSkill側を正本参照入口へ短縮してから、正本の配置変更を再評価する。 |
+| IA-02 | Review Evidence Contractが、詳細正本、詳細複製、実行・状態・templateの要約または入力欄に分散する。完全な出現層と責務は直後のIA-02 layer mapに列挙する。 | AGENTS / README / docs / Skill / PR template | 現行の詳細正本は `AGENTS.md#Review Evidence Contract` とする。詳細複製は正本競合、意図的要約は適用文脈だけを担い、PR templateは今回値の入力契約である。 | 正本競合は未解消として記録する。詳細複製は正本参照入口へ短縮する子Issueの対象とし、要約層は正本を再定義しない責務を維持する。 |
 | IA-03 | 検証入口がAGENTS、`templates/verification/verify.sh`、template CIに現れる。 | AGENTS / templates / CI | 生成先の実行正本は `scripts/verify.sh`、template本体は `templates/verification/verify.sh`、このrepositoryの実行記録は `.github/workflows/ci.yml`。 | 対象リポジトリと生成先を混同しない。CIがtemplate内の未実行workflowを成功扱いしない。 |
 | IA-04 | Securityの説明がAGENTS、security boundary doc、Preflight script、Security workflowに分散する。 | AGENTS / docs / scripts / CI | 判断基準は `docs/ai-agent-security-boundary.md`、機械判定はPreflight scriptとSecurity workflow。 | 意味上の矛盾なし。Secrets停止条件はRESIDENTのまま維持する。 |
 | IA-05 | Current Stateの概要がAGENTSと詳細schemaに現れる。 | AGENTS / docs | `docs/ai-execution-state.md` がschema / enum /遷移の正本。 | `Structured Current State` は `SHORTEN+REFERENCE` 候補。 |
 | IA-06 | RAGの共通規則と案件固有設計が混同され得る。 | AGENTS / docs / Issue | 共通正本は `docs/architecture/rag-guidelines.md`、`rag-design.md` はRAG採用案件だけの成果物。 | template repositoryに空の `rag-design.md` を作らない。 |
 | IA-07 | Codex configとCursor configを共通ルールとして固定する誘惑がある。 | config / Issue / docs | host・version・secret・network境界を伴う設定は案件Design Decisionが正本。 | `.codex/config.toml` とoverride機構は採用判断を子Issueへ延期する。 |
+
+### IA-02 Review Evidence layer map
+
+`rg -n "Review Evidence Contract|成立条件.*期待結果|V-02 Review Evidence" README.md docs .agents .github` で見つかる出現層を、正本競合か、正本を代替しない文脈要約か、今回値の入力欄かで区別する。単なる正本への参照も含め、以下の層をIA-02の判断対象から除外しない。
+
+| 層 | 現在のpath / 役割 | 現在の扱い | 判断と後続 |
+| --- | --- | --- | --- |
+| 詳細正本 | `AGENTS.md#Review Evidence Contract`。field、証拠不足時の扱い、PR因果、受入条件、再現または静的根拠、Dispositionを定義する。 | `CANONICAL_DETAIL` | `KEEP`。他層と矛盾した場合はこの節を優先する。 |
+| 詳細複製 | `docs/nine-standard-ai-development-flow.md`。Review Evidence、BLOCKING、P2分類、Verification Evidence境界を工程手順として再記述する。 | 正本競合 | 子Issueで正本参照入口へ `SHORTEN+REFERENCE` する。工程の発火順だけを残し、field schemaを再定義しない。 |
+| 詳細複製 | `.agents/skills/pr-review-fix/SKILL.md`。修正ラウンドで使う必須field、分類、停止条件を再記述する。 | 正本競合 | 子Issueで正本参照入口へ `SHORTEN+REFERENCE` する。反復手順と停止時の人間引継ぎだけを残す。 |
+| 利用者向け要約 | `README.md`。レビュー修正ラウンド、BLOCKING条件、Review Evidenceに必要な根拠を短く案内する。 | `ENTRYPOINT_SUMMARY` | 意図的な概要として `KEEP`。詳細fieldの列挙や独自の成立条件は追加せず、正本変更時は正本への参照と矛盾しないかを確認する。 |
+| project template要約 | `docs/template-guide.md`。生成先projectのreview記録にReview Evidenceを使うことを短いchecklistで案内する。 | `ENTRYPOINT_SUMMARY` | 意図的な概要として `KEEP`。生成先の詳細契約ではなく、詳細fieldは `AGENTS.md#Review Evidence Contract` を参照する。 |
+| Harness台帳要約 | `docs/ai-development-harness-inventory.md#V-02`。V-02の入力、四分類、停止・再評価条件を、Harnessが担う失敗モードと運用コストの文脈で記録する。 | `INTENTIONAL_INVENTORY_SUMMARY` | `KEEP`。Review Evidenceのfield schemaやSeverity判定の正本にはせず、Harnessの採否・再評価の説明だけを担う。V-02を変更する子Issueでは正本との整合を確認する。 |
+| State連携要約 | `docs/ai-execution-state.md`。Current StateにP2分類とevidence参照を保存する際の連携条件を示す。 | `STATE_INTEGRATION_SUMMARY` | `KEEP`。State schemaの更新手順だけを担い、Review Evidenceの成立条件・field schemaを再定義しない。 |
+| 今回値の入力欄 | `.github/pull_request_template.md`。レビューround、Finding、Disposition、根拠URLなどをPRごとに記録する。 | `INPUT_CONTRACT` | `KEEP`。正本のfield意味を変更せず、今回の値を受け取る欄だけを担う。 |
 
 この棚卸しでは、上表以外に既存Gateを弱める意味上の矛盾は検出しなかった。未決定項目を「矛盾なし」と扱わず、後続欄に明示した。
 
@@ -117,7 +132,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 2. **Gate enumeration**: 任意のIssueに対して、実装前のRisk / Design Decision / Security Boundary、標準検証、CI / Security / Review、Human Mergeの入口を列挙できる。
 3. **Scope**: repo-local Skillは対象ディレクトリと作業目的が一致した場合だけ適用され、全作業の常駐ルールへ昇格していない。
 4. **Triggered retrieval**: Framework、Plan Review、Acceptance、Security、RAGなどの詳細は、発火条件と正本文書の対応をたどれる。
-5. **Read-only boundary**: read-only確認ではbranch、commit、push、PR、Issueコメントを作成しない。確認前後のHEAD、branch、refs、status、index entryと`assume-unchanged` / `skip-worktree` flag、worktree内容が一致する。
+5. **Read-only boundary**: read-only確認ではbranch、commit、push、PR、Issueコメントを作成しない。確認前後のHEAD、branch、refs（symbolic refの参照先を含む）、status、index entryと`assume-unchanged` / `skip-worktree` flag、worktree内容が一致する。
 6. **Runtime evidence**: 利用可能なCodexの実機または公式仕様で確認できない `/status`、`/debug-config` 等のコマンドを、標準手順として固定しない。
 
 このshell smoke testはCodex自身の全runtimeを再現するものではない。source map、参照経路、禁止された書き込みの不在、Git状態不変という決定可能な境界をCIで固定し、実機でしか確認できない適用結果は次のAgent実行記録で補完する。
@@ -127,7 +142,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 1. 新しいread-only Agent sessionで、対象Issue、対象commit、root `AGENTS.md` を提示する。branch、commit、push、PR、Issueコメントの作成を禁止する。
 2. Agentに、現在適用中のinstruction source、Issue実装前に必要なGate、repo-local Skillの適用scope、Framework / Plan Review / Securityなどの発火条件と参照先を列挙させる。
 3. Agentは根拠にしたsource pathまたはGitHub URLを示し、実在確認できないruntime commandを標準手順として提案しない。
-4. 実行者は、前後の `HEAD`、branch、refs、working tree、index entryと`assume-unchanged` / `skip-worktree` flagが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
+4. 実行者は、前後の `HEAD`、branch、refsとsymbolic refの参照先、working tree、index entryと`assume-unchanged` / `skip-worktree` flagが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
 
 ### Execution record
 
@@ -141,7 +156,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 ## Deferred decisions and follow-up boundary
 
 - `AGENTS.md` の詳細を実際に `docs/` へ移す場合は、移動前後の参照経路、適用漏れ、サイズ差分、失敗時の停止を別PRで検証する。
-- `Review Evidence Contract` の専用文書化は、`AGENTS.md`、`docs/nine-standard-ai-development-flow.md`、`.agents/skills/pr-review-fix/SKILL.md`、PR templateの責務重複を確認し、docs側とSkill側を正本参照入口へ短縮してから判断する。
+- `Review Evidence Contract` の専用文書化は、IA-02 layer mapに列挙した `AGENTS.md`、README、`docs/nine-standard-ai-development-flow.md`、`docs/template-guide.md`、`docs/ai-development-harness-inventory.md#V-02`、`docs/ai-execution-state.md`、`.agents/skills/pr-review-fix/SKILL.md`、PR templateの責務を確認してから判断する。まず詳細複製であるdocs側とSkill側を正本参照入口へ短縮し、意図的要約が正本を再定義しないことを検証する。
 - `Parent Issue Completion` は、子Issue checkbox、全体完了条件、残課題切り出し、人間確認を収容する実在の正本文書ができるまで `AGENTS.md` に維持する。
 - `Design / State Modeling` と `Test Design / Safe Test Deletion` の専用正本化は、既存の標準フローとの重複を確認して子Issue化する。
 - `docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録であり、template repositoryへ空ファイルを追加しない。
