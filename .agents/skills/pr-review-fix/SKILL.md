@@ -91,6 +91,7 @@ JEVはレビュー判断を置き換えない。既定はShadow Modeであり、
 - Skill側のShadow観測用confidence閾値は `JEV_MIN_CONFIDENCE` とし、未設定時は `0.80` を使う。
 - Workerが `mode=shadow` 以外を返した場合は、その結果を自動ルーティングに使わずfallbackする。
 - API障害、401/5xx、malformed response、低confidence、`high_risk=true`、`security`、P0/P1は既存Skill判断へfallbackする。
+- JEVのHTTP 200応答も信頼せず、`decision-result.schema.json`相当の型・enum・必須項目・余剰項目禁止・nested object契約を満たす場合だけ参照する。不正応答は`malformed_response`としてbaselineへfallbackし、未検証フィールドを監査ログへ転記しない。
 - 現在head SHAに紐づくCodex review commentだけをJEVへ渡す。古いSHAの未解決threadは従来どおりReview Evidence Contractで判定する。
 - JEV監査ログにはcomment id、判定メタデータ、候補分類、latency/token usage等だけを保存し、レビュー本文、diff、Bearer Secretを保存しない。
 
