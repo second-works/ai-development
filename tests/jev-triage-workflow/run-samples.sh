@@ -135,3 +135,7 @@ if printf '%s\n' "$urllib_probe" | grep -Fq '.read('; then
   echo "urllib diagnostic probe must not read or log the response body" >&2
   exit 1
 fi
+
+# workflow YAML parse contract
+command -v ruby >/dev/null
+ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))' "$WORKFLOW"
