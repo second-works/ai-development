@@ -70,3 +70,39 @@ if grep -Eq 'echo ".*\`\$[A-Z_]+\`"' "$WORKFLOW"; then
   echo "summary must not use shell command substitution for Markdown backticks" >&2
   exit 1
 fi
+
+# ingress diagnostic contract
+grep -Fq 'JEV_PROBE_UNAUTH_STATUS=' "$WORKFLOW"
+grep -Fq 'JEV_PROBE_AUTH_STATUS=' "$WORKFLOW"
+[[ "$(grep -Fc -- '--output /dev/null' "$WORKFLOW")" -eq 2 ]]
+[[ "$(grep -Fc -- "--write-out '%{http_code}'" "$WORKFLOW")" -eq 2 ]]
+[[ "$(grep -Fc -- '--data '"'"'{}'"'"'' "$WORKFLOW")" -eq 2 ]]
+grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"' "$WORKFLOW"
+
+unauth_probe="$(
+  awk '/JEV_PROBE_UNAUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
+)"
+auth_probe="$(
+  awk '/JEV_PROBE_AUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
+)"
+
+printf '%s\n' "$unauth_probe" | grep -Fq -- '--output /dev/null'
+printf '%s\n' "$auth_probe" | grep -Fq -- '--output /dev/null'
+printf '%s\n' "$unauth_probe" | grep -Fq -- "--write-out '%{http_code}'"
+printf '%s\n' "$auth_probe" | grep -Fq -- "--write-out '%{http_code}'"
+printf '%s\n' "$auth_probe" | grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"'
+if printf '%s\n' "$unauth_probe" | grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"'; then
+  echo "unauthenticated diagnostic probe must not send the Bearer token" >&2
+  exit 1
+fi
+[[ "$(grep -Fc -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"' "$WORKFLOW")" -eq 1 ]]
+
+if grep -Eq 'curl .*--verbose|curl .* -v( |$)' "$WORKFLOW"; then
+  echo "diagnostic curl must not enable verbose output" >&2
+  exit 1
+fi
+
+if grep -Fq '/tmp/jev-probe' "$WORKFLOW"; then
+  echo "diagnostic response bodies must not be written to files" >&2
+  exit 1
+fi
