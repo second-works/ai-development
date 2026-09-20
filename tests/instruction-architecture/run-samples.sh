@@ -40,7 +40,8 @@ before_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 before_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 before_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname)')"
 before_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
-before_index="$("$git_bin" -C "$ROOT" ls-files --stage -z | digest_stream)"
+# --stage records index entries, and -v includes assume-unchanged / skip-worktree flags.
+before_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
 before_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
 
 [[ -f "$inventory" ]] || {
@@ -65,13 +66,15 @@ require "docs/instruction-architecture-inventory.md" '現行35セクションを
 require "docs/instruction-architecture-inventory.md" '## Overlap, contradiction, and source-of-truth ledger'
 require "docs/instruction-architecture-inventory.md" 'IA-01'
 require "docs/instruction-architecture-inventory.md" 'IA-02'
-require "docs/instruction-architecture-inventory.md" '`docs/nine-standard-ai-development-flow.md`、PR template'
+require "docs/instruction-architecture-inventory.md" '`docs/nine-standard-ai-development-flow.md`、`.agents/skills/pr-review-fix/SKILL.md`、PR template'
 require "docs/instruction-architecture-inventory.md" '正本競合は未解消として記録する'
+require "docs/instruction-architecture-inventory.md" 'docs側とSkill側を正本参照入口へ短縮'
 require "docs/instruction-architecture-inventory.md" '`Parent Issue Completion` | `ENTRYPOINT` | `KEEP`'
 require "docs/instruction-architecture-inventory.md" '## Agent-executed protocol'
 require "docs/instruction-architecture-inventory.md" '### Execution record'
 require "docs/instruction-architecture-inventory.md" '## Read-only smoke test'
 require "docs/instruction-architecture-inventory.md" 'branch、commit、push、PR、Issueコメントを作成しない'
+require "docs/instruction-architecture-inventory.md" 'index entryと`assume-unchanged` / `skip-worktree` flag'
 require "docs/instruction-architecture-inventory.md" '`AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/`'
 require "docs/instruction-architecture-inventory.md" '`docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録'
 
@@ -124,10 +127,10 @@ after_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 after_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 after_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname)')"
 after_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
-after_index="$("$git_bin" -C "$ROOT" ls-files --stage -z | digest_stream)"
+after_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
 after_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
 [[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_status" == "$after_status" && "$before_index" == "$after_index" && "$before_worktree" == "$after_worktree" ]] || {
-  printf 'read-only smoke test changed HEAD, branch, refs, index, or worktree contents\n' >&2
+  printf 'read-only smoke test changed HEAD, branch, refs, index entries or flags, or worktree contents\n' >&2
   exit 1
 }
 
