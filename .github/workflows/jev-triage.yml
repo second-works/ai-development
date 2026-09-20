@@ -134,6 +134,39 @@ jobs:
               "$JEV_ENDPOINT"
           )"
           JEV_PROBE_AUTH_RC=$?
+
+          JEV_PROBE_URLLIB_AUTH_STATUS="$(
+            JEV_ENDPOINT="$JEV_ENDPOINT" python3 - <<'PY'
+          import os
+          import urllib.error
+          import urllib.request
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  return None
+
+          endpoint = os.environ["JEV_ENDPOINT"]
+          token = os.environ["JEV_TRIAGE_TOKEN"]
+          request = urllib.request.Request(
+              endpoint,
+              data=b"{}",
+              method="POST",
+              headers={
+                  "content-type": "application/json",
+                  "authorization": "Bearer " + token,
+              },
+          )
+          opener = urllib.request.build_opener(NoRedirect)
+          try:
+              with opener.open(request, timeout=20) as response:
+                  print(response.status)
+          except urllib.error.HTTPError as exc:
+              print(exc.code)
+          except Exception:
+              print("urllib_error")
+          PY
+          )"
+          JEV_PROBE_URLLIB_AUTH_RC=$?
           set -e
 
           if [[ "$JEV_PROBE_UNAUTH_RC" -ne 0 ]]; then
@@ -142,15 +175,20 @@ jobs:
           if [[ "$JEV_PROBE_AUTH_RC" -ne 0 ]]; then
             JEV_PROBE_AUTH_STATUS="curl_error"
           fi
+          if [[ "$JEV_PROBE_URLLIB_AUTH_RC" -ne 0 ]]; then
+            JEV_PROBE_URLLIB_AUTH_STATUS="urllib_error"
+          fi
 
           printf 'JEV_PROBE_UNAUTH_STATUS=%s\n' "$JEV_PROBE_UNAUTH_STATUS"
           printf 'JEV_PROBE_AUTH_STATUS=%s\n' "$JEV_PROBE_AUTH_STATUS"
+          printf 'JEV_PROBE_URLLIB_AUTH_STATUS=%s\n' "$JEV_PROBE_URLLIB_AUTH_STATUS"
 
           {
             echo "## JEV Ingress Diagnostic"
             echo
             printf -- '- `JEV_PROBE_UNAUTH_STATUS`: `%s`\n' "$JEV_PROBE_UNAUTH_STATUS"
             printf -- '- `JEV_PROBE_AUTH_STATUS`: `%s`\n' "$JEV_PROBE_AUTH_STATUS"
+            printf -- '- `JEV_PROBE_URLLIB_AUTH_STATUS`: `%s`\n' "$JEV_PROBE_URLLIB_AUTH_STATUS"
           } >> "$GITHUB_STEP_SUMMARY"
 
           ACTUAL_HEAD_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
