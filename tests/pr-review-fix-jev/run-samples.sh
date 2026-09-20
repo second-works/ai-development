@@ -158,15 +158,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(503)
             self.end_headers()
             return
-        if cid == "109":
-            body = json.dumps({"unexpected": True}).encode()
-            self.send_response(200)
-            self.send_header("content-type", "application/json")
-            self.send_header("content-length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-            return
-
         result = {
             "comment_id": cid,
             "model": "typesafe/jev",
@@ -220,6 +211,18 @@ class Handler(BaseHTTPRequestHandler):
             result["priority"] = "p0"
         elif cid == "107":
             result["mode"] = "limited_automation"
+
+        if cid == "109":
+            body = json.dumps({"result": result}).replace(
+                '"latency_ms": 12',
+                '"latency_ms": 1e400',
+            ).encode()
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
 
         body = json.dumps({"result": result}).encode()
         self.send_response(200)
@@ -292,6 +295,7 @@ for forbidden in [
     "secret-diff-marker",
     "test-secret",
     "authorization",
+    "Infinity",
 ]:
     assert forbidden not in text
 PY
