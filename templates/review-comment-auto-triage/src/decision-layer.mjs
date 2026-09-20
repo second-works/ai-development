@@ -209,6 +209,46 @@ function usageRecord(response) {
   return { input_tokens: inputTokens, output_tokens: outputTokens };
 }
 
+function aiErrorStatus(error) {
+  const candidates = [
+    error?.status,
+    error?.statusCode,
+    error?.cause?.status,
+    error?.cause?.statusCode,
+  ];
+  for (const value of candidates) {
+    if (Number.isInteger(value) && value >= 400 && value <= 599) return value;
+  }
+  return null;
+}
+
+function classifyAiFailure(error) {
+  const status = aiErrorStatus(error);
+  const message = String(error?.message ?? error ?? "").toLowerCase();
+
+  const mentionsCredit = /\b(?:credits?|balance)\b/.test(message);
+  const creditUnavailable = /insufficient|exhausted|depleted|empty|zero|not enough|no remaining/.test(message);
+  if (mentionsCredit && creditUnavailable) return "credits_exhausted";
+
+  if (/spend[\s_-]*limit|budget[\s_-]*limit|cost[\s_-]*limit|over budget/.test(message)) {
+    return "spend_limit";
+  }
+
+  if (/unified[\s_-]*billing|billing|payment/.test(message)) {
+    return "billing_unavailable";
+  }
+
+  if (
+    status === 429
+    || /rate[\s_-]*limit|too many requests|account limited|capacity temporarily exceeded/.test(message)
+  ) {
+    return "rate_limited";
+  }
+
+  return "api_failure";
+}
+
+
 function fallbackResult(commentId, reason, latencyMs, mode = "shadow") {
   return {
     comment_id: commentId,
@@ -366,8 +406,13 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
     };
     result.comparison = comparisonWithExisting(comment, result);
     return result;
-  } catch {
-    return fallbackResult(comment.comment_id, "api_failure", clock.now() - started, mode);
+  } catch (error) {
+    return fallbackResult(
+      comment.comment_id,
+      classifyAiFailure(error),
+      clock.now() - started,
+      mode,
+    );
   }
 }
 
