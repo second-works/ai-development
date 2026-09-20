@@ -71,70 +71,17 @@ if grep -Eq 'echo ".*\`\$[A-Z_]+\`"' "$WORKFLOW"; then
   exit 1
 fi
 
-# ingress diagnostic contract
-grep -Fq 'JEV_PROBE_UNAUTH_STATUS=' "$WORKFLOW"
-grep -Fq 'JEV_PROBE_AUTH_STATUS=' "$WORKFLOW"
-[[ "$(grep -Fc -- '--output /dev/null' "$WORKFLOW")" -eq 2 ]]
-[[ "$(grep -Fc -- "--write-out '%{http_code}'" "$WORKFLOW")" -eq 2 ]]
-[[ "$(grep -Fc -- '--data '"'"'{}'"'"'' "$WORKFLOW")" -eq 2 ]]
-grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"' "$WORKFLOW"
-
-unauth_probe="$(
-  awk '/JEV_PROBE_UNAUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
-)"
-auth_probe="$(
-  awk '/JEV_PROBE_AUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
-)"
-
-printf '%s\n' "$unauth_probe" | grep -Fq -- '--output /dev/null'
-printf '%s\n' "$auth_probe" | grep -Fq -- '--output /dev/null'
-printf '%s\n' "$unauth_probe" | grep -Fq -- "--write-out '%{http_code}'"
-printf '%s\n' "$auth_probe" | grep -Fq -- "--write-out '%{http_code}'"
-printf '%s\n' "$auth_probe" | grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"'
-if printf '%s\n' "$unauth_probe" | grep -Fq -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"'; then
-  echo "unauthenticated diagnostic probe must not send the Bearer token" >&2
-  exit 1
-fi
-[[ "$(grep -Fc -- '--header "authorization: Bearer ${JEV_TRIAGE_TOKEN}"' "$WORKFLOW")" -eq 1 ]]
-
-if grep -Eq 'curl .*--verbose|curl .* -v( |$)' "$WORKFLOW"; then
-  echo "diagnostic curl must not enable verbose output" >&2
-  exit 1
-fi
-
-if grep -Fq '/tmp/jev-probe' "$WORKFLOW"; then
-  echo "diagnostic response bodies must not be written to files" >&2
-  exit 1
-fi
-
-# urllib ingress comparison contract
-grep -Fq 'JEV_PROBE_URLLIB_AUTH_STATUS=' "$WORKFLOW"
-grep -Fq 'import urllib.request' "$WORKFLOW"
-grep -Fq 'import urllib.error' "$WORKFLOW"
-grep -Fq 'data=b"{}"' "$WORKFLOW"
-grep -Fq '"authorization": "Bearer " + token' "$WORKFLOW"
-grep -Fq 'print(exc.code)' "$WORKFLOW"
-grep -Fq 'print(response.status)' "$WORKFLOW"
-grep -Fq 'class NoRedirect(urllib.request.HTTPRedirectHandler):' "$WORKFLOW"
-grep -Fq 'return None' "$WORKFLOW"
-grep -Fq 'urllib.request.build_opener(NoRedirect)' "$WORKFLOW"
-
-urllib_probe="$(
-  awk '/JEV_PROBE_URLLIB_AUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
-)"
-printf '%s\n' "$urllib_probe" | grep -Fq 'urllib.request.Request('
-printf '%s\n' "$urllib_probe" | grep -Fq 'data=b"{}"'
-printf '%s\n' "$urllib_probe" | grep -Fq '"authorization": "Bearer " + token'
-printf '%s\n' "$urllib_probe" | grep -Fq 'urllib.request.build_opener(NoRedirect)'
-printf '%s\n' "$urllib_probe" | grep -Fq 'with opener.open(request, timeout=20) as response:'
-if printf '%s\n' "$urllib_probe" | grep -Fq 'urllib.request.urlopen('; then
-  echo "urllib diagnostic probe must not use redirect-following urlopen" >&2
-  exit 1
-fi
-if printf '%s\n' "$urllib_probe" | grep -Fq '.read('; then
-  echo "urllib diagnostic probe must not read or log the response body" >&2
-  exit 1
-fi
+# retired diagnostic probes must not return to the production workflow
+for marker in \
+  "JEV_PROBE_UNAUTH_STATUS" \
+  "JEV_PROBE_AUTH_STATUS" \
+  "JEV_PROBE_URLLIB_AUTH_STATUS" \
+  "JEV Ingress Diagnostic"; do
+  if grep -Fq -- "$marker" "$WORKFLOW"; then
+    printf 'retired JEV diagnostic marker found: %s\n' "$marker" >&2
+    exit 1
+  fi
+done
 
 # workflow YAML parse contract
 command -v ruby >/dev/null
