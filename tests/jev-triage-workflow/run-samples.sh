@@ -29,7 +29,7 @@ triage_call="$(grep -n 'triage-with-jev.sh' "$WORKFLOW" | tail -1 | cut -d: -f1)
 [[ -n "$second_verify" ]]
 [[ "$second_verify" -lt "$triage_call" ]]
 
-echo "JEV triage workflow contract: PASS"
+
 
 grep -Fq 'BLOCKING_CANDIDATE_COUNT' "$WORKFLOW"
 grep -Fq 'IN_SCOPE_FIX_CANDIDATE_COUNT' "$WORKFLOW"
@@ -40,3 +40,10 @@ if grep -Eq 'BLOCKING_CANDIDATES|IN_SCOPE_FIX_CANDIDATES|FOLLOW_UP_CANDIDATES|DI
   echo "legacy candidate keys must not be used" >&2
   exit 1
 fi
+
+# review comment pagination contract
+grep -Fq -- '--paginate' "$WORKFLOW"
+grep -Fq -- '--slurp' "$WORKFLOW"
+grep -Fq -- "--jq 'add'" "$WORKFLOW"
+
+echo "JEV triage workflow contract: PASS"
