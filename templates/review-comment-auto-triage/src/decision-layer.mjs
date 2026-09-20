@@ -243,6 +243,23 @@ function validChoiceAnswer(answer, allowed) {
     && finiteProbability(answer.confidence) !== null;
 }
 
+function unwrapJevResponse(response) {
+  const candidates = [
+    response,
+    response?.result,
+    response?.result?.result,
+    response?.response,
+    response?.data,
+  ];
+
+  for (const candidate of candidates) {
+    if (isRecord(candidate) && isRecord(candidate.answers)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 function validResponse(response) {
   const answers = response?.answers;
   if (!isRecord(answers)) return false;
@@ -273,12 +290,13 @@ export async function runDecisionLayer({ env, input, mode = "shadow", minConfide
     const gatewayId = typeof env.AI_GATEWAY_ID === "string" && env.AI_GATEWAY_ID.trim() !== ""
       ? env.AI_GATEWAY_ID.trim()
       : "default";
-    const response = await env.AI.run(
+    const rawResponse = await env.AI.run(
       MODEL,
       buildJevRequest(comment),
       { gateway: { id: gatewayId } },
     );
-    if (!validResponse(response)) {
+    const response = unwrapJevResponse(rawResponse);
+    if (!response || !validResponse(response)) {
       return fallbackResult(comment.comment_id, "unparseable_response", clock.now() - started, mode);
     }
 
