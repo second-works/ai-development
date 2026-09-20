@@ -106,3 +106,23 @@ if grep -Fq '/tmp/jev-probe' "$WORKFLOW"; then
   echo "diagnostic response bodies must not be written to files" >&2
   exit 1
 fi
+
+# urllib ingress comparison contract
+grep -Fq 'JEV_PROBE_URLLIB_AUTH_STATUS=' "$WORKFLOW"
+grep -Fq 'import urllib.request' "$WORKFLOW"
+grep -Fq 'import urllib.error' "$WORKFLOW"
+grep -Fq 'data=b"{}"' "$WORKFLOW"
+grep -Fq '"authorization": "Bearer " + token' "$WORKFLOW"
+grep -Fq 'print(exc.code)' "$WORKFLOW"
+grep -Fq 'print(response.status)' "$WORKFLOW"
+
+urllib_probe="$(
+  awk '/JEV_PROBE_URLLIB_AUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
+)"
+printf '%s\n' "$urllib_probe" | grep -Fq 'urllib.request.Request('
+printf '%s\n' "$urllib_probe" | grep -Fq 'data=b"{}"'
+printf '%s\n' "$urllib_probe" | grep -Fq '"authorization": "Bearer " + token'
+if printf '%s\n' "$urllib_probe" | grep -Fq '.read('; then
+  echo "urllib diagnostic probe must not read or log the response body" >&2
+  exit 1
+fi
