@@ -36,6 +36,15 @@ digest_stream() {
   fi
 }
 
+digest_file() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    digest_stream < "$file"
+  else
+    printf '<missing-index>\n'
+  fi
+}
+
 git_dir="$("$git_bin" -C "$ROOT" rev-parse --path-format=absolute --git-dir)"
 git_common_dir="$("$git_bin" -C "$ROOT" rev-parse --path-format=absolute --git-common-dir)"
 
@@ -66,7 +75,10 @@ before_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || prin
 before_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname) %(symref)')"
 # Common and worktree-local raw ref storage captures dangling symbolic refs omitted by for-each-ref.
 before_ref_storage="$(snapshot_ref_storage)"
-before_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
+# Disable Git's optional index refresh so this read-only probe cannot update the index stat cache.
+before_status="$(GIT_OPTIONAL_LOCKS=0 "$git_bin" -C "$ROOT" status --porcelain=v1)"
+# Keep a raw index digest as a second guard against metadata changes not represented by ls-files.
+before_raw_index="$(digest_file "$git_dir/index")"
 # --stage records index entries, and -v includes assume-unchanged / skip-worktree flags.
 before_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
 before_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
@@ -109,11 +121,15 @@ require "docs/instruction-architecture-inventory.md" 'docs側とSkill側を正�
 require "docs/instruction-architecture-inventory.md" '`Parent Issue Completion` | `ENTRYPOINT` | `KEEP`'
 require "docs/instruction-architecture-inventory.md" '## Agent-executed protocol'
 require "docs/instruction-architecture-inventory.md" '### Execution record'
+require "docs/instruction-architecture-inventory.md" '### Historical verification record (pre-self-reference)'
+require "docs/instruction-architecture-inventory.md" 'PRのheadを証跡文書自身のコミットへ自己参照させない'
 require "docs/instruction-architecture-inventory.md" '## Read-only smoke test'
 require "docs/instruction-architecture-inventory.md" 'branch、commit、push、PR、Issueコメントを作成しない'
 require "docs/instruction-architecture-inventory.md" 'index entryと`assume-unchanged` / `skip-worktree` flag'
 require "docs/instruction-architecture-inventory.md" 'dangling symbolic refを含むref storage'
 require "docs/instruction-architecture-inventory.md" 'common ref storage'
+require "tests/instruction-architecture/run-samples.sh" 'GIT_OPTIONAL_LOCKS=0'
+require "tests/instruction-architecture/run-samples.sh" 'before_raw_index'
 require "docs/instruction-architecture-inventory.md" '`AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/`'
 require "docs/instruction-architecture-inventory.md" '`docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録'
 
@@ -166,10 +182,11 @@ after_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 after_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 after_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname) %(symref)')"
 after_ref_storage="$(snapshot_ref_storage)"
-after_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
+after_status="$(GIT_OPTIONAL_LOCKS=0 "$git_bin" -C "$ROOT" status --porcelain=v1)"
+after_raw_index="$(digest_file "$git_dir/index")"
 after_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
 after_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
-[[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_ref_storage" == "$after_ref_storage" && "$before_status" == "$after_status" && "$before_index" == "$after_index" && "$before_worktree" == "$after_worktree" ]] || {
+[[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_ref_storage" == "$after_ref_storage" && "$before_status" == "$after_status" && "$before_raw_index" == "$after_raw_index" && "$before_index" == "$after_index" && "$before_worktree" == "$after_worktree" ]] || {
   printf 'read-only smoke test changed HEAD, branch, refs or common/worktree-local ref storage, index entries or flags, or worktree contents\n' >&2
   exit 1
 }

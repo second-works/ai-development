@@ -148,7 +148,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 
 ### Execution record (historical session)
 
-以下は初回のread-only Agent sessionに対する記録であり、対象SHAはそのセッション時点のものです。PRの最新headに対する検証結果は、直後のLatest verification recordに分けて記録します。
+以下は初回のread-only Agent sessionに対する記録であり、対象SHAはそのセッション時点のものです。PRのheadを証跡文書自身のコミットへ自己参照させないため、後続の検証結果はPR本文または別の外部証跡へ記録します。
 
 - 実行日: 2026-09-20。
 - 対象: Issue #121、commit `5b962f7d23f6665d6e5807cf2916d163866d5358`。
@@ -166,13 +166,13 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 - `docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録であり、template repositoryへ空ファイルを追加しない。
 - Codex設定層のtemplate化は、対象host、version drift、適用スコープ、secret / network境界を確認できるDesign Decisionができるまで行わない。
 
-### Latest verification record
+### Historical verification record (pre-self-reference)
 
 - 実行日: 2026-09-20。
-- 対象: Issue #121、競合解消後の最新commit `418e7c9fa22ece4cf358564aae3983e2bba67e65`。
+- 対象: Issue #121、後続コミットでこの台帳を更新する前の親commit `418e7c9fa22ece4cf358564aae3983e2bba67e65`。
 - 実行: `bash tests/instruction-architecture/run-samples.sh`、`bash tests/pr-review-fix-jev/run-samples.sh`、`bash tests/app-template/run-samples.sh`、shell syntax、`git diff --check`。
 - 結果: 競合解消後のInstruction Architecture、JEV、app-template契約テスト、shell syntax、差分検査はPASS。Deployment / Security Preflightのローカル実行はmacOSのGit実行環境制限で未完了とし、GitHub CI / Securityで再検証する。
-- GitHub証跡: 最新headに対するCI / Security workflowとCodex Reviewは、この記録作成時点では未観測または未完了であり、PASSとは扱わない。
+- GitHub証跡: この節は親commitに対する履歴記録であり、後続headのCI / Security workflowやCodex ReviewのPASSを主張しない。後続headの結果はPR本文へ記録する。
 
 ## Verification record
 
