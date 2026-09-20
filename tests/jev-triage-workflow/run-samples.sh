@@ -115,6 +115,9 @@ grep -Fq 'data=b"{}"' "$WORKFLOW"
 grep -Fq '"authorization": "Bearer " + token' "$WORKFLOW"
 grep -Fq 'print(exc.code)' "$WORKFLOW"
 grep -Fq 'print(response.status)' "$WORKFLOW"
+grep -Fq 'class NoRedirect(urllib.request.HTTPRedirectHandler):' "$WORKFLOW"
+grep -Fq 'return None' "$WORKFLOW"
+grep -Fq 'urllib.request.build_opener(NoRedirect)' "$WORKFLOW"
 
 urllib_probe="$(
   awk '/JEV_PROBE_URLLIB_AUTH_STATUS="\$\(/,/^          \)"/ { print }' "$WORKFLOW"
@@ -122,6 +125,12 @@ urllib_probe="$(
 printf '%s\n' "$urllib_probe" | grep -Fq 'urllib.request.Request('
 printf '%s\n' "$urllib_probe" | grep -Fq 'data=b"{}"'
 printf '%s\n' "$urllib_probe" | grep -Fq '"authorization": "Bearer " + token'
+printf '%s\n' "$urllib_probe" | grep -Fq 'urllib.request.build_opener(NoRedirect)'
+printf '%s\n' "$urllib_probe" | grep -Fq 'with opener.open(request, timeout=20) as response:'
+if printf '%s\n' "$urllib_probe" | grep -Fq 'urllib.request.urlopen('; then
+  echo "urllib diagnostic probe must not use redirect-following urlopen" >&2
+  exit 1
+fi
 if printf '%s\n' "$urllib_probe" | grep -Fq '.read('; then
   echo "urllib diagnostic probe must not read or log the response body" >&2
   exit 1
