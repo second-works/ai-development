@@ -55,7 +55,10 @@ grep -Fq 'DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}' "$WORKF
 grep -Fq 'JEV Triage must be dispatched from the repository default branch' "$WORKFLOW"
 
 # gh api must not combine --slurp with its own --jq formatter.
-if grep -Eq 'gh api.*--slurp.*--jq|gh api.*--jq.*--slurp' "$WORKFLOW"; then
+# Normalize shell line continuations first so multi-line logical commands are tested.
+normalized_workflow="$(sed ':a;N;$!ba;s/\\\n/ /g' "$WORKFLOW")"
+if printf '%s\n' "$normalized_workflow" \
+  | grep -Eq 'gh api.*--slurp.*--jq|gh api.*--jq.*--slurp'; then
   echo "slurp must not be combined with gh api --jq" >&2
   exit 1
 fi
