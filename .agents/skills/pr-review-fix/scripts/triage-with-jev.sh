@@ -338,9 +338,16 @@ for comment in current:
         # Non-2xx is always a degraded JEV path. Accept the Worker's structured
         # body only when it is itself an explicit fallback result; a schema-valid
         # shadow_observation on 4xx/5xx must never clear fallback_required.
+        # Reading an error body can itself fail on truncated/disconnected
+        # responses, so convert that failure to the local HTTP fallback too.
         # Raw upstream error text is discarded so secrets/provider details never
         # reach the audit log.
-        result = decode_structured_result(exc.read(), comment_id)
+        try:
+            error_body = exc.read()
+        except Exception:
+            records.append(fallback_record(comment_id, "http_" + str(exc.code)))
+            continue
+        result = decode_structured_result(error_body, comment_id)
         if (
             result is None
             or result.get("final_result") != "fallback"
