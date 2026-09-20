@@ -168,6 +168,14 @@ cat >"$COMMENTS" <<'JSON'
       "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
     },
     {
+      "id": 119,
+      "body": "Redirects must not receive the Bearer token.",
+      "path": "src/s.js",
+      "line": 190,
+      "commit_id": "abc123",
+      "user": {"login": "chatgpt-codex-connector[bot]", "type": "Bot"}
+    },
+    {
       "id": 999,
       "body": "Old commit must be ignored.",
       "path": "src/old.js",
@@ -196,6 +204,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.headers.get("authorization") != "Bearer test-secret":
             self.send_response(401)
+            self.end_headers()
+            return
+        if self.headers.get("user-agent") != "ai-development-jev-triage/1.0":
+            self.send_response(403)
             self.end_headers()
             return
         length = int(self.headers.get("content-length") or "0")
@@ -298,6 +310,12 @@ class Handler(BaseHTTPRequestHandler):
             self.close_connection = True
             return
 
+        if cid == "119":
+            self.send_response(302)
+            self.send_header("location", "http://127.0.0.1:1/should-not-follow")
+            self.end_headers()
+            return
+
         if cid == "102":
             result["decision"] = "no_action"
             result["auto_fixable"] = False
@@ -352,12 +370,12 @@ export JEV_MIN_CONFIDENCE="0.80"
 
 OUTPUT="$(bash "$SCRIPT" "github.com/second-works/ai-development" 123 abc123 "$COMMENTS" "$LOG")"
 grep -Fq "JEV_STATUS=SHADOW_COMPLETE" <<<"$OUTPUT"
-grep -Fq "JEV_OBSERVED_COUNT=18" <<<"$OUTPUT"
+grep -Fq "JEV_OBSERVED_COUNT=19" <<<"$OUTPUT"
 grep -Fq "JEV_BLOCKING_CANDIDATE_COUNT=2" <<<"$OUTPUT"
 grep -Fq "JEV_IN_SCOPE_FIX_CANDIDATE_COUNT=3" <<<"$OUTPUT"
 grep -Fq "JEV_FOLLOW_UP_CANDIDATE_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_DISMISS_CANDIDATE_COUNT=1" <<<"$OUTPUT"
-grep -Fq "JEV_FALLBACK_COUNT=15" <<<"$OUTPUT"
+grep -Fq "JEV_FALLBACK_COUNT=16" <<<"$OUTPUT"
 grep -Fq "JEV_CREDITS_EXHAUSTED_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_SPEND_LIMIT_COUNT=1" <<<"$OUTPUT"
 grep -Fq "JEV_RATE_LIMITED_COUNT=1" <<<"$OUTPUT"
@@ -366,6 +384,7 @@ grep -Fq "credits_exhausted:1" <<<"$OUTPUT"
 grep -Fq "spend_limit:1" <<<"$OUTPUT"
 grep -Fq "http_429:1" <<<"$OUTPUT"
 grep -Fq "http_502:1" <<<"$OUTPUT"
+grep -Fq "http_302:1" <<<"$OUTPUT"
 
 python3 - "$LOG" <<'PY'
 import json
@@ -375,7 +394,7 @@ path = sys.argv[1]
 records = [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
 by_id = {r["comment_id"]: r for r in records}
 
-assert len(records) == 18
+assert len(records) == 19
 assert by_id["101"]["jev_disposition_candidate"] == "IN-SCOPE FIX"
 assert by_id["101"]["fallback_required"] is False
 assert by_id["102"]["jev_disposition_candidate"] == "DISMISS"
@@ -401,7 +420,10 @@ assert by_id["117"]["jev_disposition_candidate"] is None
 assert by_id["118"]["fallback_reason"] == "http_502"
 assert by_id["118"]["fallback_required"] is True
 assert by_id["118"]["jev_disposition_candidate"] is None
-assert all(by_id[cid]["effective_disposition_source"] == "baseline" for cid in ["113", "114", "115", "116", "117", "118"])
+assert by_id["119"]["fallback_reason"] == "http_302"
+assert by_id["119"]["fallback_required"] is True
+assert by_id["119"]["jev_disposition_candidate"] is None
+assert all(by_id[cid]["effective_disposition_source"] == "baseline" for cid in ["113", "114", "115", "116", "117", "118", "119"])
 assert by_id["110"]["usage"] is None
 assert by_id["111"]["comparison"] is None
 assert all(r["authoritative"] is False for r in records)
@@ -455,3 +477,14 @@ for marker in \
 done
 
 printf 'pr-review-fix JEV shadow integration contract passed\n'
+
+# urllib transport contract
+grep -Fq 'USER_AGENT = "ai-development-jev-triage/1.0"' "$SCRIPT"
+grep -Fq 'class NoRedirect(urllib.request.HTTPRedirectHandler):' "$SCRIPT"
+grep -Fq 'HTTP_OPENER = urllib.request.build_opener(NoRedirect)' "$SCRIPT"
+grep -Fq '"user-agent": USER_AGENT' "$SCRIPT"
+grep -Fq 'with HTTP_OPENER.open(request, timeout=20) as response:' "$SCRIPT"
+if grep -Fq 'urllib.request.urlopen(request' "$SCRIPT"; then
+  echo "JEV transport must not use redirect-following urllib.request.urlopen" >&2
+  exit 1
+fi
