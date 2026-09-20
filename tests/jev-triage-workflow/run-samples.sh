@@ -44,7 +44,7 @@ fi
 # review comment pagination contract
 grep -Fq -- '--paginate' "$WORKFLOW"
 grep -Fq -- '--slurp' "$WORKFLOW"
-grep -Fq -- "--jq 'add'" "$WORKFLOW"
+grep -Fq "jq 'add' /tmp/review-comment-pages.json > /tmp/review-comments.json" "$WORKFLOW"
 
 echo "JEV triage workflow contract: PASS"
 
@@ -53,3 +53,12 @@ grep -Fq 'environment: jev-triage-production' "$WORKFLOW"
 grep -Fq 'WORKFLOW_REF: ${{ github.ref_name }}' "$WORKFLOW"
 grep -Fq 'DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}' "$WORKFLOW"
 grep -Fq 'JEV Triage must be dispatched from the repository default branch' "$WORKFLOW"
+
+# gh api must not combine --slurp with its own --jq formatter.
+# Normalize shell line continuations first so multi-line logical commands are tested.
+normalized_workflow="$(sed ':a;N;$!ba;s/\\\n/ /g' "$WORKFLOW")"
+if printf '%s\n' "$normalized_workflow" \
+  | grep -Eq 'gh api.*--slurp.*--jq|gh api.*--jq.*--slurp'; then
+  echo "slurp must not be combined with gh api --jq" >&2
+  exit 1
+fi
