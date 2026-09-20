@@ -67,7 +67,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh api             --paginate             "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments"             > /tmp/review-comments.json
+          gh api             --paginate             --slurp             "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments"             --jq 'add'             > /tmp/review-comments.json
 
       - name: Run JEV Shadow Triage
         id: triage
