@@ -188,6 +188,10 @@ FALLBACK_REASONS = {
     "invalid_existing_decision",
     "invalid_route_config",
     "unparseable_response",
+    "credits_exhausted",
+    "spend_limit",
+    "rate_limited",
+    "billing_unavailable",
     "api_failure",
     "high_risk",
     "low_confidence",
@@ -289,6 +293,16 @@ def validate_jev_result(result, expected_comment_id):
         return False
     return True
 
+def decode_structured_result(response_body, expected_comment_id):
+    try:
+        decoded = json.loads(response_body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+        return None
+    if not isinstance(decoded, dict) or set(decoded) != {"result"}:
+        return None
+    result = decoded.get("result")
+    return result if validate_jev_result(result, expected_comment_id) else None
+
 for comment in current:
     comment_id = str(comment.get("id"))
     payload = {
@@ -312,20 +326,22 @@ for comment in current:
         },
     )
 
+    result = None
     try:
         with urllib.request.urlopen(request, timeout=20) as response:
             response_body = response.read()
-        decoded = json.loads(response_body.decode("utf-8"))
-        if not isinstance(decoded, dict) or set(decoded) != {"result"}:
-            records.append(fallback_record(comment_id, "malformed_response"))
-            continue
-        result = decoded.get("result")
-        if not validate_jev_result(result, comment_id):
+        result = decode_structured_result(response_body, comment_id)
+        if result is None:
             records.append(fallback_record(comment_id, "malformed_response"))
             continue
     except urllib.error.HTTPError as exc:
-        records.append(fallback_record(comment_id, "http_" + str(exc.code)))
-        continue
+        # The Worker intentionally returns structured fallback results with non-2xx
+        # status codes. Parse only the validated result contract and discard raw
+        # upstream error text so secrets/provider details never reach the audit log.
+        result = decode_structured_result(exc.read(), comment_id)
+        if result is None:
+            records.append(fallback_record(comment_id, "http_" + str(exc.code)))
+            continue
     except Exception:
         records.append(fallback_record(comment_id, "api_failure"))
         continue
@@ -376,12 +392,20 @@ counts = {
     "DISMISS": 0,
 }
 fallback_count = 0
+fallback_reasons = {}
 for record in records:
     candidate = record.get("jev_disposition_candidate")
     if candidate in counts:
         counts[candidate] += 1
     if record.get("fallback_required"):
         fallback_count += 1
+        reason = record.get("fallback_reason") or "unknown"
+        fallback_reasons[reason] = fallback_reasons.get(reason, 0) + 1
+
+reason_summary = ",".join(
+    f"{reason}:{fallback_reasons[reason]}"
+    for reason in sorted(fallback_reasons)
+)
 
 print("JEV_STATUS=SHADOW_COMPLETE")
 print("JEV_OBSERVED_COUNT=" + str(len(records)))
@@ -391,5 +415,10 @@ print("JEV_FOLLOW_UP_CANDIDATE_COUNT=" + str(counts["FOLLOW-UP"]))
 print("JEV_DISMISS_CANDIDATE_COUNT=" + str(counts["DISMISS"]))
 print("JEV_FALLBACK_COUNT=" + str(fallback_count))
 print("JEV_FALLBACK_REQUIRED=" + ("1" if fallback_count else "0"))
+print("JEV_FALLBACK_REASONS=" + reason_summary)
+print("JEV_CREDITS_EXHAUSTED_COUNT=" + str(fallback_reasons.get("credits_exhausted", 0)))
+print("JEV_SPEND_LIMIT_COUNT=" + str(fallback_reasons.get("spend_limit", 0)))
+print("JEV_RATE_LIMITED_COUNT=" + str(fallback_reasons.get("rate_limited", 0)))
+print("JEV_BILLING_UNAVAILABLE_COUNT=" + str(fallback_reasons.get("billing_unavailable", 0)))
 print("JEV_LOG=" + str(output))
 PY
