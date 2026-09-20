@@ -87,7 +87,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 
 ### IA-02 Review Evidence layer map
 
-`rg -n "Review Evidence Contract|成立条件.*期待結果|V-02 Review Evidence|PR Causality|Evidence不足" README.md docs .agents .github tests` で見つかる出現層を、正本競合か、正本を代替しない文脈要約か、機械判定か、今回値の入力欄かで区別する。単なる正本への参照も含め、以下の層をIA-02の判断対象から除外しない。
+`rg -n "Review Evidence Contract|成立条件.*期待結果|V-02 Review Evidence|PR Causality|Evidence不足|BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS|非BLOCKING P2" README.md docs .agents .github tests` で見つかる出現層を、正本競合か、正本を代替しない文脈要約か、機械判定か、今回値の入力欄かで区別する。単なる正本への参照も含め、以下の層をIA-02の判断対象から除外しない。
 
 | 層 | 現在のpath / 役割 | 現在の扱い | 判断と後続 |
 | --- | --- | --- | --- |
@@ -99,7 +99,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | Harness台帳要約 | `docs/ai-development-harness-inventory.md#V-02`。V-02の入力、四分類、停止・再評価条件を、Harnessが担う失敗モードと運用コストの文脈で記録する。 | `INTENTIONAL_INVENTORY_SUMMARY` | `KEEP`。Review Evidenceのfield schemaやSeverity判定の正本にはせず、Harnessの採否・再評価の説明だけを担う。V-02を変更する子Issueでは正本との整合を確認する。 |
 | State連携要約 | `docs/ai-execution-state.md`。Current StateにP2分類とevidence参照を保存する際の連携条件を示す。 | `STATE_INTEGRATION_SUMMARY` | `KEEP`。State schemaの更新手順だけを担い、Review Evidenceの成立条件・field schemaを再定義しない。 |
 | 機械判定 | `tests/review-evidence/run-samples.sh`。AGENTS、Skill、標準フロー、PR templateの必須field、BLOCKING条件、P2収束条件を検査する。 | `MECHANICAL_CHECK` | `KEEP`。正本ではなく期待値を検査する層であり、正本または詳細複製を短縮する同一PRで期待値を更新する。 |
-| 機械判定の参照 | `tests/instruction-architecture/run-samples.sh`、`tests/template-simplification/run-samples.sh`、`tests/verification-evidence/run-samples.sh`。台帳の出現層、PR template、Verification Evidenceとの接続を検査する。 | `MECHANICAL_CHECK` | `KEEP`。Review Evidenceの語句を参照してもfield schemaを定義しない。正本変更時は `tests/review-evidence/run-samples.sh` と併せて同一PRで更新・実行する。 |
+| 機械判定の参照 | `tests/instruction-architecture/run-samples.sh`、`tests/template-simplification/run-samples.sh`、`tests/verification-evidence/run-samples.sh`、`tests/pr-review-followups/run-samples.sh`。台帳の出現層、PR template、Verification Evidence、FOLLOW-UPの四分類と非BLOCKING P2の接続を検査する。 | `MECHANICAL_CHECK` | `KEEP`。Review Evidenceの語句を参照してもfield schemaを定義しない。正本変更時は `tests/review-evidence/run-samples.sh` と併せて同一PRで更新・実行する。 |
 | 今回値の入力欄 | `.github/pull_request_template.md`。レビューround、Finding、Disposition、根拠URLなどをPRごとに記録する。 | `INPUT_CONTRACT` | `KEEP`。正本のfield意味を変更せず、今回の値を受け取る欄だけを担う。 |
 
 この棚卸しでは、上表以外に既存Gateを弱める意味上の矛盾は検出しなかった。未決定項目を「矛盾なし」と扱わず、後続欄に明示した。
@@ -144,7 +144,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 1. 新しいread-only Agent sessionで、対象Issue、対象commit、root `AGENTS.md` を提示する。branch、commit、push、PR、Issueコメントの作成を禁止する。
 2. Agentに、現在適用中のinstruction source、Issue実装前に必要なGate、repo-local Skillの適用scope、Framework / Plan Review / Securityなどの発火条件と参照先を列挙させる。
 3. Agentは根拠にしたsource pathまたはGitHub URLを示し、実在確認できないruntime commandを標準手順として提案しない。
-4. 実行者は、前後の `HEAD`、branch、refsとdangling symbolic refを含むref storage・参照先、working tree、index entryと`assume-unchanged` / `skip-worktree` flagが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
+4. 実行者は、前後の `HEAD`、branch、refsとdangling symbolic refを含むcommon ref storage・worktree-local ref storage・参照先、working tree、index entryと`assume-unchanged` / `skip-worktree` flagが変化していないことを記録する。結果はIssueまたはPRに残し、CIのdeterministic contractと混同しない。
 
 ### Execution record
 
@@ -158,7 +158,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 ## Deferred decisions and follow-up boundary
 
 - `AGENTS.md` の詳細を実際に `docs/` へ移す場合は、移動前後の参照経路、適用漏れ、サイズ差分、失敗時の停止を別PRで検証する。
-- `Review Evidence Contract` の専用文書化は、IA-02 layer mapに列挙した `AGENTS.md`、README、`docs/nine-standard-ai-development-flow.md`、`docs/template-guide.md`、`docs/ai-development-harness-inventory.md#V-02`、`docs/ai-execution-state.md`、`.agents/skills/pr-review-fix/SKILL.md`、`tests/review-evidence/run-samples.sh`、その参照契約テスト群、PR templateの責務を確認してから判断する。まず詳細複製であるdocs側とSkill側を正本参照入口へ短縮し、意図的要約が正本を再定義せず、同一PRでテスト期待値を更新・実行することを検証する。
+- `Review Evidence Contract` の専用文書化は、IA-02 layer mapに列挙した `AGENTS.md`、README、`docs/nine-standard-ai-development-flow.md`、`docs/template-guide.md`、`docs/ai-development-harness-inventory.md#V-02`、`docs/ai-execution-state.md`、`.agents/skills/pr-review-fix/SKILL.md`、`tests/review-evidence/run-samples.sh`、`tests/pr-review-followups/run-samples.sh`を含む参照契約テスト群、PR templateの責務を確認してから判断する。まず詳細複製であるdocs側とSkill側を正本参照入口へ短縮し、意図的要約が正本を再定義せず、同一PRでテスト期待値を更新・実行することを検証する。
 - `Parent Issue Completion` は、子Issue checkbox、全体完了条件、残課題切り出し、人間確認を収容する実在の正本文書ができるまで `AGENTS.md` に維持する。
 - `Design / State Modeling` と `Test Design / Safe Test Deletion` の専用正本化は、既存の標準フローとの重複を確認して子Issue化する。
 - `docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録であり、template repositoryへ空ファイルを追加しない。

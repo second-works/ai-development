@@ -37,22 +37,34 @@ digest_stream() {
 }
 
 git_dir="$("$git_bin" -C "$ROOT" rev-parse --path-format=absolute --git-dir)"
+git_common_dir="$("$git_bin" -C "$ROOT" rev-parse --path-format=absolute --git-common-dir)"
 
 snapshot_ref_storage() {
-  local -a paths=()
-  [[ -d "$git_dir/refs" ]] && paths+=(refs)
-  [[ -e "$git_dir/packed-refs" ]] && paths+=(packed-refs)
-  if ((${#paths[@]} == 0)); then
-    printf '<no-ref-storage>\n'
-    return
-  fi
-  "$tar_bin" -C "$git_dir" -cf - "${paths[@]}" | digest_stream
+  snapshot_one_ref_storage() {
+    local storage_dir="$1"
+    local -a paths=()
+    printf 'storage=%s\n' "$storage_dir"
+    [[ -d "$storage_dir/refs" ]] && paths+=(refs)
+    [[ -e "$storage_dir/packed-refs" ]] && paths+=(packed-refs)
+    if ((${#paths[@]} == 0)); then
+      printf '<no-ref-storage>\n'
+      return
+    fi
+    "$tar_bin" -C "$storage_dir" -cf - "${paths[@]}"
+  }
+
+  {
+    snapshot_one_ref_storage "$git_common_dir"
+    if [[ "$git_dir" != "$git_common_dir" ]]; then
+      snapshot_one_ref_storage "$git_dir"
+    fi
+  } | digest_stream
 }
 
 before_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 before_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 before_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname) %(symref)')"
-# Raw ref storage captures dangling symbolic refs omitted by for-each-ref.
+# Common and worktree-local raw ref storage captures dangling symbolic refs omitted by for-each-ref.
 before_ref_storage="$(snapshot_ref_storage)"
 before_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
 # --stage records index entries, and -v includes assume-unchanged / skip-worktree flags.
@@ -91,6 +103,7 @@ require "docs/instruction-architecture-inventory.md" '`.agents/skills/pr-review-
 require "docs/instruction-architecture-inventory.md" '`tests/review-evidence/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '`tests/template-simplification/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '`tests/verification-evidence/run-samples.sh`'
+require "docs/instruction-architecture-inventory.md" '`tests/pr-review-followups/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '正本競合は未解消として記録する'
 require "docs/instruction-architecture-inventory.md" 'docs側とSkill側を正本参照入口へ短縮'
 require "docs/instruction-architecture-inventory.md" '`Parent Issue Completion` | `ENTRYPOINT` | `KEEP`'
@@ -100,6 +113,7 @@ require "docs/instruction-architecture-inventory.md" '## Read-only smoke test'
 require "docs/instruction-architecture-inventory.md" 'branch、commit、push、PR、Issueコメントを作成しない'
 require "docs/instruction-architecture-inventory.md" 'index entryと`assume-unchanged` / `skip-worktree` flag'
 require "docs/instruction-architecture-inventory.md" 'dangling symbolic refを含むref storage'
+require "docs/instruction-architecture-inventory.md" 'common ref storage'
 require "docs/instruction-architecture-inventory.md" '`AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/`'
 require "docs/instruction-architecture-inventory.md" '`docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録'
 
@@ -156,7 +170,7 @@ after_status="$("$git_bin" -C "$ROOT" status --porcelain=v1)"
 after_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
 after_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
 [[ "$before_head" == "$after_head" && "$before_branch" == "$after_branch" && "$before_refs" == "$after_refs" && "$before_ref_storage" == "$after_ref_storage" && "$before_status" == "$after_status" && "$before_index" == "$after_index" && "$before_worktree" == "$after_worktree" ]] || {
-  printf 'read-only smoke test changed HEAD, branch, refs or ref storage, index entries or flags, or worktree contents\n' >&2
+  printf 'read-only smoke test changed HEAD, branch, refs or common/worktree-local ref storage, index entries or flags, or worktree contents\n' >&2
   exit 1
 }
 
