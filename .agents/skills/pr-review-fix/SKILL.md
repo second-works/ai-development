@@ -1,6 +1,6 @@
 ---
 name: pr-review-fix
-description: 既存GitHub PRのCodex Code Review指摘を、JEV Shadow Triageを補助Decision Layerとして使いながら、同じPRのhead branchへ安全に修正・pushし、SHA一致確認と再検証後にレビューを収束させる。ユーザーが「PR #XXのレビュー修正を進めて」などと依頼したときに使う。新規remote branch/PR作成やMergeには使わない。
+description: 既存GitHub PRのCodex Code Review指摘・レビューコメント・レビュー結果への確認、分類、修正、再検証、再レビューを、JEV Shadow Triageを補助Decision Layerとして使いながら同じPRのhead branchで安全に収束させる。ユーザーがSkill名やPR番号を明示しなくても、「コメント確認して修正して」「レビュー結果対応して」「指摘を直して」「コメント出てます。修正して」「修正後再レビューして」など、既存PRのレビュー指摘への対応を意味する自然文または近い表現で使う。単なるIssueコメント閲覧、READMEやソースコード中のコメント修正、既存PR指摘への対応を伴わない一般レビューには使わない。新規remote branch/PR作成やMergeには使わない。
 ---
 
 # PR Review Fix
