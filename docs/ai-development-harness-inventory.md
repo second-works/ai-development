@@ -239,17 +239,17 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 ### T-01 CodexとSkills
 
 - **ETCSLV分類**：Tools
-- **解決する失敗モード**：モデルの判断だけでは再現できない手順を毎回手作業で再構成すること、同じ処理を複数Skillへ重複実装すること。
+- **解決する失敗モード**：モデルの判断だけでは再現できない手順を毎回手作業で再構成すること、同じ処理を複数Skillへ重複実装すること、外部の新しい手法を現行repoの既存責務確認なしに追加してテンプレートを肥大化させること。
 - **発火条件**：標準手順を再利用可能なSkillへ切り出すとき。
-- **入力 / Context**：Issue、AGENTS.md、対象PR、Skillの契約。
-- **出力 / State変更**：実装、レビュー依頼、検証の実行。
+- **入力 / Context**：Issue、AGENTS.md、対象PR、評価対象の外部提案、現行repoの既存責務、Skillの契約。
+- **出力 / State変更**：テンプレート変更の採否・配置判断、実装、レビュー依頼、検証の実行。
 - **決定論的判定可能か**：ファイル、branch、SHA、コマンド結果は機械確認できる。Skillを追加する価値は失敗モードと再利用頻度で評価する。
 - **実行コスト / 運用負荷**：Skill数が増えるほど参照と更新の負荷が増える。既存Skillで足りる処理を新設しない。
 - **重複する仕組み**：V-01 Codex Code ReviewとTool / Skill利用が重なるが、Skillの再利用契約とレビュー判定は別責務。
 - **安全上必須か**：個々のSkillは一律に必須ではない。PR修正のSHA管理など、追跡可能性を担う契約は維持する。
 - **判定**：SIMPLIFY。
 - **削除・再評価条件**：対象Skillに固有の失敗モード、再利用、検証上の効果がなくなった場合にREMOVE_CANDIDATEとして再評価する。
-- **関連Issue / 正本文書**：#56、T-01。Issue #56の監査条件とこの項目の判定を追跡する。 正本：AGENTS.md、.agents/skills/pr-review-fix/SKILL.md。
+- **関連Issue / 正本文書**：#56、#147、T-01。Issue #56の監査条件とIssue #147のテンプレート変更評価Skillを追跡する。 正本：AGENTS.md、.agents/skills/pr-review-fix/SKILL.md、.agents/skills/template-change-evaluator/SKILL.md。
 
 ### T-02 GitHub Actionsと外部Tool
 
