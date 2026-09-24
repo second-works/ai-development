@@ -45,7 +45,9 @@ Requirements / agreed plan
   ↓
 Framework Decision（適用時）
   ↓
-UI Level / PRODUCT前提（適用時）
+UI Level Decision（全案件。非UIは NONE + 理由）
+  ↓
+PRODUCT前提（PRODUCT時のみ）
   ↓
 Plan Review Gate
   ↓
@@ -60,8 +62,9 @@ Child Issue Quality Gate
 GitHub Issue登録
 ```
 
+- UI Levelは全案件で `NONE / UTILITY / PRODUCT / NEEDS_DECISION` のいずれかを明示する。UIを持たないCLI・library・文書案件でも省略せず `NONE` と対象外理由を記録する。
 - Framework Decision、UI LevelまたはPlan Reviewが `NEEDS_DECISION` の場合はIssue登録へ進まない。
-- Plan Reviewが `PASS` または理由付き `NOT_APPLICABLE` の場合だけIssue構造案へ進む。
+- Plan Reviewが `PASS` または理由付き `NOT_APPLICABLE` の場合だけIssue構造案へ進み、その判定・理由・正本参照をGitHub上のIssue本文へ保存する。
 - 重要な判断を推測で埋めない。
 - Risk Tierは [Adaptive Development Flow](../../../docs/adaptive-development-flow.md) の正本で判定し、IssueへTierと理由を記録する。
 - Child Issue Quality GateのMUST不足はScoreで相殺せず、補完・分割・統合・依存整理が終わるまで登録しない。
@@ -90,6 +93,8 @@ GitHub Issue登録
 子Issueでは少なくとも、正本が要求する今回値を埋める。
 
 - 目的
+- Plan Review結果（`PASS / NOT_APPLICABLE`）、理由、正本参照
+- UI Level（全案件。非UIは `NONE`）と分類理由
 - 変更範囲
 - Non-goals / 変更禁止範囲
 - 完了条件
@@ -103,7 +108,7 @@ GitHub Issue登録
 
 ## 5. 登録前に全Issueを検査する
 
-GitHubへ書き込む前に、すべての子Issueまたは単一IssueへChild Issue Quality Gateを適用する。
+GitHubへ書き込む前に、すべての子Issueまたは単一IssueへChild Issue Quality Gateを適用する。単一Issueでも、Plan Reviewの判定・理由・正本参照とUI Level分類をチャットだけに残さずIssue本文へ保存する。
 
 - MUST不足があれば、まずdraftを補完・分割・統合・依存整理する。
 - 不足を解消するために未承認の設計判断が必要なら、Issue登録を停止してDesign Decisionへ戻す。
