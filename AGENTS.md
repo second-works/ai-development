@@ -120,6 +120,14 @@ Issue化前、実装開始時、PR提出前および差分の影響変更時は 
 
 Plan Review Gateは計画書の全面書き換えや一問一答の強制ではなく、既存のDesign Decision、Design Decision Escalation、子Issue品質チェック、1 Issue / 1 PRを置き換えない。
 
+### Plan to Issues Routing
+
+合意済みの計画・方針・設計をGitHub Issueベースの実装単位へ変換するよう依頼された場合は、Issue登録前に必ず `.agents/skills/plan-to-issues/SKILL.md` を読み、そのSkillに従う。ユーザーがSkill名を明示していることを起動条件にしない。
+
+「この方向でIssue化して」「親Issueと子Issueに分けて」「実装できるIssueにして」「この計画をGitHub Issueベースにして」「Codexで進められる形に分割して」など、現在の合意内容を実装可能なIssueへ変換・登録する近い表現も対象とする。
+
+既存Issueの実装・レビュー・コメント確認、Issue一覧や状態確認、単なるIssue本文の文言修正は対象外とする。Issue化依頼でも、Plan ReviewまたはChild Issue Quality Gateの停止条件を満たす場合は、推測でIssue登録へ進まない。
+
 ## Framework Decision
 
 新規Web/UI案件、またはRendering Strategy、Application Architecture、Runtime、Deployment / hostingの変更を伴う案件では、[Framework Decision v1](docs/architecture/framework-decision.md) をUI Level DecisionとPlan Review Gateより前に確認する。

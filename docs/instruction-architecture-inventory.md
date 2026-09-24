@@ -44,6 +44,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | `Structured Current State` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Structured Current State` → `docs/ai-execution-state.md` | `docs/ai-execution-state.md` | schema、enum、遷移は正本へ。 |
 | `GitHub上の言語` | `RESIDENT` | `KEEP` | `AGENTS.md#GitHub上の言語` → 同節 | README、Issue / PR template | 外部文章の常時方針。 |
 | `Plan Review Gate` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Plan Review Gate` → `docs/plan-review-gate.md` | `docs/plan-review-gate.md` | 判定と出力形式は正本へ。 |
+| `Plan Review Gate > Plan to Issues Routing` | `ENTRYPOINT` | `KEEP` | `AGENTS.md#Plan to Issues Routing` → `.agents/skills/plan-to-issues/SKILL.md` | `.agents/skills/plan-to-issues/SKILL.md` | 合意済み計画をIssue化する反復手順だけをSkillへ委譲し、Framework / Plan Review / Risk / Child Issue Qualityの詳細は各正本を参照する。 |
 | `Framework Decision` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Framework Decision` → `docs/architecture/framework-decision.md` | `docs/architecture/framework-decision.md` | 発火条件だけを残す。 |
 | `AI / Codex Reference Contract` | `RESIDENT` | `SHORTEN+REFERENCE` | `AGENTS.md#AI / Codex Reference Contract` → `docs/product-ui-standard.md` / 案件 `docs/design.md` | `docs/product-ui-standard.md`、案件 `docs/design.md` | PRODUCT UIの参照順序を短く保つ。 |
 | `Child Issue Quality Gate` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Child Issue Quality Gate` → `docs/issue-quality-check.md` | `docs/issue-quality-check.md` | MUST / SHOULD / Scoreは正本へ。 |
@@ -117,7 +118,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 
 ### `.agents/skills/` and `templates/`
 
-反復する特定作業の実行手順と、生成先へコピーする雛形を置く。Skillは適用範囲と停止条件を明記し、templateは生成先での配置先を明記する。現行repo-local Skillとして `.agents/skills/pr-review-fix/SKILL.md` と `.agents/skills/template-change-evaluator/SKILL.md` を追跡し、前者は既存PRレビュー修正、後者はテンプレート改善の採否・重複・配置判断に限定する。
+反復する特定作業の実行手順と、生成先へコピーする雛形を置く。Skillは適用範囲と停止条件を明記し、templateは生成先での配置先を明記する。現行repo-local Skillとして `.agents/skills/pr-review-fix/SKILL.md`、`.agents/skills/template-change-evaluator/SKILL.md`、`.agents/skills/plan-to-issues/SKILL.md` を追跡し、順に既存PRレビュー修正、テンプレート改善の採否・重複・配置判断、合意済み計画からGitHub Issueへの変換に限定する。
 
 ### `scripts/`, `tests/`, and `.github/workflows/`
 
@@ -133,7 +134,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 
 1. **Source map**: 現在の `AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/` の役割を説明でき、主要な正本文書が存在する。
 2. **Gate enumeration**: 任意のIssueに対して、実装前のRisk / Design Decision / Security Boundary、標準検証、CI / Security / Review、Human Mergeの入口を列挙できる。
-3. **Scope**: repo-local Skillは対象ディレクトリと作業目的が一致した場合だけ適用され、全作業の常駐ルールへ昇格していない。`pr-review-fix` は既存PRレビュー修正、`template-change-evaluator` はテンプレート改善の採否・重複・配置判断に限定され、それぞれの `AGENTS.md` routingからSkillへ参照経路をたどれる。
+3. **Scope**: repo-local Skillは対象ディレクトリと作業目的が一致した場合だけ適用され、全作業の常駐ルールへ昇格していない。`pr-review-fix` は既存PRレビュー修正、`template-change-evaluator` はテンプレート改善の採否・重複・配置判断、`plan-to-issues` は合意済み計画からGitHub Issueへの変換に限定され、それぞれの `AGENTS.md` routingからSkillへ参照経路をたどれる。
 4. **Triggered retrieval**: Framework、Plan Review、Acceptance、Security、RAGなどの詳細は、発火条件と正本文書の対応をたどれる。
 5. **Read-only boundary**: read-only確認ではbranch、commit、push、PR、Issueコメントを作成しない。確認前後のHEAD、branch、refs（dangling symbolic refを含むref storageと参照先）、status、index entryと`assume-unchanged` / `skip-worktree` flag、worktree内容が一致する。
 6. **Runtime evidence**: 利用可能なCodexの実機または公式仕様で確認できない `/status`、`/debug-config` 等のコマンドを、標準手順として固定しない。
