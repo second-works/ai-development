@@ -1,0 +1,63 @@
+name: Slack Failure Alert
+
+on:
+  workflow_run:
+    workflows:
+      - Template CI
+      - JEV Triage
+      - Security
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'timed_out' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Send failure alert to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ALERTS_WEBHOOK }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          BRANCH_NAME: ${{ github.event.workflow_run.head_branch }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
+            echo "::error::SLACK_ALERTS_WEBHOOK is not configured"
+            exit 1
+          fi
+
+          payload="$(
+            jq -n \
+              --arg repository "$REPOSITORY" \
+              --arg workflow "$WORKFLOW_NAME" \
+              --arg branch "$BRANCH_NAME" \
+              --arg conclusion "$CONCLUSION" \
+              --arg run_url "$RUN_URL" \
+              --arg run_number "$RUN_NUMBER" \
+              '{
+                text: (
+                  "🚨 GitHub Actions failure\n" +
+                  "Repository: " + $repository + "\n" +
+                  "Workflow: " + $workflow + "\n" +
+                  "Branch: " + $branch + "\n" +
+                  "Conclusion: " + $conclusion + "\n" +
+                  "Run: #" + $run_number + " " + $run_url
+                )
+              }'
+          )"
+
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H 'Content-type: application/json' \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"
