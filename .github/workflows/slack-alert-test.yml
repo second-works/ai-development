@@ -1,0 +1,18 @@
+name: Slack Alert Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-slack-alert:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send test alert to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ALERTS_WEBHOOK }}
+        run: |
+          curl --fail-with-body -X POST \
+            -H 'Content-type: application/json' \
+            --data '{"text":"✅ ai-development → Slack #alerts テスト成功"}' \
+            "$SLACK_WEBHOOK_URL"
