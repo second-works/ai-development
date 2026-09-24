@@ -88,7 +88,7 @@ assert_order "$CHILD" '# UI Level / PRODUCT UI 引き継ぎ' '# AI / Codex Refer
 assert_order "$CHILD" '# AI / Codex Reference Contract（PRODUCT UI実装時）' '# 今回の変更'
 
 assert_exact_line "$PARENT" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
-assert_exact_line "$CHILD" '- 親IssueのUI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
+assert_exact_line "$CHILD" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
 
 assert_contains "$PARENT" '- 分類理由:'
 assert_contains "$PARENT" '- PRODUCT時の適用仕様: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)'
@@ -97,12 +97,14 @@ assert_contains "$PARENT" '- UI LevelがNEEDS_DECISIONの場合の未決定事�
 assert_contains "$PARENT" 'AI/Codexが分類や重要UX判断を推測せず、子Issue化・実装開始を停止する'
 assert_contains "$PARENT" 'PRODUCT以外ではPRODUCT用の必須欄やVisual/UI Acceptanceを強制しない'
 
-assert_contains "$CHILD" '- 親IssueのUI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
+assert_contains "$CHILD" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
 assert_contains "$CHILD" '- UI対象範囲:'
-assert_contains "$CHILD" '- 分類理由 / 親Issue参照:'
+assert_contains "$CHILD" '- 分類理由 / 親Issue参照（非UIは `NONE` と対象外理由を必ず記録）:'
 assert_contains "$CHILD" '- PRODUCT時の設計参照: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)、[Design Profile / docs/design.md雛形](../blob/main/templates/app/docs/design.md)'
 assert_contains "$CHILD" '- UI受入対象外の理由（NONE/UTILITYでPRODUCT項目を適用しない場合）:'
 assert_contains "$CHILD" '- NEEDS_DECISIONの未決定事項 / 決定期限:'
+assert_contains "$CHILD" 'UI Levelは親Issueの有無にかかわらず全案件で明示する'
+assert_contains "$CHILD" 'UIを持たないCLI・library・文書案件も省略せず `NONE` と対象外理由を記録する'
 assert_contains "$CHILD" 'UI Levelが `NEEDS_DECISION` の場合、AI/Codexは推測で子Issue化・実装開始せず、決定まで停止する'
 assert_contains "$CHILD" 'PRODUCT以外ではPRODUCT用の仕様・Design Profile・Visual/UI Acceptanceを必須化しない'
 
