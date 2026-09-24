@@ -103,6 +103,10 @@ require "AGENTS.md" '作業開始前に必ず `.agents/skills/pr-review-fix/SKIL
 require "AGENTS.md" '「コメント確認して修正して」'
 require "AGENTS.md" '「レビュー結果対応して」'
 require "AGENTS.md" '単に「コメント」という語が含まれるだけでは起動しない'
+require "AGENTS.md" '### Plan to Issues Routing'
+require "AGENTS.md" '必ず `.agents/skills/plan-to-issues/SKILL.md` を読み、そのSkillに従う'
+require "AGENTS.md" '「この方向でIssue化して」'
+require "AGENTS.md" '既存Issueの実装・レビュー・コメント確認'
 require ".agents/skills/pr-review-fix/SKILL.md" 'ユーザーがSkill名やPR番号を明示しなくても'
 require ".agents/skills/pr-review-fix/SKILL.md" '「コメント確認して修正して」'
 require ".agents/skills/pr-review-fix/SKILL.md" '単なるIssueコメント閲覧'
@@ -123,6 +127,9 @@ require "docs/instruction-architecture-inventory.md" '`.agents/skills/pr-review-
 require "docs/instruction-architecture-inventory.md" '`Core Rules > Template Change Evaluation Routing` | `ENTRYPOINT` | `KEEP`'
 require "docs/instruction-architecture-inventory.md" '`.agents/skills/template-change-evaluator/SKILL.md`'
 require "docs/instruction-architecture-inventory.md" '`template-change-evaluator` はテンプレート改善の採否・重複・配置判断に限定'
+require "docs/instruction-architecture-inventory.md" '`Plan Review Gate > Plan to Issues Routing` | `ENTRYPOINT` | `KEEP`'
+require "docs/instruction-architecture-inventory.md" '`.agents/skills/plan-to-issues/SKILL.md`'
+require "docs/instruction-architecture-inventory.md" '`plan-to-issues` は合意済み計画からGitHub Issueへの変換に限定'
 require "docs/instruction-architecture-inventory.md" '`tests/review-evidence/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '`tests/template-simplification/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '`tests/verification-evidence/run-samples.sh`'
@@ -178,6 +185,7 @@ for path in \
   templates/security/security-preflight.sh \
   .agents/skills/pr-review-fix/SKILL.md \
   .agents/skills/template-change-evaluator/SKILL.md \
+  .agents/skills/plan-to-issues/SKILL.md \
   .github/workflows/ci.yml \
   .github/workflows/security.yml; do
   [[ -e "$ROOT/$path" ]] || {
