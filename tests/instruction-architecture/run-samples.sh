@@ -98,6 +98,14 @@ require() {
 }
 
 require "AGENTS.md" 'docs/instruction-architecture-inventory.md'
+require "AGENTS.md" '### Existing PR Review Feedback Routing'
+require "AGENTS.md" '作業開始前に必ず `.agents/skills/pr-review-fix/SKILL.md` を読み、そのSkillに従う'
+require "AGENTS.md" '「コメント確認して修正して」'
+require "AGENTS.md" '「レビュー結果対応して」'
+require "AGENTS.md" '単に「コメント」という語が含まれるだけでは起動しない'
+require ".agents/skills/pr-review-fix/SKILL.md" 'ユーザーがSkill名やPR番号を明示しなくても'
+require ".agents/skills/pr-review-fix/SKILL.md" '「コメント確認して修正して」'
+require ".agents/skills/pr-review-fix/SKILL.md" '単なるIssueコメント閲覧'
 require "docs/instruction-architecture-inventory.md" '## Decision First'
 require "docs/instruction-architecture-inventory.md" '変更前の `AGENTS.md`: **47,136 bytes**'
 require "docs/instruction-architecture-inventory.md" '変更後 `AGENTS.md`: 47,438 bytes（`+302 bytes`）'
