@@ -109,7 +109,7 @@ require ".agents/skills/pr-review-fix/SKILL.md" '単なるIssueコメント閲�
 require "docs/instruction-architecture-inventory.md" '## Decision First'
 require "docs/instruction-architecture-inventory.md" '変更前の `AGENTS.md`: **47,136 bytes**'
 require "docs/instruction-architecture-inventory.md" '変更後 `AGENTS.md`: 47,438 bytes（`+302 bytes`）'
-require "docs/instruction-architecture-inventory.md" '現行35セクションをすべて列挙する'
+require "docs/instruction-architecture-inventory.md" '現行35トップレベルセクション（`##`）をすべて列挙し'
 require "docs/instruction-architecture-inventory.md" '## Overlap, contradiction, and source-of-truth ledger'
 require "docs/instruction-architecture-inventory.md" 'IA-01'
 require "docs/instruction-architecture-inventory.md" 'IA-02'
@@ -120,6 +120,9 @@ require "docs/instruction-architecture-inventory.md" '`docs/ai-development-harne
 require "docs/instruction-architecture-inventory.md" '`docs/ai-execution-state.md`'
 require "docs/instruction-architecture-inventory.md" '`docs/nine-standard-ai-development-flow.md`'
 require "docs/instruction-architecture-inventory.md" '`.agents/skills/pr-review-fix/SKILL.md`'
+require "docs/instruction-architecture-inventory.md" '`Core Rules > Template Change Evaluation Routing` | `ENTRYPOINT` | `KEEP`'
+require "docs/instruction-architecture-inventory.md" '`.agents/skills/template-change-evaluator/SKILL.md`'
+require "docs/instruction-architecture-inventory.md" '`template-change-evaluator` はテンプレート改善の採否・重複・配置判断に限定'
 require "docs/instruction-architecture-inventory.md" '`tests/review-evidence/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '`tests/template-simplification/run-samples.sh`'
 require "docs/instruction-architecture-inventory.md" '`tests/verification-evidence/run-samples.sh`'
@@ -174,6 +177,7 @@ for path in \
   templates/verification/verify.sh \
   templates/security/security-preflight.sh \
   .agents/skills/pr-review-fix/SKILL.md \
+  .agents/skills/template-change-evaluator/SKILL.md \
   .github/workflows/ci.yml \
   .github/workflows/security.yml; do
   [[ -e "$ROOT/$path" ]] || {

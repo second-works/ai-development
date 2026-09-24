@@ -37,6 +37,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | --- | --- | --- | --- | --- | --- |
 | `Purpose` | `RESIDENT` | `KEEP` | `AGENTS.md#Purpose` → `AGENTS.md#Purpose` | `docs/instruction-architecture-inventory.md` | 台帳入口として短いまま残す。 |
 | `Core Rules` | `RESIDENT` | `SHORTEN+REFERENCE` | `AGENTS.md#Core Rules` → 短い常駐規則 → Issue / 各正本文書 | Issue / PR rule、各正本文書 | 基本禁止事項だけを常駐し、工程詳細は正本へ移す候補。 |
+| `Core Rules > Template Change Evaluation Routing` | `ENTRYPOINT` | `KEEP` | `AGENTS.md#Template Change Evaluation Routing` → `.agents/skills/template-change-evaluator/SKILL.md` | `.agents/skills/template-change-evaluator/SKILL.md` | テンプレート改善の採否・重複・配置判断だけを起動し、詳細な反復手順はSkillへ委譲する。単純要約や一般質問には適用しない。 |
 | `AI生成ドキュメント原則` | `RESIDENT` | `KEEP` | `AGENTS.md#AI生成ドキュメント原則` → 同節 | Issue / PR template | 文書生成時の常時判断。 |
 | `Adaptive Development Flow / Risk Tier` | `ENTRYPOINT` | `SHORTEN+REFERENCE` | `AGENTS.md#Adaptive Development Flow / Risk Tier` → `docs/adaptive-development-flow.md` | `docs/adaptive-development-flow.md` | HIGH停止条件は残し、判定詳細を委譲する。 |
 | `Design / State Modeling` | `RESIDENT` | `MOVE` | `AGENTS.md#Design / State Modeling` → 将来 `docs/design-state-modeling.md`（子Issue） | 各案件の型・schema・信頼境界 | 専用正本がないため今回は維持し、作成後に短い入口へする。 |
@@ -71,7 +72,7 @@ Issue #121では、既存の機能・Safety Gate・検証責務を移動また�
 | `Human Decision Points` | `RESIDENT` | `KEEP` | `AGENTS.md#Human Decision Points` → 同節 | Issue / PR | AIが推測で決めない境界。 |
 | `Standard Codex Instruction` | `ENTRYPOINT` | `MOVE` | `AGENTS.md#Standard Codex Instruction` → README / `docs/template-guide.md` | README、`docs/template-guide.md` | 実行依頼例を正本へ移す候補。 |
 
-本表は `AGENTS.md` の現行35セクションをすべて列挙する。`MOVE` と `SHORTEN+REFERENCE` は候補であり、今回のPRでは実行しない。実行する子Issueでは、表の旧→新経路、適用漏れ、サイズ差分、失敗時の停止を更新してから移動する。
+本表は `AGENTS.md` の現行35トップレベルセクション（`##`）をすべて列挙し、追加のroutingサブセクション（`###`）は親セクション直下のENTRYPOINT行として追跡する。`MOVE` と `SHORTEN+REFERENCE` は候補であり、今回のPRでは実行しない。実行する子Issueでは、表の旧→新経路、適用漏れ、サイズ差分、失敗時の停止を更新してから移動する。
 
 ## Overlap, contradiction, and source-of-truth ledger
 
@@ -116,7 +117,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 
 ### `.agents/skills/` and `templates/`
 
-反復する特定作業の実行手順と、生成先へコピーする雛形を置く。Skillは適用範囲と停止条件を明記し、templateは生成先での配置先を明記する。
+反復する特定作業の実行手順と、生成先へコピーする雛形を置く。Skillは適用範囲と停止条件を明記し、templateは生成先での配置先を明記する。現行repo-local Skillとして `.agents/skills/pr-review-fix/SKILL.md` と `.agents/skills/template-change-evaluator/SKILL.md` を追跡し、前者は既存PRレビュー修正、後者はテンプレート改善の採否・重複・配置判断に限定する。
 
 ### `scripts/`, `tests/`, and `.github/workflows/`
 
@@ -132,7 +133,7 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 
 1. **Source map**: 現在の `AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/` の役割を説明でき、主要な正本文書が存在する。
 2. **Gate enumeration**: 任意のIssueに対して、実装前のRisk / Design Decision / Security Boundary、標準検証、CI / Security / Review、Human Mergeの入口を列挙できる。
-3. **Scope**: repo-local Skillは対象ディレクトリと作業目的が一致した場合だけ適用され、全作業の常駐ルールへ昇格していない。
+3. **Scope**: repo-local Skillは対象ディレクトリと作業目的が一致した場合だけ適用され、全作業の常駐ルールへ昇格していない。`pr-review-fix` は既存PRレビュー修正、`template-change-evaluator` はテンプレート改善の採否・重複・配置判断に限定され、それぞれの `AGENTS.md` routingからSkillへ参照経路をたどれる。
 4. **Triggered retrieval**: Framework、Plan Review、Acceptance、Security、RAGなどの詳細は、発火条件と正本文書の対応をたどれる。
 5. **Read-only boundary**: read-only確認ではbranch、commit、push、PR、Issueコメントを作成しない。確認前後のHEAD、branch、refs（dangling symbolic refを含むref storageと参照先）、status、index entryと`assume-unchanged` / `skip-worktree` flag、worktree内容が一致する。
 6. **Runtime evidence**: 利用可能なCodexの実機または公式仕様で確認できない `/status`、`/debug-config` 等のコマンドを、標準手順として固定しない。
