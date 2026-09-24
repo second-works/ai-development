@@ -126,7 +126,7 @@ require "docs/instruction-architecture-inventory.md" '`docs/nine-standard-ai-dev
 require "docs/instruction-architecture-inventory.md" '`.agents/skills/pr-review-fix/SKILL.md`'
 require "docs/instruction-architecture-inventory.md" '`Core Rules > Template Change Evaluation Routing` | `ENTRYPOINT` | `KEEP`'
 require "docs/instruction-architecture-inventory.md" '`.agents/skills/template-change-evaluator/SKILL.md`'
-require "docs/instruction-architecture-inventory.md" '`template-change-evaluator` はテンプレート改善の採否・重複・配置判断に限定'
+require "docs/instruction-architecture-inventory.md" '`template-change-evaluator` はテンプレート改善の採否・重複・配置判断'
 require "docs/instruction-architecture-inventory.md" '`Plan Review Gate > Plan to Issues Routing` | `ENTRYPOINT` | `KEEP`'
 require "docs/instruction-architecture-inventory.md" '`.agents/skills/plan-to-issues/SKILL.md`'
 require "docs/instruction-architecture-inventory.md" '`plan-to-issues` は合意済み計画からGitHub Issueへの変換に限定'
