@@ -107,6 +107,18 @@ JEV出力は次の**候補分類**へ正規化する。候補はShadow観測用�
 
 Shadow Modeの観測結果が既存分類と不一致でも、自動的に既存分類を変更しない。50〜100件程度の評価結果を蓄積し、限定自動化へ進む場合は別Design Decisionとする。
 
+### Local Judge / 共通Decision Provider
+
+Local Judgeを比較する場合は、[Local Judge運用契約](../../../templates/review-comment-auto-triage/local_judge/README.md)を参照する。
+`triage-with-providers.py` は JEV / Local Judge / Codex baseline を共通の `observe(review)` interfaceで扱う。JEVの既存API、`model=typesafe/jev`、`JEV_*`、単独実行は維持する。
+
+- 比較入口でも `authoritative=false` / `effective_disposition_source=baseline` を固定し、修正・thread resolve・routing・Merge判断を委譲しない。
+- Local JudgeはGemma 4で5項目を1-token判定し、固定候補の確率を返す。`LOCAL_JUDGE_MIN_CONFIDENCE` は評価上のfallbackメタデータだけに使い、`JEV_MIN_CONFIDENCE` と分離する。
+- Secretは `.github/workflows/decision-shadow.yml` の保護された `local-judge-shadow` Environment内でだけ参照する。Codex promptへSecret値を渡さない。
+- Local Judge未設定・障害・不正応答でもbaselineで継続する。既存のJEV単独実行を必須の比較Workflowへ置き換えない。
+- baselineの5項目ラベルを別途与えるまで比較はnullであり、Codexとの一致やFalse Negative検証を完了扱いにしない。監査artifactとSHAを固定したラベルを後からjoinできる。
+- 配備前の検証は合成fixtureに限定し、実PR本文/diffの送信先追加・Access/Tunnel/Secret登録は運用契約の承認境界を確認する。
+
 ## FOLLOW-UPの記録・参照
 
 FOLLOW-UPは、今回のPRの修正要求から外した妥当な指摘を、将来の障害調査に利用できる既知リスクまたは技術的負債として記録する。
@@ -367,6 +379,8 @@ bash "$JEV_TRIAGE_SCRIPT" \
 - JEVログへレビュー本文・diff・Bearer Secretが含まれていないことを維持する。
 
 ### 4. 指摘を分類
+
+Local Judge比較を有効化した環境では、手順3.5のJEV単独実行に代えて保護された `decision-shadow.yml` をdefault branchからdispatchできる。比較artifactが未取得でも既存分類を続け、Secretをローカルへ取り出して代替実行しない。provider比較・後からのbaseline結合手順は上記運用契約を使う。
 
 現在有効な指摘を以下へ整理する。
 
