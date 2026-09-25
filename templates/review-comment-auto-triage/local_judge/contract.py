@@ -20,11 +20,20 @@ REASONS = {
     "malformed_response", "response_too_large", "request_too_large", "http_error",
     "low_confidence", "high_risk", "non_shadow_response", "model_mismatch",
     "jev_fallback", "baseline_unavailable",
+    "invalid_comment_id", "invalid_body", "comment_too_large", "invalid_comment",
+    "invalid_existing_decision", "invalid_route_config", "unparseable_response",
+    "credits_exhausted", "spend_limit", "rate_limited", "billing_unavailable",
+    "api_failure", "undecided",
 }
 
 
 class Invalid(ValueError):
     """A sanitized error code, never an upstream message."""
+
+
+def valid_reason(value):
+    return (value is None or isinstance(value, str) and
+            (value in REASONS or re.fullmatch(r"http_[1-5][0-9]{2}", value) is not None))
 
 
 def number(value, maximum=None):
@@ -129,7 +138,7 @@ def observation(cid, provider, *, decision=None, reason=None, confidence=None,
         raise Invalid("invalid_input")
     if decision is not None:
         validate_decision(decision)
-    if reason not in REASONS:
+    if not valid_reason(reason):
         reason = "unavailable"
     return {
         "schema_version": 1, "comment_id": cid, "provider": provider,

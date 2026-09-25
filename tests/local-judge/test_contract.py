@@ -163,6 +163,13 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(record["decision"], DECISION)
         self.assertEqual(record["confidence"], 0.92)
         self.assertIsNone(record["probabilities"])
+        for reason in ("credits_exhausted", "spend_limit", "rate_limited", "billing_unavailable"):
+            fallback = {**raw, "decision": "undecided", "confidence": None,
+                        "latency_ms": None, "fallback_required": True,
+                        "fallback_reason": reason}
+            adapted = JevProvider({"153": fallback}).observe(REVIEW)
+            self.assertTrue(adapted["fallback_required"])
+            self.assertEqual(adapted["fallback_reason"], reason)
         raw["model"] = MODEL
         self.assertTrue(JevProvider({"153": raw}).observe(REVIEW)["fallback_required"])
 
@@ -266,6 +273,13 @@ class ContractTests(unittest.TestCase):
             join([local], {**baseline, "head_sha": "b" * 40})
         with self.assertRaises(Invalid):
             join([local, local], baseline)
+        for inconsistent in (
+            {**local, "fallback_reason": "unavailable"},
+            {**local, "fallback_required": True},
+            {**local, "fallback_required": True, "fallback_reason": "unknown_reason"},
+        ):
+            with self.assertRaisesRegex(Invalid, "invalid_input"):
+                join([inconsistent], baseline)
         report = summary(join([local], {**baseline, "decisions": {}}))["local_judge"]
         self.assertIsNone(report["field_agreement"]["needs_action"])
         self.assertEqual(report["paired_with_baseline"], 0)

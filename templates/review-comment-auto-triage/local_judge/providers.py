@@ -6,7 +6,8 @@ import time
 from urllib.parse import urlsplit
 
 from .contract import (MODEL, Invalid, MAX_REQUEST, OPTIONS, exact, number,
-                       observation, validate_decision, validate_input, validate_local)
+                       observation, valid_reason, validate_decision, validate_input,
+                       validate_local)
 from .transport import request_json
 
 
@@ -87,16 +88,19 @@ class JevProvider:
                 raise Invalid("malformed_response")
             if raw.get("mode") != "shadow":
                 return observation(cid, "jev", reason="non_shadow_response")
+            fallback_required = raw.get("fallback_required")
+            fallback_reason = raw.get("fallback_reason")
+            if (type(fallback_required) is not bool or not valid_reason(fallback_reason)
+                    or fallback_required != (fallback_reason is not None)):
+                raise Invalid("malformed_response")
             if raw.get("decision") not in ("action_required", "no_action"):
-                return observation(cid, "jev", reason="jev_fallback")
+                return observation(cid, "jev", reason=fallback_reason or "jev_fallback")
             decision = {field: raw.get(field) for field in OPTIONS if field != "needs_action"}
             decision["needs_action"] = raw["decision"] == "action_required"
             validate_decision(decision)
             if not number(raw.get("confidence"), 1) or not number(raw.get("latency_ms")):
                 raise Invalid("malformed_response")
-            if type(raw.get("fallback_required")) is not bool:
-                raise Invalid("malformed_response")
-            reason = "jev_fallback" if raw["fallback_required"] else None
+            reason = (fallback_reason or "jev_fallback") if fallback_required else None
             return observation(cid, "jev", decision=decision, reason=reason,
                                confidence=raw["confidence"], latency_ms=raw["latency_ms"])
         except Exception:

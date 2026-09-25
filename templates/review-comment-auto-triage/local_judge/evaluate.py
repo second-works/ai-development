@@ -6,7 +6,8 @@ from pathlib import Path
 import statistics
 
 from .contract import (FIELDS, MODEL, Invalid, compare, disposition, exact, loads,
-                       number, observation, validate_decision, validate_local)
+                       number, observation, valid_reason, validate_decision,
+                       validate_local)
 
 
 def summary(rows):
@@ -90,7 +91,9 @@ def join(rows, baseline):
                             "latency_ms": raw["latency_ms"], **(raw["measurements"] or {})}, cid)
         elif raw["probabilities"] is not None or raw["measurements"] is not None:
             raise Invalid("invalid_input")
-        if type(raw["fallback_required"]) is not bool:
+        reason = raw["fallback_reason"]
+        if (type(raw["fallback_required"]) is not bool or not valid_reason(reason)
+                or raw["fallback_required"] != (reason is not None)):
             raise Invalid("invalid_input")
         key = (cid, provider)
         if key in grouped:
