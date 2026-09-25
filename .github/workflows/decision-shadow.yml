@@ -1,0 +1,100 @@
+name: Decision Provider Shadow Comparison
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number
+        required: true
+        type: string
+      head_sha:
+        description: Expected full PR head SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: local-judge-shadow
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: local-judge-shadow
+    steps:
+      - name: Validate trusted dispatch
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          WORKFLOW_REF: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          [[ "$WORKFLOW_REF" == "$DEFAULT_BRANCH" ]]
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Checkout trusted default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Fetch current review comments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')" == "$HEAD_SHA" ]]
+          umask 077
+          gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/comments" > "$RUNNER_TEMP/shadow-comments.json"
+
+      - name: Observe providers without changing baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          JEV_TRIAGE_URL: ${{ vars.JEV_TRIAGE_URL }}
+          JEV_TRIAGE_TOKEN: ${{ secrets.JEV_TRIAGE_TOKEN }}
+          LOCAL_JUDGE_URL: ${{ vars.LOCAL_JUDGE_URL }}
+          LOCAL_JUDGE_HOST: ${{ vars.LOCAL_JUDGE_HOST }}
+          LOCAL_JUDGE_MIN_CONFIDENCE: ${{ vars.LOCAL_JUDGE_MIN_CONFIDENCE }}
+          LOCAL_JUDGE_TOKEN: ${{ secrets.LOCAL_JUDGE_TOKEN }}
+          LOCAL_JUDGE_ACCESS_CLIENT_ID: ${{ secrets.LOCAL_JUDGE_ACCESS_CLIENT_ID }}
+          LOCAL_JUDGE_ACCESS_CLIENT_SECRET: ${{ secrets.LOCAL_JUDGE_ACCESS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')" == "$HEAD_SHA" ]]
+          python3 .agents/skills/pr-review-fix/scripts/triage-with-providers.py \
+            "github.com/$GITHUB_REPOSITORY" "$PR_NUMBER" "$HEAD_SHA" \
+            "$RUNNER_TEMP/shadow-comments.json" "$RUNNER_TEMP/shadow-audit.jsonl" \
+            > "$RUNNER_TEMP/shadow-summary.txt"
+          grep -E '^SHADOW_(STATUS|OBSERVED_COUNT|FALLBACK_COUNT|FALLBACK_REQUIRED)=[A-Z_0-9]+$' \
+            "$RUNNER_TEMP/shadow-summary.txt" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Recheck observation identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')" == "$HEAD_SHA" ]]
+
+      - name: Upload sanitized observations only
+        uses: actions/upload-artifact@v4
+        with:
+          name: decision-shadow-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/shadow-audit.jsonl
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Delete transient review inputs
+        if: always()
+        run: rm -f "$RUNNER_TEMP/shadow-comments.json" "$RUNNER_TEMP/shadow-summary.txt" "$RUNNER_TEMP/shadow-audit.jsonl"

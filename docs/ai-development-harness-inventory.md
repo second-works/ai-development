@@ -68,6 +68,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 | C-03 | Adaptive Development Flow | C | SIMPLIFY | docs/adaptive-development-flow.md |
 | C-04 | Human-facing HTML Status Report | C | SIMPLIFY | scripts/render-status-report.py、docs/html-status-report.md |
 | T-01 | CodexとSkills | T | SIMPLIFY | AGENTS.md、.agents/skills |
+| T-03 | Decision Provider Shadow比較 | T | KEEP | templates/review-comment-auto-triage/local_judge/README.md |
 | T-02 | GitHub Actionsと外部Tool | T | KEEP | .github/workflows、AI Agent Security Boundary |
 | C-01 | 正本文書とIssue / PR Context | C | STRENGTHEN | docs/template-guide.md、docs、Issue / PRテンプレート |
 | C-02 | Review Context | C | SIMPLIFY | PRテンプレート、Review Evidence Contract |
@@ -250,6 +251,21 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **判定**：SIMPLIFY。
 - **削除・再評価条件**：対象Skillに固有の失敗モード、再利用、検証上の効果がなくなった場合にREMOVE_CANDIDATEとして再評価する。
 - **関連Issue / 正本文書**：#56、#147、#148、T-01。Issue #56の監査条件、Issue #147のテンプレート変更評価Skill、Issue #148の計画→Issue変換Skillを追跡する。 正本：AGENTS.md、.agents/skills/pr-review-fix/SKILL.md、.agents/skills/template-change-evaluator/SKILL.md、.agents/skills/plan-to-issues/SKILL.md。
+
+### T-03 Decision Provider Shadow比較
+
+- **ETCSLV分類**：Tools
+- **解決する失敗モード**：JEV固有scoreとローカルモデルの確率を同一視し、False Negativeや障害を検出せず判定を委譲すること。
+- **発火条件**：人間がShadow比較を有効にしたときだけ実行する。
+- **入力 / Context**：現PR headのCodexコメント、独立して判断したbaselineの判定ラベル。
+- **出力 / State変更**：本文を含まない同一comment単位の比較observation。`authoritative=false`を固定し、修正・resolve・routing・MergeのStateを変更しない。
+- **決定論的判定可能か**：schema、enum/range、redirect禁止、Secret非保存、baseline不変は契約テストで保証し、意味分類の正答率は実測する。
+- **実行コスト / 運用負荷**：1コメント5回・各1-token、合計25秒上限、直列処理。Gemma 4の共有メモリ/KVとの競合は配備時に評価する。
+- **重複する仕組み**：JEV比較adapterは既存JEV契約を再実装せず、共通observationへ変換する。T-01のレビュー修正やV-01のレビュー判定を代行しない。
+- **安全上必須か**：追加Provider自体は任意だが、利用する際の認証・サイズ・timeout・非権威契約は必須。
+- **判定**：KEEP。
+- **削除・再評価条件**：50〜100件の実レビューで精度、False Negative、レイテンシ、通常利用との競合を見て、別Design Decisionで継続または削除を判断する。
+- **関連Issue / 正本文書**：#153、#116、#123、#131。`templates/review-comment-auto-triage/local_judge/README.md`、`tests/local-judge/`。
 
 ### T-02 GitHub Actionsと外部Tool
 
