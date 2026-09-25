@@ -6,6 +6,8 @@ import io
 import json
 import os
 from pathlib import Path
+import shlex
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -233,6 +235,19 @@ class ContractTests(unittest.TestCase):
             with self.assertRaises(Invalid):
                 runner.collect("github.com/o/r", "1", sha, path / "comments", path / "comments")
             self.assertEqual((path / "comments").read_text(), original)
+
+    def test_jev_timeout_terminates_shell_child_processes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            started = Path(tmp) / "child-started"
+            late = Path(tmp) / "child-finished"
+            program = (f"import pathlib,time; pathlib.Path({str(started)!r}).touch(); "
+                       f"time.sleep(1.5); pathlib.Path({str(late)!r}).write_text('still running')")
+            command = ["bash", "-c", "python3 -c " + shlex.quote(program)]
+            with self.assertRaises(subprocess.TimeoutExpired):
+                runner.run_jev(command, timeout=1)
+            self.assertTrue(started.exists())
+            time.sleep(1.6)
+            self.assertFalse(late.exists(), "timed-out JEV child continued running")
 
     def test_offline_join_recomputes_comparison_and_rejects_stale_labels(self):
         local = LocalJudgeProvider(ENV, lambda *_a, **_k: {"result": result()}).observe(REVIEW)

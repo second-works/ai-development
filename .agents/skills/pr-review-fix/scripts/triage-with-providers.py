@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -16,6 +17,23 @@ from local_judge.providers import BaselineProvider, JevProvider, LocalJudgeProvi
 
 MAX_COMMENTS = 100
 MAX_INPUT = 2 * 1024 * 1024
+
+
+def run_jev(command, timeout=120):
+    """Run legacy JEV in its own process group so timeout stops every child."""
+    process = subprocess.Popen(
+        command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        return process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait()
+        raise
 
 
 def read_json(path):
@@ -89,13 +107,11 @@ def collect(repo, pr, sha, comments_file, output_file, baseline_file=None):
         jev_records = {}
         if comments:
             try:
-                completed = subprocess.run(
+                returncode = run_jev(
                     ["bash", str(Path(__file__).with_name("triage-with-jev.sh")), repo, pr, sha,
-                     str(selected), str(audit)],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120,
-                    check=False,
+                     str(selected), str(audit)], timeout=120,
                 )
-                if completed.returncode == 0 and audit.exists() and audit.stat().st_size <= MAX_INPUT:
+                if returncode == 0 and audit.exists() and audit.stat().st_size <= MAX_INPUT:
                     for line in audit.read_text().splitlines():
                         record = loads(line)
                         if isinstance(record, dict) and comment_id(record.get("comment_id")):
