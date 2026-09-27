@@ -71,7 +71,16 @@ class ContractTests(unittest.TestCase):
         self.assertIn("ProxyHandler({})", workflow)
         self.assertIn("ssl.create_default_context()", workflow)
         self.assertIn('endpoint.path != "/triage"', workflow)
+        self.assertIn('endpoint.hostname != host', workflow)
+        self.assertIn('endpoint.netloc != host', workflow)
+        self.assertIn('re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?", host)', workflow)
         self.assertIn('result.get("authoritative") is not False', workflow)
+        for field in ("probabilities", "field_latency_ms", "cache_tokens", "cache_prompt",
+                      "probability_kind"):
+            self.assertIn('"' + field + '"', workflow)
+        self.assertIn("set(result) != expected_result_keys", workflow)
+        self.assertIn("object_pairs_hook=unique_object", workflow)
+        self.assertIn("math.isclose(sum(values.values()), 1, abs_tol=0.001)", workflow)
 
         import re
         import textwrap
@@ -81,6 +90,78 @@ class ContractTests(unittest.TestCase):
         source = re.search(r"(?ms)^python3 - <<'PY'\n(.*?)^PY$", script)
         self.assertIsNotNone(source)
         compile(source.group(1), "local-judge-smoke.py", "exec")
+
+        class FakeResponse:
+            status = 200
+            def __init__(self, payload):
+                self.payload = payload
+            def __enter__(self):
+                return self
+            def __exit__(self, *_args):
+                return False
+            def read(self, limit):
+                return self.payload[:limit]
+
+        class FakeOpener:
+            def __init__(self, payload):
+                self.payload = payload
+                self.request = None
+            def open(self, request, timeout):
+                self.request = request
+                self.timeout = timeout
+                return FakeResponse(self.payload)
+
+        smoke_env = {
+            "WORKFLOW_REF": "main", "DEFAULT_BRANCH": "main",
+            "LOCAL_JUDGE_URL": "https://judge.example.invalid/triage",
+            "LOCAL_JUDGE_HOST": "judge.example.invalid", "LOCAL_JUDGE_TOKEN": "T" * 64,
+            "LOCAL_JUDGE_ACCESS_CLIENT_ID": "test-client-id",
+            "LOCAL_JUDGE_ACCESS_CLIENT_SECRET": "test-client-secret",
+        }
+        valid_result = result()
+        valid_result["comment_id"] = "15300001"
+
+        def execute(payload, updates=None):
+            with tempfile.TemporaryDirectory() as temporary:
+                summary = Path(temporary) / "summary.md"
+                opener = FakeOpener(payload)
+                environment = {**smoke_env, "GITHUB_STEP_SUMMARY": str(summary), **(updates or {})}
+                output = io.StringIO()
+                with patch("urllib.request.build_opener", return_value=opener), \
+                     patch.dict(os.environ, environment, clear=True), contextlib.redirect_stdout(output):
+                    try:
+                        exec(compile(source.group(1), "local-judge-smoke.py", "exec"), {})
+                    except SystemExit as error:
+                        return error.code, output.getvalue(), opener, ""
+                return 0, output.getvalue(), opener, summary.read_text()
+
+        status, output, opener, summary = execute(json.dumps({"result": valid_result}).encode())
+        self.assertEqual(status, 0)
+        self.assertEqual(opener.timeout, 35)
+        self.assertEqual(opener.request.full_url, smoke_env["LOCAL_JUDGE_URL"])
+        self.assertEqual(opener.request.get_header("Authorization"), "Bearer " + smoke_env["LOCAL_JUDGE_TOKEN"])
+        self.assertEqual(json.loads(opener.request.data), {
+            "comment_id": "15300001",
+            "body": "Synthetic connectivity check. This is not a real review.",
+            "diff_hunk": "@@ synthetic test diff @@",
+        })
+        self.assertIn("LOCAL_JUDGE_SMOKE_STATUS=PASSED", output)
+        self.assertIn("No GitHub review content was fetched or sent.", summary)
+
+        incomplete = {"result": {key: value for key, value in valid_result.items()
+                                  if key != "probabilities"}}
+        status, output, _opener, summary = execute(json.dumps(incomplete).encode())
+        self.assertEqual(status, 1)
+        self.assertIn("response schema is invalid", output)
+        self.assertNotIn("probabilities", output + summary)
+
+        status, output, opener, _summary = execute(
+            json.dumps({"result": valid_result}).encode(),
+            {"LOCAL_JUDGE_HOST": "judge.example.invalid:443",
+             "LOCAL_JUDGE_URL": "https://judge.example.invalid:443/triage"},
+        )
+        self.assertEqual(status, 1)
+        self.assertIsNone(opener.request, "invalid allowlist reached the network")
 
     def test_local_schema_rejects_untrusted_values(self):
         validate_local(result(), "153")
