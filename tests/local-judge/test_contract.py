@@ -52,6 +52,35 @@ def result(decision=None):
 
 
 class ContractTests(unittest.TestCase):
+    def test_synthetic_smoke_workflow_never_reads_or_sends_review_content(self):
+        workflow = (ROOT / ".github/workflows/local-judge-smoke.yml").read_text()
+        self.assertRegex(workflow, r"(?m)^on:\n  workflow_dispatch:\s*$")
+        self.assertRegex(workflow, r"(?m)^permissions: \{\}\s*$")
+        self.assertIn("environment: local-judge-shadow", workflow)
+        for forbidden in ("pull_request:", "pulls/", "issues/", "gh api", "github.token",
+                          "actions/checkout", "upload-artifact", "LOCAL_JUDGE_MIN_CONFIDENCE"):
+            self.assertNotIn(forbidden, workflow)
+        for secret in ("LOCAL_JUDGE_TOKEN", "LOCAL_JUDGE_ACCESS_CLIENT_ID",
+                       "LOCAL_JUDGE_ACCESS_CLIENT_SECRET"):
+            self.assertIn("secrets." + secret, workflow)
+        self.assertIn('"comment_id": "15300001"', workflow)
+        self.assertIn('"body": "Synthetic connectivity check. This is not a real review."', workflow)
+        self.assertIn('"diff_hunk": "@@ synthetic test diff @@"', workflow)
+        self.assertIn("class NoRedirect(HTTPRedirectHandler)", workflow)
+        self.assertIn("ProxyHandler({})", workflow)
+        self.assertIn("ssl.create_default_context()", workflow)
+        self.assertIn('endpoint.path != "/triage"', workflow)
+        self.assertIn('result.get("authoritative") is not False', workflow)
+
+        import re
+        import textwrap
+        match = re.search(r"(?ms)^        run: \|\n(.*?)(?=^      - name:|\Z)", workflow)
+        self.assertIsNotNone(match)
+        script = textwrap.dedent(match.group(1))
+        source = re.search(r"(?ms)^python3 - <<'PY'\n(.*?)^PY$", script)
+        self.assertIsNotNone(source)
+        compile(source.group(1), "local-judge-smoke.py", "exec")
+
     def test_local_schema_rejects_untrusted_values(self):
         validate_local(result(), "153")
         mutations = [
