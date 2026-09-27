@@ -81,6 +81,10 @@ class ContractTests(unittest.TestCase):
         self.assertIn("set(result) != expected_result_keys", workflow)
         self.assertIn("object_pairs_hook=unique_object", workflow)
         self.assertIn("math.isclose(sum(values.values()), 1, abs_tol=0.001)", workflow)
+        self.assertIn("opener.open(request, timeout=30)", workflow)
+        self.assertIn("remaining = 30 - (time.monotonic() - started)", workflow)
+        self.assertIn("response.fp.raw._sock.settimeout(remaining)", workflow)
+        self.assertIn("response.read1(min(4096, 32769 - size))", workflow)
 
         import re
         import textwrap
@@ -93,23 +97,48 @@ class ContractTests(unittest.TestCase):
 
         class FakeResponse:
             status = 200
-            def __init__(self, payload):
+            def __init__(self, payload, clock, read_increment=0):
                 self.payload = payload
+                self.clock = clock
+                self.read_increment = read_increment
+                self.offset = 0
+                self.length = len(payload)
+                self.done = False
+                class FakeSocket:
+                    timeout = None
+                    def settimeout(inner_self, value):
+                        inner_self.timeout = value
+                class FakeRaw:
+                    _sock = FakeSocket()
+                class FakeFile:
+                    raw = FakeRaw()
+                self.fp = FakeFile()
             def __enter__(self):
                 return self
             def __exit__(self, *_args):
                 return False
-            def read(self, limit):
-                return self.payload[:limit]
+            def isclosed(self):
+                return self.done
+            def read1(self, limit):
+                self.clock[0] += self.read_increment
+                chunk = self.payload[self.offset:self.offset + min(limit, 64)]
+                self.offset += len(chunk)
+                self.done = self.offset >= len(self.payload)
+                return chunk
 
         class FakeOpener:
-            def __init__(self, payload):
+            def __init__(self, payload, clock, elapsed_on_open=0, read_increment=0):
                 self.payload = payload
+                self.clock = clock
+                self.elapsed_on_open = elapsed_on_open
+                self.read_increment = read_increment
                 self.request = None
             def open(self, request, timeout):
                 self.request = request
                 self.timeout = timeout
-                return FakeResponse(self.payload)
+                self.clock[0] += self.elapsed_on_open
+                self.response = FakeResponse(self.payload, self.clock, self.read_increment)
+                return self.response
 
         smoke_env = {
             "WORKFLOW_REF_TYPE": "branch", "WORKFLOW_REF": "main", "DEFAULT_BRANCH": "main",
@@ -121,13 +150,15 @@ class ContractTests(unittest.TestCase):
         valid_result = result()
         valid_result["comment_id"] = "15300001"
 
-        def execute(payload, updates=None):
+        def execute(payload, updates=None, elapsed_on_open=0, read_increment=0):
             with tempfile.TemporaryDirectory() as temporary:
                 summary = Path(temporary) / "summary.md"
-                opener = FakeOpener(payload)
+                clock = [0.0]
+                opener = FakeOpener(payload, clock, elapsed_on_open, read_increment)
                 environment = {**smoke_env, "GITHUB_STEP_SUMMARY": str(summary), **(updates or {})}
                 output = io.StringIO()
                 with patch("urllib.request.build_opener", return_value=opener), \
+                     patch("time.monotonic", side_effect=lambda: clock[0]), \
                      patch.dict(os.environ, environment, clear=True), contextlib.redirect_stdout(output):
                     try:
                         exec(compile(source.group(1), "local-judge-smoke.py", "exec"), {})
@@ -137,7 +168,8 @@ class ContractTests(unittest.TestCase):
 
         status, output, opener, summary = execute(json.dumps({"result": valid_result}).encode())
         self.assertEqual(status, 0)
-        self.assertEqual(opener.timeout, 35)
+        self.assertEqual(opener.timeout, 30)
+        self.assertEqual(opener.response.fp.raw._sock.timeout, 30)
         self.assertEqual(opener.request.full_url, smoke_env["LOCAL_JUDGE_URL"])
         self.assertEqual(opener.request.get_header("Authorization"), "Bearer " + smoke_env["LOCAL_JUDGE_TOKEN"])
         self.assertEqual(json.loads(opener.request.data), {
@@ -154,6 +186,19 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("default branch", output)
         self.assertIsNone(opener.request, "default-branch-named tag reached the network")
+
+        status, output, opener, _summary = execute(
+            json.dumps({"result": valid_result}).encode(), elapsed_on_open=31,
+        )
+        self.assertEqual(status, 1)
+        self.assertIn("request timed out", output)
+        self.assertIsNone(opener.response.fp.raw._sock.timeout)
+
+        status, output, _opener, _summary = execute(
+            json.dumps({"result": valid_result}).encode(), read_increment=10,
+        )
+        self.assertEqual(status, 1)
+        self.assertIn("request timed out", output)
 
         incomplete = {"result": {key: value for key, value in valid_result.items()
                                   if key != "probabilities"}}
