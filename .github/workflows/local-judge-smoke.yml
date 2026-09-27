@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   synthetic-smoke:
+    if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 3
     environment: local-judge-shadow
@@ -53,11 +54,15 @@ jobs:
               fail("required Environment value is missing")
 
           host = os.environ["LOCAL_JUDGE_HOST"]
-          endpoint = urlsplit(os.environ["LOCAL_JUDGE_URL"])
+          try:
+              endpoint = urlsplit(os.environ["LOCAL_JUDGE_URL"])
+              endpoint_port = endpoint.port
+          except ValueError:
+              fail("endpoint is malformed")
           if (not re.fullmatch(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?", host)
                   or "." not in host or re.fullmatch(r"[0-9.]+", host)
                   or endpoint.scheme != "https" or endpoint.hostname != host
-                  or endpoint.netloc != host or endpoint.port is not None
+                  or endpoint.netloc != host or endpoint_port is not None
                   or endpoint.path != "/triage" or endpoint.query or endpoint.fragment
                   or endpoint.username or endpoint.password):
               fail("endpoint must be exactly https://LOCAL_JUDGE_HOST/triage")
