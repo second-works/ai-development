@@ -117,6 +117,8 @@ jobs:
                           fail("request timed out")
                       response.fp.raw._sock.settimeout(remaining)
                       chunk = response.read1(min(4096, 32769 - size))
+                      if time.monotonic() - started >= 30:
+                          fail("request timed out")
                       if not chunk:
                           if response.length not in (None, 0):
                               fail("response was incomplete")
