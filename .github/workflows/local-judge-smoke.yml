@@ -12,13 +12,14 @@ concurrency:
 
 jobs:
   synthetic-smoke:
-    if: github.ref_name == github.event.repository.default_branch
+    if: github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 3
     environment: local-judge-shadow
     steps:
       - name: Send one fixed synthetic request
         env:
+          WORKFLOW_REF_TYPE: ${{ github.ref_type }}
           WORKFLOW_REF: ${{ github.ref_name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           LOCAL_JUDGE_URL: ${{ vars.LOCAL_JUDGE_URL }}
@@ -43,7 +44,8 @@ jobs:
               print(f"LOCAL_JUDGE_SMOKE_STATUS=FAILED ({reason})")
               raise SystemExit(1)
 
-          if os.environ.get("WORKFLOW_REF") != os.environ.get("DEFAULT_BRANCH"):
+          if (os.environ.get("WORKFLOW_REF_TYPE") != "branch"
+                  or os.environ.get("WORKFLOW_REF") != os.environ.get("DEFAULT_BRANCH")):
               fail("manual dispatch must use the default branch")
 
           required = (
