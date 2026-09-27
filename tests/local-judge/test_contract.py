@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -57,7 +58,27 @@ class ContractTests(unittest.TestCase):
         self.assertRegex(workflow, r"(?m)^on:\n  workflow_dispatch:\s*$")
         self.assertRegex(workflow, r"(?m)^permissions: \{\}\s*$")
         self.assertIn("environment: local-judge-shadow", workflow)
-        self.assertIn("if: github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch", workflow)
+        self.assertIn("  validate-ref:\n", workflow)
+        self.assertIn("    needs: validate-ref\n", workflow)
+        self.assertNotIn("if: github.ref_type", workflow)
+        ref_job = re.search(r"(?ms)^  validate-ref:\n(.*?)(?=^  synthetic-smoke:)", workflow)
+        self.assertIsNotNone(ref_job)
+        self.assertNotIn("environment:", ref_job.group(1),
+                         "ref validation must fail before the protected Environment is used")
+        ref_script_match = re.search(r"(?ms)^        run: \|\n(.*)", ref_job.group(1))
+        self.assertIsNotNone(ref_script_match)
+        ref_script = textwrap.dedent(ref_script_match.group(1))
+        self.assertIn("exit 1", ref_script)
+        for ref_type, ref_name, expected_status in (
+            ("branch", "main", 0), ("branch", "feature/test", 1), ("tag", "main", 1),
+        ):
+            process = subprocess.run(
+                ["bash", "-c", ref_script],
+                env={**os.environ, "WORKFLOW_REF_TYPE": ref_type,
+                     "WORKFLOW_REF": ref_name, "DEFAULT_BRANCH": "main"},
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(process.returncode, expected_status, process.stderr)
         for forbidden in ("pull_request:", "pulls/", "issues/", "gh api", "github.token",
                           "actions/checkout", "upload-artifact", "LOCAL_JUDGE_MIN_CONFIDENCE"):
             self.assertNotIn(forbidden, workflow)
@@ -87,11 +108,14 @@ class ContractTests(unittest.TestCase):
         self.assertIn("response.read1(min(4096, 32769 - size))", workflow)
         self.assertIn("if time.monotonic() - started >= 30:", workflow)
 
-        import re
-        import textwrap
-        match = re.search(r"(?ms)^        run: \|\n(.*?)(?=^      - name:|\Z)", workflow)
-        self.assertIsNotNone(match)
-        script = textwrap.dedent(match.group(1))
+        smoke_step = re.search(
+            r"(?ms)^      - name: Send one fixed synthetic request\n(.*?)(?=^      - name:|\Z)",
+            workflow,
+        )
+        self.assertIsNotNone(smoke_step)
+        run_block = re.search(r"(?ms)^        run: \|\n(.*)", smoke_step.group(1))
+        self.assertIsNotNone(run_block)
+        script = textwrap.dedent(run_block.group(1))
         source = re.search(r"(?ms)^python3 - <<'PY'\n(.*?)^PY$", script)
         self.assertIsNotNone(source)
         compile(source.group(1), "local-judge-smoke.py", "exec")
