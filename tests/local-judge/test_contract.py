@@ -85,6 +85,7 @@ class ContractTests(unittest.TestCase):
         self.assertIn("remaining = 30 - (time.monotonic() - started)", workflow)
         self.assertIn("response.fp.raw._sock.settimeout(remaining)", workflow)
         self.assertIn("response.read1(min(4096, 32769 - size))", workflow)
+        self.assertIn("if time.monotonic() - started >= 30:", workflow)
 
         import re
         import textwrap
@@ -193,6 +194,13 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn("request timed out", output)
         self.assertIsNone(opener.response.fp.raw._sock.timeout)
+
+        status, output, opener, _summary = execute(
+            json.dumps({"result": valid_result}).encode(), read_increment=31,
+        )
+        self.assertEqual(status, 1)
+        self.assertIn("request timed out", output)
+        self.assertEqual(opener.response.fp.raw._sock.timeout, 30)
 
         status, output, _opener, _summary = execute(
             json.dumps({"result": valid_result}).encode(), read_increment=10,
