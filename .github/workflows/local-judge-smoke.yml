@@ -70,8 +70,7 @@ jobs:
           for name in ("LOCAL_JUDGE_TOKEN", "LOCAL_JUDGE_ACCESS_CLIENT_ID",
                        "LOCAL_JUDGE_ACCESS_CLIENT_SECRET"):
               credential = os.environ[name]
-              if (not credential.isascii() or not credential.isprintable()
-                      or any(character.isspace() for character in credential)):
+              if not re.fullmatch(r"[!-~]{1,512}", credential):
                   fail("authentication value contains invalid header characters")
           if not re.fullmatch(r"[!-~]{32,256}", os.environ["LOCAL_JUDGE_TOKEN"]):
               fail("LOCAL_JUDGE_TOKEN has an invalid format")
@@ -115,13 +114,42 @@ jobs:
 
           if len(raw) > 32768:
               fail("response exceeded 32 KiB")
+
+          def unique_object(pairs):
+              result = {}
+              for key, value in pairs:
+                  if key in result:
+                      raise ValueError("duplicate JSON key")
+                  result[key] = value
+              return result
+
+          def reject_constant(_value):
+              raise ValueError("non-finite JSON number")
+
+          fields = ("needs_action", "category", "priority", "auto_fixable", "high_risk")
+          options = {
+              "needs_action": {"A": True, "B": False},
+              "category": dict(zip("ABCDEF", ("security", "bug", "test", "style", "docs", "other"))),
+              "priority": dict(zip("ABCD", ("p0", "p1", "p2", "p3"))),
+              "auto_fixable": {"A": True, "B": False},
+              "high_risk": {"A": True, "B": False},
+          }
+          expected_result_keys = {
+              "comment_id", "model", "mode", "authoritative", "decision", "probabilities",
+              "latency_ms", "field_latency_ms", "cache_prompt", "cache_tokens", "probability_kind",
+          }
           try:
-              document = json.loads(raw)
+              document = json.loads(raw, object_pairs_hook=unique_object, parse_constant=reject_constant)
+              if not isinstance(document, dict) or set(document) != {"result"}:
+                  fail("response schema is invalid")
               result = document["result"]
-              if not isinstance(result, dict) or not isinstance(result.get("decision"), dict):
+              if not isinstance(result, dict) or set(result) != expected_result_keys:
                   fail("response schema is invalid")
               decision = result["decision"]
               latency = result["latency_ms"]
+              probabilities = result["probabilities"]
+              field_latency = result["field_latency_ms"]
+              cache_tokens = result["cache_tokens"]
           except (ValueError, KeyError, TypeError):
               fail("response schema is invalid")
 
@@ -129,15 +157,39 @@ jobs:
                   or result.get("model") != "gemma-4-e4b"
                   or result.get("mode") != "shadow"
                   or result.get("authoritative") is not False
-                  or set(decision) != {"needs_action", "category", "priority",
-                                       "auto_fixable", "high_risk"}
-                  or any(type(decision[field]) is not bool for field in
-                         ("needs_action", "auto_fixable", "high_risk"))
-                  or decision.get("category") not in
-                         {"security", "bug", "test", "style", "docs", "other"}
-                  or decision.get("priority") not in {"p0", "p1", "p2", "p3"}
-                  or isinstance(latency, bool) or not isinstance(latency, (int, float))
-                  or not math.isfinite(latency) or latency < 0):
+                  or result.get("probability_kind") != "constrained_distribution"
+                  or type(result.get("cache_prompt")) is not bool
+                  or not isinstance(decision, dict) or set(decision) != set(fields)
+                  or not isinstance(probabilities, dict) or set(probabilities) != set(fields)
+                  or not isinstance(field_latency, dict) or set(field_latency) != set(fields)
+                  or not isinstance(cache_tokens, dict) or set(cache_tokens) != set(fields)):
+              fail("response did not match the shadow contract")
+
+          for field in fields:
+              if not any(type(decision[field]) is type(value) and decision[field] == value
+                         for value in options[field].values()):
+                  fail("response decision is invalid")
+              values = probabilities[field]
+              if not isinstance(values, dict) or set(values) != set(options[field]):
+                  fail("response probabilities are invalid")
+              if any(type(value) not in (int, float) or not 0 <= value <= 1
+                     or not math.isfinite(value) for value in values.values()):
+                  fail("response probabilities are invalid")
+              if not math.isclose(sum(values.values()), 1, abs_tol=0.001):
+                  fail("response probabilities are invalid")
+              selected = options[field][max(values, key=values.get)]
+              if type(decision[field]) is not type(selected) or decision[field] != selected:
+                  fail("response decision does not match probabilities")
+              duration = field_latency[field]
+              if (type(duration) not in (int, float) or not 0 <= duration <= 60000
+                      or not math.isfinite(duration)):
+                  fail("response field latency is invalid")
+              cached = cache_tokens[field]
+              if (cached is not None and (type(cached) is not int or not 0 <= cached <= 32768)):
+                  fail("response cache tokens are invalid")
+
+          if (type(result.get("latency_ms")) not in (int, float)
+                  or not 0 <= latency <= 60000 or not math.isfinite(latency)):
               fail("response did not match the shadow contract")
 
           print("LOCAL_JUDGE_SMOKE_STATUS=PASSED")
