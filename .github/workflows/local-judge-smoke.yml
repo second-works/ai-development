@@ -1,0 +1,133 @@
+name: Local Judge Synthetic Smoke Test
+
+on:
+  workflow_dispatch:
+
+# The smoke test does not read GitHub data or call the GitHub API.
+permissions: {}
+
+concurrency:
+  group: local-judge-shadow
+  cancel-in-progress: false
+
+jobs:
+  synthetic-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: local-judge-shadow
+    steps:
+      - name: Send one fixed synthetic request
+        env:
+          WORKFLOW_REF: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          LOCAL_JUDGE_URL: ${{ vars.LOCAL_JUDGE_URL }}
+          LOCAL_JUDGE_HOST: ${{ vars.LOCAL_JUDGE_HOST }}
+          LOCAL_JUDGE_TOKEN: ${{ secrets.LOCAL_JUDGE_TOKEN }}
+          LOCAL_JUDGE_ACCESS_CLIENT_ID: ${{ secrets.LOCAL_JUDGE_ACCESS_CLIENT_ID }}
+          LOCAL_JUDGE_ACCESS_CLIENT_SECRET: ${{ secrets.LOCAL_JUDGE_ACCESS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import math
+          import os
+          import ssl
+          import sys
+          from urllib.error import HTTPError, URLError
+          from urllib.parse import urlsplit
+          from urllib.request import (HTTPRedirectHandler, HTTPSHandler, ProxyHandler,
+                                      Request, build_opener)
+
+          def fail(reason):
+              print(f"LOCAL_JUDGE_SMOKE_STATUS=FAILED ({reason})")
+              raise SystemExit(1)
+
+          if os.environ.get("WORKFLOW_REF") != os.environ.get("DEFAULT_BRANCH"):
+              fail("manual dispatch must use the default branch")
+
+          required = (
+              "LOCAL_JUDGE_URL", "LOCAL_JUDGE_HOST", "LOCAL_JUDGE_TOKEN",
+              "LOCAL_JUDGE_ACCESS_CLIENT_ID", "LOCAL_JUDGE_ACCESS_CLIENT_SECRET",
+          )
+          if any(not os.environ.get(name) for name in required):
+              fail("required Environment value is missing")
+
+          host = os.environ["LOCAL_JUDGE_HOST"]
+          endpoint = urlsplit(os.environ["LOCAL_JUDGE_URL"])
+          if (not host or endpoint.scheme != "https" or endpoint.netloc != host
+                  or endpoint.path != "/triage" or endpoint.query or endpoint.fragment
+                  or endpoint.username or endpoint.password):
+              fail("endpoint must be exactly https://LOCAL_JUDGE_HOST/triage")
+
+          # Fixed synthetic fixture only. No PR, issue, comment, or diff is read.
+          synthetic = {
+              "comment_id": "15300001",
+              "body": "Synthetic connectivity check. This is not a real review.",
+              "diff_hunk": "@@ synthetic test diff @@",
+          }
+          payload = json.dumps(synthetic, separators=(",", ":")).encode("utf-8")
+          request = Request(
+              os.environ["LOCAL_JUDGE_URL"], data=payload, method="POST",
+              headers={
+                  "Content-Type": "application/json",
+                  "Authorization": "Bearer " + os.environ["LOCAL_JUDGE_TOKEN"],
+                  "CF-Access-Client-Id": os.environ["LOCAL_JUDGE_ACCESS_CLIENT_ID"],
+                  "CF-Access-Client-Secret": os.environ["LOCAL_JUDGE_ACCESS_CLIENT_SECRET"],
+              },
+          )
+
+          class NoRedirect(HTTPRedirectHandler):
+              def redirect_request(self, *_args, **_kwargs):
+                  return None
+
+          # Ignore runner proxy settings and reject redirects so credentials can
+          # only reach the exact, TLS-verified /triage host configured above.
+          opener = build_opener(ProxyHandler({}), NoRedirect(),
+                                HTTPSHandler(context=ssl.create_default_context()))
+          try:
+              with opener.open(request, timeout=35) as response:
+                  if response.status != 200:
+                      fail(f"unexpected HTTP status {response.status}")
+                  raw = response.read(32769)
+          except HTTPError as error:
+              # Never print the body or request headers; Access errors can contain
+              # proxy details and must not expose any credentials.
+              fail(f"HTTP {error.code}")
+          except (URLError, TimeoutError, OSError):
+              fail("connection failed")
+
+          if len(raw) > 32768:
+              fail("response exceeded 32 KiB")
+          try:
+              document = json.loads(raw)
+              result = document["result"]
+              decision = result["decision"]
+              latency = result["latency_ms"]
+          except (ValueError, KeyError, TypeError):
+              fail("response schema is invalid")
+
+          if (result.get("comment_id") != synthetic["comment_id"]
+                  or result.get("model") != "gemma-4-e4b"
+                  or result.get("mode") != "shadow"
+                  or result.get("authoritative") is not False
+                  or set(decision) != {"needs_action", "category", "priority",
+                                       "auto_fixable", "high_risk"}
+                  or any(type(decision[field]) is not bool for field in
+                         ("needs_action", "auto_fixable", "high_risk"))
+                  or decision.get("category") not in
+                         {"security", "bug", "test", "style", "docs", "other"}
+                  or decision.get("priority") not in {"p0", "p1", "p2", "p3"}
+                  or isinstance(latency, bool) or not isinstance(latency, (int, float))
+                  or not math.isfinite(latency) or latency < 0):
+              fail("response did not match the shadow contract")
+
+          print("LOCAL_JUDGE_SMOKE_STATUS=PASSED")
+          print("LOCAL_JUDGE_SMOKE_MODEL=gemma-4-e4b")
+          print("LOCAL_JUDGE_SMOKE_MODE=shadow")
+          print("LOCAL_JUDGE_SMOKE_AUTHORITATIVE=false")
+          print(f"LOCAL_JUDGE_SMOKE_LATENCY_MS={latency:.3f}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+              summary.write("Synthetic Local Judge request passed through Cloudflare Access.\n")
+              summary.write("No GitHub review content was fetched or sent.\n")
+              summary.write(f"- Model: `gemma-4-e4b`\n- Mode: `shadow`\n- Authoritative: `false`\n- Latency: `{latency:.3f} ms`\n")
+          PY
