@@ -57,6 +57,7 @@ class ContractTests(unittest.TestCase):
         self.assertRegex(workflow, r"(?m)^on:\n  workflow_dispatch:\s*$")
         self.assertRegex(workflow, r"(?m)^permissions: \{\}\s*$")
         self.assertIn("environment: local-judge-shadow", workflow)
+        self.assertIn("if: github.ref_name == github.event.repository.default_branch", workflow)
         for forbidden in ("pull_request:", "pulls/", "issues/", "gh api", "github.token",
                           "actions/checkout", "upload-artifact", "LOCAL_JUDGE_MIN_CONFIDENCE"):
             self.assertNotIn(forbidden, workflow)
