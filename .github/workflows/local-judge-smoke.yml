@@ -34,7 +34,9 @@ jobs:
           import math
           import os
           import re
+          import socket
           import ssl
+          import time
           from urllib.error import HTTPError, URLError
           from urllib.parse import urlsplit
           from urllib.request import (HTTPRedirectHandler, HTTPSHandler, ProxyHandler,
@@ -102,16 +104,39 @@ jobs:
           # only reach the exact, TLS-verified /triage host configured above.
           opener = build_opener(ProxyHandler({}), NoRedirect(),
                                 HTTPSHandler(context=ssl.create_default_context()))
+          started = time.monotonic()
           try:
-              with opener.open(request, timeout=35) as response:
+              with opener.open(request, timeout=30) as response:
                   if response.status != 200:
                       fail(f"unexpected HTTP status {response.status}")
-                  raw = response.read(32769)
+                  chunks = []
+                  size = 0
+                  while not response.isclosed():
+                      remaining = 30 - (time.monotonic() - started)
+                      if remaining <= 0:
+                          fail("request timed out")
+                      response.fp.raw._sock.settimeout(remaining)
+                      chunk = response.read1(min(4096, 32769 - size))
+                      if not chunk:
+                          if response.length not in (None, 0):
+                              fail("response was incomplete")
+                          break
+                      chunks.append(chunk)
+                      size += len(chunk)
+                      if size > 32768:
+                          fail("response exceeded 32 KiB")
+                  raw = b"".join(chunks)
+          except (TimeoutError, socket.timeout):
+              fail("request timed out")
           except HTTPError as error:
               # Never print the body or request headers; Access errors can contain
               # proxy details and must not expose any credentials.
               fail(f"HTTP {error.code}")
-          except (URLError, TimeoutError, OSError):
+          except (URLError, OSError):
+              fail("connection failed")
+          except (ValueError, UnicodeError):
+              fail("response was malformed")
+          except Exception:
               fail("connection failed")
 
           if len(raw) > 32768:
