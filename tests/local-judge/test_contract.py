@@ -57,7 +57,7 @@ class ContractTests(unittest.TestCase):
         self.assertRegex(workflow, r"(?m)^on:\n  workflow_dispatch:\s*$")
         self.assertRegex(workflow, r"(?m)^permissions: \{\}\s*$")
         self.assertIn("environment: local-judge-shadow", workflow)
-        self.assertIn("if: github.ref_name == github.event.repository.default_branch", workflow)
+        self.assertIn("if: github.ref_type == 'branch' && github.ref_name == github.event.repository.default_branch", workflow)
         for forbidden in ("pull_request:", "pulls/", "issues/", "gh api", "github.token",
                           "actions/checkout", "upload-artifact", "LOCAL_JUDGE_MIN_CONFIDENCE"):
             self.assertNotIn(forbidden, workflow)
@@ -112,7 +112,7 @@ class ContractTests(unittest.TestCase):
                 return FakeResponse(self.payload)
 
         smoke_env = {
-            "WORKFLOW_REF": "main", "DEFAULT_BRANCH": "main",
+            "WORKFLOW_REF_TYPE": "branch", "WORKFLOW_REF": "main", "DEFAULT_BRANCH": "main",
             "LOCAL_JUDGE_URL": "https://judge.example.invalid/triage",
             "LOCAL_JUDGE_HOST": "judge.example.invalid", "LOCAL_JUDGE_TOKEN": "T" * 64,
             "LOCAL_JUDGE_ACCESS_CLIENT_ID": "test-client-id",
@@ -147,6 +147,13 @@ class ContractTests(unittest.TestCase):
         })
         self.assertIn("LOCAL_JUDGE_SMOKE_STATUS=PASSED", output)
         self.assertIn("No GitHub review content was fetched or sent.", summary)
+
+        status, output, opener, _summary = execute(
+            json.dumps({"result": valid_result}).encode(), {"WORKFLOW_REF_TYPE": "tag"},
+        )
+        self.assertEqual(status, 1)
+        self.assertIn("default branch", output)
+        self.assertIsNone(opener.request, "default-branch-named tag reached the network")
 
         incomplete = {"result": {key: value for key, value in valid_result.items()
                                   if key != "probabilities"}}
