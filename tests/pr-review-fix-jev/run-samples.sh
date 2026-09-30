@@ -460,13 +460,15 @@ grep -Fq "JEV_FALLBACK_REQUIRED=1" <<<"$INVALID_CONF"
 
 SKILL_FILE="$ROOT_DIR/.agents/skills/pr-review-fix/SKILL.md"
 for marker in \
-  "## JEV Decision Layer" \
+  "## JEV / Local Judge Manual Evaluation (Paused in Normal Review)" \
+  "通常のPRレビュー修正ではCodex Code Reviewと既存の人手による仕様確認だけを使う" \
+  "JEV / Local Judgeは実行しない" \
   "JEV_TRIAGE_URL" \
   "JEV_TRIAGE_TOKEN" \
   "JEV_MIN_CONFIDENCE" \
-  "JEV_FALLBACK_REASONS" \
   "authoritative=false" \
   "effective_disposition_source=baseline" \
+  ".agents/skills/pr-review-fix/scripts/triage-with-jev.sh" \
   "triage-with-jev.sh" \
   "Shadow Mode" \
   "JEV候補だけを根拠にBLOCKING確定"; do
@@ -476,7 +478,28 @@ for marker in \
   }
 done
 
-printf 'pr-review-fix JEV shadow integration contract passed\n'
+python3 - "$SKILL_FILE" <<'PY'
+from pathlib import Path
+import sys
+
+skill = Path(sys.argv[1]).read_text()
+initial_triage = skill.split("### 3.5. JEV / Local Judgeは実行しない", 1)[1].split("### 4.", 1)[0]
+if any(marker in initial_triage for marker in ("triage-with-jev.sh", "decision-shadow.yml", "JEV_TRIAGE_URL")):
+    raise SystemExit("normal PR review flow must not invoke JEV or Local Judge")
+
+if "JEV / Local Judgeは通常レビューでは未実行" not in skill:
+    raise SystemExit("normal review report must state that JEV and Local Judge were skipped")
+
+for route in (
+    ".agents/skills/pr-review-fix/scripts/triage-with-jev.sh",
+    ".github/workflows/jev-triage.yml",
+    ".github/workflows/decision-shadow.yml",
+):
+    if not (Path(sys.argv[1]).parents[3] / route).is_file():
+        raise SystemExit(f"manual evaluation route must remain available: {route}")
+PY
+
+printf 'Codex-only normal review and retained manual JEV/Local Judge routes contract passed\n'
 
 # urllib transport contract
 grep -Fq 'USER_AGENT = "ai-development-jev-triage/1.0"' "$SCRIPT"

@@ -1,6 +1,6 @@
 ---
 name: pr-review-fix
-description: 既存GitHub PRのCodex Code Review指摘・レビューコメント・レビュー結果への確認、分類、修正、再検証、再レビューを、JEV Shadow Triageを補助Decision Layerとして使いながら同じPRのhead branchで安全に収束させる。ユーザーがSkill名やPR番号を明示しなくても、「コメント確認して修正して」「レビュー結果対応して」「指摘を直して」「コメント出てます。修正して」「修正後再レビューして」など、既存PRのレビュー指摘への対応を意味する自然文または近い表現で使う。単なるIssueコメント閲覧、READMEやソースコード中のコメント修正、既存PR指摘への対応を伴わない一般レビューには使わない。新規remote branch/PR作成やMergeには使わない。
+description: 既存GitHub PRのCodex Code Review指摘・レビューコメント・レビュー結果への確認、分類、修正、再検証、再レビューを、Codexレビューだけを根拠に同じPRのhead branchで安全に収束させる。ユーザーがSkill名やPR番号を明示しなくても、「コメント確認して修正して」「レビュー結果対応して」「指摘を直して」「コメント出てます。修正して」「修正後再レビューして」など、既存PRのレビュー指摘への対応を意味する自然文または近い表現で使う。単なるIssueコメント閲覧、READMEやソースコード中のコメント修正、既存PR指摘への対応を伴わない一般レビューには使わない。新規remote branch/PR作成やMergeには使わない。
 ---
 
 # PR Review Fix
@@ -78,11 +78,14 @@ Issue範囲内で、修正が小さく、副作用が限定的で、今回直す
 
 誤検知、根拠不足、スタイル差、重複指摘、すでに解消済みのもの。
 
-## JEV Decision Layer
+## JEV / Local Judge Manual Evaluation (Paused in Normal Review)
 
-Codexレビューコメントの分類前に、既存のReview Comment Auto-Triage（Cloudflare Workers AI `typesafe/jev`）を**補助Decision Layer**として利用できる。
+通常のPRレビュー修正ではCodex Code Reviewと既存の人手による仕様確認だけを使う。JEV Shadow TriageとLocal Judgeは一時停止中であり、このSkillの通常手順から呼び出さず、その出力を分類・修正・完了判断に使わない。実装、スクリプト、手動評価Workflowは比較再開用に保持する。ユーザーが明示的に評価を依頼した場合に限り、後述の運用契約と専用Workflowを使う。
 
-JEVはレビュー判断を置き換えない。既定はShadow Modeであり、Skillの既存分類を正本とする。
+以下は、明示的な手動評価を再開する場合の参照情報であり、通常レビューの実行手順ではない。
+手動経路として `.agents/skills/pr-review-fix/scripts/triage-with-jev.sh`、`.github/workflows/jev-triage.yml`、`.github/workflows/decision-shadow.yml`、およびLocal Judge用Workflowを維持する。
+
+Review Comment Auto-Triage は Cloudflare Workers AI `typesafe/jev` を使う。
 
 - JEVの出力は常に `authoritative=false` として扱う。
 - 有効な最終分類のsourceは `effective_disposition_source=baseline` とし、既存のP0/P1/P2/P3ルールとReview Evidence Contractで決定する。
@@ -352,35 +355,11 @@ PR本文の `Closes #XX` 等からIssueを確認し、Issue本文を仕様基準
 - Issue範囲外: FOLLOW-UPまたは停止して報告
 - 仕様曖昧: 推測せず人間へ確認
 
-### 3.5. JEV Shadow Triageを実行
+### 3.5. JEV / Local Judgeは実行しない
 
-現在headのCodex review commentをJEVへ送り、候補分類を監査ログへ保存する。
-
-```bash
-JEV_TRIAGE_SCRIPT="$RUNTIME_DIR/scripts/triage-with-jev.sh"
-JEV_LOG="$RUNTIME_DIR/jev-triage-initial.jsonl"
-
-bash "$JEV_TRIAGE_SCRIPT" \
-  "$REPO" <PR番号> "$BEFORE_SHA" \
-  "$REVIEW_COMMENTS_FILE" "$JEV_LOG"
-```
-
-標準出力の `JEV_STATUS` / 候補件数 / fallback件数 / `JEV_FALLBACK_REASONS` を記録する。
-
-- `JEV_STATUS=SHADOW_COMPLETE`: Shadow観測結果を分類時の補助証拠として参照する。
-- `SKIPPED_UNCONFIGURED` または `FALLBACK_*`: JEVだけを理由に停止せず、既存分類へfallbackする。
-- `JEV_CREDITS_EXHAUSTED_COUNT>0`: 「JEV: 利用不可（Cloudflare AI Gatewayクレジット不足）— Codex baselineで継続」と報告する。
-- `JEV_SPEND_LIMIT_COUNT>0`: 「JEV: 利用不可（AI Gateway Spend Limit到達）— Codex baselineで継続」と報告する。
-- `JEV_RATE_LIMITED_COUNT>0`: 「JEV: 一時利用不可（AI Gateway rate limit）— Codex baselineで継続」と報告する。
-- `JEV_BILLING_UNAVAILABLE_COUNT>0`: 「JEV: 利用不可（Unified Billing設定/課金エラー）— Codex baselineで継続」と報告する。
-- 上記理由コードが複数ある場合は、件数とともにすべて報告する。生のCloudflareエラー本文は表示・保存しない。
-- `fallback_required=true` のコメントはJEV候補を自動修正判断に使わない。
-- `jev_disposition_candidate` は候補であり、最終Dispositionではない。
-- JEVログへレビュー本文・diff・Bearer Secretが含まれていないことを維持する。
+通常レビューではJEVへの送信、Local JudgeのWorkflow dispatch、比較artifactの取得を行わない。Codexレビューコメントを直接確認し、次の手順で分類する。JEVまたはLocal Judgeを呼び出すのは、ユーザーが手動評価を明示した場合だけとする。
 
 ### 4. 指摘を分類
-
-Local Judge比較を有効化した環境では、手順3.5のJEV単独実行に代えて保護された `decision-shadow.yml` をdefault branchからdispatchできる。比較artifactが未取得でも既存分類を続け、Secretをローカルへ取り出して代替実行しない。provider比較・後からのbaseline結合手順は上記運用契約を使う。
 
 現在有効な指摘を以下へ整理する。
 
@@ -390,7 +369,7 @@ Local Judge比較を有効化した環境では、手順3.5のJEV単独実行に
 
 P2をBLOCKINGと判定する場合は、具体的な失敗条件・再現経路・PR差分との因果・Issue受入条件との関係を記録する。
 
-JEVの`jev_disposition_candidate`は補助情報として比較するが、`authoritative=false`のため単独では最終分類を変更しない。JEVがfallbackしたコメントは従来ルールだけで分類する。
+分類はCodexがレビュー本文・差分・Issue受入条件を照合して決定する。JEV / Local Judgeの出力は通常レビューでは存在せず、判断材料として参照しない。
 
 ### 5. 同じhead branch上で修正
 
@@ -541,22 +520,7 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 - `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。P2のみの指摘は完了条件を阻害しない。
 - timeout: 再レビュー待ちとして停止。
 
-`REVIEW_PASSED` でもP2が報告された場合、分類前に現在headのreview commentを再取得してJEV Shadow Triageも再実行する。
-
-```bash
-REVIEW_COMMENTS_FILE="$RUNTIME_DIR/review-comments-$EXPECTED_SHA.json"
-JEV_LOG="$RUNTIME_DIR/jev-triage-$EXPECTED_SHA.jsonl"
-
-gh api --hostname "$HOST" --paginate --slurp \
-  "repos/$REPO_PATH/pulls/<PR番号>/comments?per_page=100" \
-  >"$REVIEW_COMMENTS_FILE"
-
-bash "$RUNTIME_DIR/scripts/triage-with-jev.sh" \
-  "$REPO" <PR番号> "$EXPECTED_SHA" \
-  "$REVIEW_COMMENTS_FILE" "$JEV_LOG"
-```
-
-JEV未設定・失敗・low confidence・high risk・non-shadow responseでもレビュー工程は継続し、既存分類へfallbackする。
+`REVIEW_PASSED` でもP2が報告された場合、現在headのreview commentを再取得してCodexの分類ルールだけで評価する。JEV / Local Judgeは再実行しない。
 
 1. 各P2を `BLOCKING / IN-SCOPE FIX / FOLLOW-UP / DISMISS` に分類する。P2のみでは停止せず、分類結果を記録する。
 2. BLOCKINGだけ修正する。
@@ -598,8 +562,7 @@ CI / security / Codex Reviewがすべて `EXPECTED_SHA` 対象だったことを
 - PR番号 / repository / head branch
 - 修正前後SHA / push SHA
 - P0 / P1 / P2の件数と分類
-- JEV Shadow Triageのstatus、候補分類件数、fallback件数、`JEV_FALLBACK_REASONS`
-- JEVがfallbackした場合の利用者向け理由（クレジット不足 / Spend Limit / rate limit / billing / その他API障害）と「Codex baselineで継続した」こと
+- JEV / Local Judgeは通常レビューでは未実行（手動評価経路は保持）
 - BLOCKING残件
 - FOLLOW-UP / DISMISS項目
 - Issue受入条件の充足状況
