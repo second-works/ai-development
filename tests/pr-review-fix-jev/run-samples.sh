@@ -468,6 +468,7 @@ for marker in \
   "JEV_MIN_CONFIDENCE" \
   "authoritative=false" \
   "effective_disposition_source=baseline" \
+  ".agents/skills/pr-review-fix/scripts/triage-with-jev.sh" \
   "triage-with-jev.sh" \
   "Shadow Mode" \
   "JEV候補だけを根拠にBLOCKING確定"; do

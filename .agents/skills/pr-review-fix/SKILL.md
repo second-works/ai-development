@@ -83,7 +83,7 @@ Issue範囲内で、修正が小さく、副作用が限定的で、今回直す
 通常のPRレビュー修正ではCodex Code Reviewと既存の人手による仕様確認だけを使う。JEV Shadow TriageとLocal Judgeは一時停止中であり、このSkillの通常手順から呼び出さず、その出力を分類・修正・完了判断に使わない。実装、スクリプト、手動評価Workflowは比較再開用に保持する。ユーザーが明示的に評価を依頼した場合に限り、後述の運用契約と専用Workflowを使う。
 
 以下は、明示的な手動評価を再開する場合の参照情報であり、通常レビューの実行手順ではない。
-手動経路として `scripts/triage-with-jev.sh`、`.github/workflows/jev-triage.yml`、`.github/workflows/decision-shadow.yml`、およびLocal Judge用Workflowを維持する。
+手動経路として `.agents/skills/pr-review-fix/scripts/triage-with-jev.sh`、`.github/workflows/jev-triage.yml`、`.github/workflows/decision-shadow.yml`、およびLocal Judge用Workflowを維持する。
 
 Review Comment Auto-Triage は Cloudflare Workers AI `typesafe/jev` を使う。
 
