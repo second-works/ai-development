@@ -141,9 +141,6 @@ def review_body_findings_in(body):
             current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line))]
         elif current is not None and blocking.match(line):
             current[1] = True
-        elif not line.strip() and current is not None:
-            found.append(current)
-            current = None
     if current is not None:
         found.append(current)
     return [tuple(entry) for entry in found]
