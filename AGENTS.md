@@ -243,16 +243,18 @@ RAGを採用する各プロジェクトでは、原則として `docs/architectu
 6. 標準検証入口 `./scripts/verify.sh` を実行する。検証順序は lint → type check → test → build とし、対象外工程はログに理由を出す。
 7. 標準検証を実行できない場合は、実行不能の理由を記録して停止し、人間の判断なしにcommit・PR作成・レビュー依頼へ進まない。
 8. 標準検証が失敗した場合は、後続工程へ進まずIssue範囲内で原因を修正する。Lintルール、型検査、テストを無効化・緩和して成功扱いにしない。
-9. 変更内容を自己レビューする。
-10. 標準検証成功後にcommitする。
-11. 標準検証成功後にPRを作成する。
-12. GitHub Actions CIの結果を確認する。CIも同じ `./scripts/verify.sh` を呼び出す。
-13. CI失敗時は原因を修正し、成功するまでPRを完了扱いにしない。
-14. CI成功後にCodex Code Reviewを実行する。Automatic reviewsが有効な場合は自動結果を確認し、無効な場合はPRで `@codex review` を依頼する。
-15. P0 / P1 / BLOCKINGと分類したP2指摘がある場合は、下記「Code Review Rules」の修正ループに従い、既存PRのhead branchをチェックアウトして修正する。非BLOCKING P2は四分類と記録を行い、追加修正ループへ戻さない。
-16. P0 / P1およびBLOCKING P2が解消され、非BLOCKING P2が四分類・記録され、CIが成功し、利用可能なセキュリティチェックが成功または人間が例外を明示判断した状態で人間の最終確認へ進む。
-17. PR本文に対応Issue、変更内容、標準検証・CI結果、Codexレビュー結果、注意点を記載する。
-18. PR作成後は勝手に次のIssueへ範囲を拡張しない。
+9. PR作成前に、Issue要件・変更差分全体・テスト変更を対象とするPre-PR Reviewを実施する。対話UIで `/review` が利用できる場合は使用してよいが、特定コマンドの実行そのものではなくレビュー結果をGateとする。
+10. Pre-PR ReviewでP0 / P1相当の重大な問題、明確なバグ、回帰、Issue範囲外変更、必要テスト不足を検出した場合はPRを作成せず修正する。
+11. Pre-PR Review修正後は `./scripts/verify.sh` を再実行し、成功後に変更差分を再確認する。未解決の重大問題がある状態ではcommit・PR作成へ進まない。
+12. 標準検証とPre-PR Review Gate成功後にcommitする。
+13. 標準検証とPre-PR Review Gate成功後にPRを作成する。
+14. GitHub Actions CIの結果を確認する。CIも同じ `./scripts/verify.sh` を呼び出す。
+15. CI失敗時は原因を修正し、成功するまでPRを完了扱いにしない。
+16. CI成功後にCodex Code Reviewを実行する。Automatic reviewsが有効な場合は自動結果を確認し、無効な場合はPRで `@codex review` を依頼する。
+17. P0 / P1 / BLOCKINGと分類したP2指摘がある場合は、下記「Code Review Rules」の修正ループに従い、既存PRのhead branchをチェックアウトして修正する。非BLOCKING P2は四分類と記録を行い、追加修正ループへ戻さない。
+18. P0 / P1およびBLOCKING P2が解消され、非BLOCKING P2が四分類・記録され、CIが成功し、利用可能なセキュリティチェックが成功または人間が例外を明示判断した状態で人間の最終確認へ進む。
+19. PR本文に対応Issue、変更内容、標準検証・Pre-PR Review・CI結果、Codexレビュー結果、注意点を記載する。
+20. PR作成後は勝手に次のIssueへ範囲を拡張しない。
 
 ## Standard Verification Gate
 
@@ -579,13 +581,17 @@ Release Candidateを作る案件では、Release判定前に [Deployment / Relea
 
 ## Before PR
 
-プロジェクトで定義されている場合、PR作成前に標準検証入口を実行する。
+PR作成前は、標準検証とPre-PR Reviewの両方を必須Gateとする。
 
-- `./scripts/verify.sh`（lint → type check → test → build）
+1. `./scripts/verify.sh`（lint → type check → test → build）を実行する。
+2. Issue要件、変更差分全体、テスト変更を対象にPre-PR Reviewを実施する。
+3. 重大な指摘、明確なバグ、回帰、Issue範囲外変更、必要テスト不足があれば修正する。
+4. 修正後に `./scripts/verify.sh` を再実行し、差分を再確認する。
+5. 未解決の重大問題がないことを確認してからPRを作成する。
 
-標準検証入口を実行できない場合は、理由をPR本文に記録して成功扱いにせず停止する。
+対話UIで `/review` が利用できる場合はPre-PR Reviewの実行手段として使用してよい。ただし自動フローでは特定コマンドの呼び出しを必須条件にせず、レビューが実施され、結果が解消されていることをGateとする。
 
-失敗した場合は原因を確認し、Issue範囲内で修正する。
+標準検証入口を実行できない場合は、理由を記録して成功扱いにせず停止する。人間の判断なしにPR作成へ進まない。
 
 実行できないテストや検証がある場合は、成功したことにせずPR本文に理由を明記する。
 
