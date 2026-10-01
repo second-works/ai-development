@@ -130,15 +130,22 @@ def review_body_findings_in(body):
     found = []
     current = None
     heading = re.compile(r'^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(P[012])\](?:\*\*)?(?=\s|:|$)', re.I)
+    badge = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:<sub>)*!\[(P[012]) Badge\]\([^)]*\)(?:</sub>)*', re.I)
     field = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:severity|priority|重大度|優先度)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?(P[012])\b', re.I)
     blocking = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:classification|分類)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?BLOCKING\b', re.I)
+    finding_detail = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?Finding ID(?:\*\*)?\s*[:：=]', re.I)
+    embedded_severity = re.compile(r'(?:\*\*)?Severity(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?(P[012])\b', re.I)
+    embedded_blocking = re.compile(r'(?:\*\*)?Classification(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?BLOCKING\b', re.I)
     for line in (body or '').splitlines():
-        match = heading.match(line) or field.match(line)
+        match = heading.match(line) or badge.match(line) or field.match(line)
+        detail_line = bool(finding_detail.match(line))
+        if match is None and detail_line:
+            match = embedded_severity.search(line)
         if match:
             if current is not None:
                 found.append(current)
             severity = match.group(1).upper()
-            current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line))]
+            current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line)) or (detail_line and bool(embedded_blocking.search(line)))]
         elif current is not None and blocking.match(line):
             current[1] = True
     if current is not None:
