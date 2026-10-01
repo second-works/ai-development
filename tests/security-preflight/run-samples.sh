@@ -63,13 +63,22 @@ else
 fi
 
 mkdir -p "$fixture_dir/packages/api" "$fixture_dir/packages/web" "$fixture_dir/.fake-bin"
+printf '{}\n' > "$fixture_dir/package-lock.json"
 printf '{}\n' > "$fixture_dir/packages/api/package-lock.json"
 printf '{}\n' > "$fixture_dir/packages/web/package-lock.json"
-git -C "$fixture_dir" add packages
+git -C "$fixture_dir" add package-lock.json packages
 git -C "$fixture_dir" commit -qm nested-lockfiles
 audit_pwd_file="$fixture_dir/audit-pwd.txt"
 printf '%s\n' '#!/usr/bin/env bash' \
   'printf "%s\\n" "$PWD" >> "$SECURITY_AUDIT_PWD_FILE"' \
+  'if [[ "${SECURITY_AUDIT_MODE:-}" == high ]]; then' \
+  '  printf "%s\\n" '\''{"auditReportVersion":2,"metadata":{"vulnerabilities":{"high":1,"critical":0}}}'\''' \
+  '  exit 1' \
+  'fi' \
+  'if [[ "${SECURITY_AUDIT_MODE:-}" == invalid ]]; then' \
+  '  printf "%s\\n" invalid-json' \
+  '  exit 1' \
+  'fi' \
   'printf "%s\\n" '\''{"auditReportVersion":2,"metadata":{"vulnerabilities":{"high":0,"critical":0}}}'\''' \
   > "$fixture_dir/.fake-bin/npm"
 chmod +x "$fixture_dir/.fake-bin/npm"
@@ -81,7 +90,52 @@ grep -Fq 'SECURITY_STATUS=SECURITY_PASSED' "$fixture_dir/nested-result.txt"
 grep -Fxq "$fixture_dir/packages/api" "$audit_pwd_file"
 grep -Fxq "$fixture_dir/packages/web" "$audit_pwd_file"
 
-git -C "$fixture_dir" rm -qr package.json packages
+printf 'example==1.0\n' > "$fixture_dir/requirements.txt"
+git -C "$fixture_dir" add requirements.txt
+git -C "$fixture_dir" commit -qm mixed-python-manifest
+if mixed_result="$(SECURITY_AUDIT_PWD_FILE="$audit_pwd_file" PATH="$fixture_dir/.fake-bin:$PATH" "$preflight" "$fixture_dir" 2>/dev/null)"; then
+  printf 'Node lockfiles masked an unscanned Python manifest\n' >&2
+  exit 1
+else
+  [[ "$?" -eq 4 ]]
+  grep -Fq 'SECURITY_STATUS=SECURITY_UNAVAILABLE' <<<"$mixed_result"
+  grep -Fq 'DEPENDENCY_STATUS=SECURITY_UNAVAILABLE' <<<"$mixed_result"
+  grep -Fq 'requirements.txt' <<<"$mixed_result"
+fi
+if mixed_high_result="$(SECURITY_AUDIT_MODE=high SECURITY_AUDIT_PWD_FILE="$audit_pwd_file" PATH="$fixture_dir/.fake-bin:$PATH" "$preflight" "$fixture_dir" 2>/dev/null)"; then
+  printf 'high vulnerability did not fail when Python scanning was unavailable\n' >&2
+  exit 1
+else
+  [[ "$?" -eq 1 ]]
+  grep -Fq 'SECURITY_STATUS=SECURITY_FAILED' <<<"$mixed_high_result"
+  grep -Fq 'DEPENDENCY_STATUS=SECURITY_FAILED' <<<"$mixed_high_result"
+fi
+if mixed_invalid_result="$(SECURITY_AUDIT_MODE=invalid SECURITY_AUDIT_PWD_FILE="$audit_pwd_file" PATH="$fixture_dir/.fake-bin:$PATH" "$preflight" "$fixture_dir" 2>/dev/null)"; then
+  printf 'invalid npm audit result was treated as success\n' >&2
+  exit 1
+else
+  [[ "$?" -eq 4 ]]
+  grep -Fq 'SECURITY_STATUS=SECURITY_UNAVAILABLE' <<<"$mixed_invalid_result"
+fi
+git -C "$fixture_dir" rm -q requirements.txt
+git -C "$fixture_dir" commit -qm remove-python-manifest
+
+mkdir -p "$fixture_dir/packages/unlocked"
+printf '{"name":"unlocked"}\n' > "$fixture_dir/packages/unlocked/package.json"
+git -C "$fixture_dir" add packages/unlocked/package.json
+git -C "$fixture_dir" commit -qm unlocked-node-package
+if unlocked_result="$(SECURITY_AUDIT_PWD_FILE="$audit_pwd_file" PATH="$fixture_dir/.fake-bin:$PATH" "$preflight" "$fixture_dir" 2>/dev/null)"; then
+  printf 'another package lockfile masked an unlocked Node package\n' >&2
+  exit 1
+else
+  [[ "$?" -eq 4 ]]
+  grep -Fq 'SECURITY_STATUS=SECURITY_UNAVAILABLE' <<<"$unlocked_result"
+  grep -Fq 'packages/unlocked/package.json' <<<"$unlocked_result"
+fi
+git -C "$fixture_dir" rm -qr packages/unlocked
+git -C "$fixture_dir" commit -qm remove-unlocked-node-package
+
+git -C "$fixture_dir" rm -qr package.json package-lock.json packages
 git -C "$fixture_dir" commit -qm cleanup-manifests
 
 printf '%s%s\n' 'sk-proj-' 'abcdefghijklmnopqrstuvwxyz' > "$fixture_dir/secret.txt"

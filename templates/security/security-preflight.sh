@@ -99,26 +99,52 @@ dependency_status='SECURITY_NOT_APPLICABLE'
 dependency_reason='no supported dependency manifest is present'
 dependency_manifest=''
 dependency_manifests=()
+dependency_reasons=()
+dependency_failed=0
+dependency_unavailable=0
 
 for path in "${manifest_paths[@]}"; do
   manifest_name="${path##*/}"
   case "$manifest_name" in
-    package-lock.json|npm-shrinkwrap.json|pnpm-lock.yaml|yarn.lock)
+    package-lock.json|npm-shrinkwrap.json)
       dependency_manifests+=("$path")
+      ;;
+    pnpm-lock.yaml|yarn.lock|requirements.txt|requirements-*.txt|pyproject.toml|poetry.lock|Pipfile.lock|uv.lock)
+      dependency_unavailable=1
+      dependency_reasons+=("no supported dependency scanner is defined for $(escape_path "$path")")
+      ;;
+    package.json)
+      if [[ "$path" == */* ]]; then
+        package_dir="${path%/*}"
+      else
+        package_dir='.'
+      fi
+      matching_lock=0
+      for lock_path in "${manifest_paths[@]}"; do
+        if [[ "$package_dir" == '.' ]]; then
+          if [[ "$lock_path" == 'package-lock.json' || "$lock_path" == 'npm-shrinkwrap.json' ]]; then
+            matching_lock=1
+            break
+          fi
+        elif [[ "$lock_path" == "$package_dir/package-lock.json" || "$lock_path" == "$package_dir/npm-shrinkwrap.json" ]]; then
+          matching_lock=1
+          break
+        fi
+      done
+      if ((matching_lock == 0)); then
+        dependency_unavailable=1
+        dependency_reasons+=("package.json is present but no supported npm lockfile is available for $(escape_path "$path")")
+      fi
       ;;
   esac
 done
 
-if ((${#dependency_manifests[@]} > 0)); then
+if ((${#manifest_paths[@]} > 0)); then
   dependency_display_manifests=()
-  for path in "${dependency_manifests[@]}"; do
+  for path in "${manifest_paths[@]}"; do
     dependency_display_manifests+=("$(escape_path "$path")")
   done
   dependency_manifest="$(IFS=,; printf '%s' "${dependency_display_manifests[*]}")"
-  dependency_status='SECURITY_PASSED'
-  dependency_reasons=()
-  dependency_failed=0
-  dependency_unavailable=0
 
   for path in "${dependency_manifests[@]}"; do
     if [[ "$path" == */* ]]; then
@@ -171,30 +197,10 @@ PY
     dependency_status='SECURITY_FAILED'
   elif ((dependency_unavailable)); then
     dependency_status='SECURITY_UNAVAILABLE'
+  else
+    dependency_status='SECURITY_PASSED'
   fi
   dependency_reason="${dependency_reasons[*]}"
-else
-  for path in "${manifest_paths[@]}"; do
-    manifest_name="${path##*/}"
-    if [[ "$manifest_name" == 'package.json' ]]; then
-      dependency_status='SECURITY_UNAVAILABLE'
-      dependency_reason='package.json is present but no supported npm lockfile is available'
-      dependency_manifest="$(escape_path "$path")"
-      break
-    fi
-  done
-  for path in "${manifest_paths[@]}"; do
-    [[ "$dependency_status" == 'SECURITY_NOT_APPLICABLE' ]] || break
-    manifest_name="${path##*/}"
-    case "$manifest_name" in
-      requirements.txt|requirements-*.txt|pyproject.toml|poetry.lock|Pipfile.lock|uv.lock)
-        dependency_status='SECURITY_UNAVAILABLE'
-        dependency_reason="no supported dependency scanner is defined for $(escape_path "$path")"
-        dependency_manifest="$(escape_path "$path")"
-        break
-        ;;
-    esac
-  done
 fi
 
 overall_status='SECURITY_PASSED'
