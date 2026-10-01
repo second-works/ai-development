@@ -125,6 +125,29 @@ def findings_in(body):
     explicit_blocking = bool(re.search(r'(?im)^\s*(?:classification|分類)\s*[:：=]\s*BLOCKING\b', body or ''))
     return [(sev, sev in ('P0', 'P1') or explicit_blocking) for sev in severities]
 
+def review_body_findings_in(body):
+    """Count structured findings, not summary text such as 'No P0/P1 findings'."""
+    found = []
+    current = None
+    heading = re.compile(r'^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(P[012])\](?:\*\*)?(?=\s|:|$)', re.I)
+    field = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:severity|priority|重大度|優先度)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?(P[012])\b', re.I)
+    blocking = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:classification|分類)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?BLOCKING\b', re.I)
+    for line in (body or '').splitlines():
+        match = heading.match(line) or field.match(line)
+        if match:
+            if current is not None:
+                found.append(current)
+            severity = match.group(1).upper()
+            current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line))]
+        elif current is not None and blocking.match(line):
+            current[1] = True
+        elif not line.strip() and current is not None:
+            found.append(current)
+            current = None
+    if current is not None:
+        found.append(current)
+    return [tuple(entry) for entry in found]
+
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
 reviews = flatten_pages(reviews_path)
@@ -156,7 +179,7 @@ for r in reviews:
     if state not in ('COMMENTED', 'APPROVED', 'CHANGES_REQUESTED'):
         continue
     eligible_review_ids.add(rid)
-    review_body_findings.extend(findings_in(body))
+    review_body_findings.extend(review_body_findings_in(body))
     if state == 'CHANGES_REQUESTED':
         changes_requested_ids.append(rid)
 

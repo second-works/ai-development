@@ -497,7 +497,7 @@ wait-codex-review.shは次も保証する。
 - `Reviewed commit` が `EXPECTED_SHA` と一致する
 - review IDが `REVIEW_BASELINE_ID` より大きいCodex reviewだけを今回の再レビューとして受理する
 - 現行headの提出済み `COMMENTED` / `APPROVED` / `CHANGES_REQUESTED` のみ完了証拠にし、`DISMISSED` / `PENDING` / 未知stateは除外する。`CHANGES_REQUESTED` は本文にseverity表記がなくても成功させない
-- 受理したreviewの本文もinline・未解決threadと同じP0/P1/明示BLOCKING P2分類に含める
+- 受理したreview本文の構造化された指摘（`[P1]`見出しや`Severity: P1`等）をP0/P1/明示BLOCKING P2分類に含める。`No P0/P1 findings`等の要約表現は指摘に数えない
 - 再レビュー依頼と同じ秒に完了していた依頼前reviewを再利用しない
 - issue comment側は `REVIEW_REQUEST_COMMENT_ID` より後のsummaryだけを補助情報として扱う
 - Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する

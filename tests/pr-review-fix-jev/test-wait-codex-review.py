@@ -67,9 +67,11 @@ esac
 run_case("clean submitted review", reviews=[review()], expected_status="REVIEW_PASSED", expected_code=0)
 run_case("approved review", reviews=[review(state="APPROVED")], expected_status="REVIEW_PASSED", expected_code=0)
 run_case("body P1", reviews=[review(body="[P1] security regression")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3, extra=["AUTO_BLOCKING_COUNT=1"])
+run_case("severity field P1", reviews=[review(body="**Severity:** P1\n**Finding ID:** F-1")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
+run_case("negated severity summary", reviews=[review(body="No P0/P1 findings and 0 P1 findings")], expected_status="REVIEW_PASSED", expected_code=0, extra=["AUTO_BLOCKING_COUNT=0"])
 run_case("requested changes without severity", reviews=[review(state="CHANGES_REQUESTED")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
-run_case("blocking P2 body", reviews=[review(body="P2 needs fix\nClassification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
-run_case("nonblocking P2 body", reviews=[review(body="P2 suggestion")], expected_status="REVIEW_PASSED", expected_code=0, extra=["P2_NONBLOCKING_COUNT=1"])
+run_case("blocking P2 body", reviews=[review(body="[P2] needs fix\nClassification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
+run_case("nonblocking P2 body", reviews=[review(body="[P2] suggestion")], expected_status="REVIEW_PASSED", expected_code=0, extra=["P2_NONBLOCKING_COUNT=1"])
 run_case("inline P1", reviews=[review()], inline=[{"body": "P1 broken", "commit_id": SHA, "pull_request_review_id": 201, "user": ACTOR}], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 run_case("unresolved old-head thread", reviews=[review()], threads=[{"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [{"id": "thread-1", "isResolved": False, "comments": {"nodes": [{"author": {"login": ACTOR["login"], "__typename": "Bot"}, "body": "P1 still broken", "outdated": False}]}}]}}}}}], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 for state in ("DISMISSED", "PENDING", "UNKNOWN"):
