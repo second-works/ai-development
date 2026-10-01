@@ -568,6 +568,7 @@ CIの成功をSecurityの成功として扱わない。標準の待機処理はC
 - `SECURITY_UNAVAILABLE`: 必要なscanner、実行環境、または結果が利用できない。人間の判断なしに通過させない
 
 fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は各lockfileのディレクトリで `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` と混同しない。パス由来の状態理由はCR/LFをエスケープし、機械可読な状態行を汚染しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
+複数の依存マニフェストがある場合、`package.json` は同じディレクトリのnpm lockfileと対応付け、未対応のPython / pnpm / Yarnマニフェストを別のlockfileの監査成功で隠さない。検出したHigh/Critical脆弱性の `SECURITY_FAILED` は未監査の `SECURITY_UNAVAILABLE` より優先する。
 
 ## Full-System Security Audit
 
