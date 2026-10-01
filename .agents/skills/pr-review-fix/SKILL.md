@@ -496,6 +496,8 @@ wait-codex-review.shは次も保証する。
 - 対象hostだけ `gh auth status --hostname` で認証確認する
 - `Reviewed commit` が `EXPECTED_SHA` と一致する
 - review IDが `REVIEW_BASELINE_ID` より大きいCodex reviewだけを今回の再レビューとして受理する
+- 現行headの提出済み `COMMENTED` / `APPROVED` / `CHANGES_REQUESTED` のみ完了証拠にし、`DISMISSED` / `PENDING` / 未知stateは除外する。`CHANGES_REQUESTED` は本文にseverity表記がなくても成功させない
+- 受理したreviewの本文もinline・未解決threadと同じP0/P1/明示BLOCKING P2分類に含める
 - 再レビュー依頼と同じ秒に完了していた依頼前reviewを再利用しない
 - issue comment側は `REVIEW_REQUEST_COMMENT_ID` より後のsummaryだけを補助情報として扱う
 - Codex actorは既知の `chatgpt-codex-connector` / `chatgpt-codex-connector[bot]` の完全一致かつGitHub actor type `Bot` の場合だけ受理する
@@ -516,7 +518,7 @@ bash "$RUNTIME_DIR/scripts/wait-codex-review.sh" \
 
 `wait-codex-review.sh` はP0/P1とP2を分離する。
 
-- `STATUS=REVIEW_CHANGES_REQUIRED`: BLOCKINGあり。P0/P1またはBLOCKINGと分類したP2があるため修正ループへ戻る。
+- `STATUS=REVIEW_CHANGES_REQUIRED`: P0/P1、BLOCKINGと分類したP2、または `CHANGES_REQUESTED` があるため修正ループへ戻る。
 - `STATUS=REVIEW_PASSED`: BLOCKINGの未処理指摘なし。P2のみの指摘は完了条件を阻害しない。
 - timeout: 再レビュー待ちとして停止。
 

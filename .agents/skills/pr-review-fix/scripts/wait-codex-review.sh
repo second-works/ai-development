@@ -135,10 +135,12 @@ request_comment = next(
     None,
 )
 if request_comment is None:
-    print("ERROR=request comment id was not found")
+    print("ERROR: request comment id was not found", file=sys.stderr)
     sys.exit(4)
 
 eligible_review_ids = set()
+review_body_findings = []
+changes_requested_ids = []
 for r in reviews:
     if not is_allowed_rest_actor(r):
         continue
@@ -150,7 +152,13 @@ for r in reviews:
     body = r.get('body') or ''
     if 'Reviewed commit:' not in body or (short10 not in body and sha not in body):
         continue
+    state = r.get('state') or ''
+    if state not in ('COMMENTED', 'APPROVED', 'CHANGES_REQUESTED'):
+        continue
     eligible_review_ids.add(rid)
+    review_body_findings.extend(findings_in(body))
+    if state == 'CHANGES_REQUESTED':
+        changes_requested_ids.append(rid)
 
 review_seen = bool(eligible_review_ids)
 review_ids_text = ','.join(str(v) for v in sorted(eligible_review_ids))
@@ -165,7 +173,7 @@ for c in issue_comments:
         review_comment_id = cid
         break
 
-new_findings = []
+new_findings = list(review_body_findings)
 for c in review_comments:
     if not is_allowed_rest_actor(c):
         continue
@@ -211,6 +219,7 @@ print(f"AFTER_REVIEW_ID={after_review_id}")
 print(f"NEW_FINDING_COUNT={len(new_findings)}")
 print(f"UNRESOLVED_FINDING_COUNT={len(unresolved_findings)}")
 print(f"AUTO_BLOCKING_COUNT={len(auto_blocking)}")
+print(f"CHANGES_REQUESTED_COUNT={len(changes_requested_ids)}")
 print(f"P2_CLASSIFICATION_COUNT={len(p2_findings)}")
 print(f"P2_NONBLOCKING_COUNT={len(p2_nonblocking)}")
 if all_severities:
@@ -222,6 +231,7 @@ PY
 
   REVIEW_SEEN="$(printf '%s\n' "$RESULT" | awk -F= '$1=="REVIEW_SEEN"{print $2}')"
   AUTO_BLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="AUTO_BLOCKING_COUNT"{print $2}')"
+  CHANGES_REQUESTED_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="CHANGES_REQUESTED_COUNT"{print $2}')"
   P2_CLASSIFICATION_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="P2_CLASSIFICATION_COUNT"{print $2}')"
   P2_NONBLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="P2_NONBLOCKING_COUNT"{print $2}')"
 
@@ -230,7 +240,7 @@ PY
     echo "EXPECTED_SHA=$EXPECTED_SHA"
     echo "AFTER_COMMENT_ID=$AFTER_COMMENT_ID"
     echo "AFTER_REVIEW_ID=$AFTER_REVIEW_ID"
-    if [[ "$AUTO_BLOCKING_COUNT" -gt 0 ]]; then
+    if [[ "$AUTO_BLOCKING_COUNT" -gt 0 || "$CHANGES_REQUESTED_COUNT" -gt 0 ]]; then
       echo "STATUS=REVIEW_CHANGES_REQUIRED"
       exit 3
     fi
