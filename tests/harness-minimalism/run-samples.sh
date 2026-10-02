@@ -360,6 +360,7 @@ bash "$ROOT/tests/adaptive-development-flow/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/github-state/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/issue-quality/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/template-simplification/run-samples.sh" "$ROOT"
+python3 "$ROOT/tests/harness-minimalism/test-ci-entrypoints.py"
 
 if (( failures != 0 )); then
   exit 1

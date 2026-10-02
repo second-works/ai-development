@@ -29,6 +29,24 @@ jobs:
       - name: Verification samples
         run: tests/verification/run-samples.sh
 
+      - name: GitHub state read-only contract
+        run: bash tests/github-state/run-samples.sh
+
+      - name: Current State contract
+        run: bash tests/current-state/run-samples.sh
+
+      - name: HTML status report contract
+        run: bash tests/html-status-report/run-samples.sh
+
+      - name: Adaptive development flow contract
+        run: bash tests/adaptive-development-flow/run-samples.sh
+
+      - name: Child Issue quality contract
+        run: bash tests/issue-quality/run-samples.sh
+
+      - name: Template simplification contract
+        run: bash tests/template-simplification/run-samples.sh
+
       - name: Application setup and doctor template contract
         run: bash tests/app-template/run-samples.sh
 
