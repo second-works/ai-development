@@ -133,27 +133,30 @@ def review_body_findings_in(body):
     badge = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:<sub>)*!\[(P[012]) Badge\]\([^)]*\)(?:</sub>)*', re.I)
     field = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:severity|priority|重大度|優先度)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?(P[012])\b', re.I)
     blocking = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:classification|分類)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?BLOCKING\b', re.I)
-    finding_detail = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?Finding ID(?:\*\*)?\s*[:：=]', re.I)
+    finding_detail = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?Finding ID(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*([A-Za-z0-9_-]+)', re.I)
     embedded_severity = re.compile(r'(?:\*\*)?Severity(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?(P[012])\b', re.I)
     embedded_blocking = re.compile(r'(?:\*\*)?Classification(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?BLOCKING\b', re.I)
     for line in (body or '').splitlines():
         match = heading.match(line) or badge.match(line) or field.match(line)
-        detail_line = bool(finding_detail.match(line))
+        detail_match = finding_detail.match(line)
+        detail_line = detail_match is not None
+        detail_id = detail_match.group(1) if detail_match else None
         if match is None and detail_line:
             match = embedded_severity.search(line)
         if match:
             severity = match.group(1).upper()
-            if detail_line and current is not None and current[0] == severity:
+            if detail_line and current is not None and current[0] == severity and (current[2] is None or current[2] == detail_id):
                 current[1] = current[1] or bool(embedded_blocking.search(line))
+                current[2] = detail_id
                 continue
             if current is not None:
                 found.append(current)
-            current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line)) or (detail_line and bool(embedded_blocking.search(line)))]
+            current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line)) or (detail_line and bool(embedded_blocking.search(line))), detail_id]
         elif current is not None and blocking.match(line):
             current[1] = True
     if current is not None:
         found.append(current)
-    return [tuple(entry) for entry in found]
+    return [tuple(entry[:2]) for entry in found]
 
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
