@@ -10,6 +10,10 @@ description: 既存GitHub PRのCodex Code Review指摘・レビューコメン�
 レビューの目的は「指摘を0件にすること」ではない。
 完了条件は、**Issueの受入条件を満たし、CI/securityが成功し、今回のPRに起因するBLOCKINGが残っていないこと**。
 
+## 実行環境
+
+通常レビューのshell helperとSecurity PreflightはBash 5以上を使う。macOS標準の`/bin/bash` 3.2は非対応で、外部操作前に説明付きで停止する。利用するBashの絶対パス（例: Apple SiliconのHomebrew版 `/opt/homebrew/bin/bash`）を `BASH5` に設定し、`"$BASH5" --version` で5以上を確認してから、以下の `bash "$RUNTIME_DIR/scripts/..."` の例では `bash` を `"$BASH5"` に置き換える。Security Preflightも同じBashで実行し、非対応環境の `SECURITY_UNAVAILABLE` を成功として扱わない。手動JEV評価用の`triage-with-jev.sh`はこのBash 5前提の対象外で、従来の起動経路を維持する。スクリプトはインストールやPATH変更を行わない。
+
 ## Structured Current State
 
 レビュー修正の開始時と各trust boundaryの終了時は、[Structured Current State](../../../docs/ai-execution-state.md)を構築または復元する。

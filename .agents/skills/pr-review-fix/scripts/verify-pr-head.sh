@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+if (( BASH_VERSINFO[0] < 5 )); then
+  printf 'ERROR: Bash 5 or newer required (current %s)\n' "$BASH_VERSION" >&2
+  exit 4
+fi
 set -euo pipefail
 
 if [[ $# -lt 3 || $# -gt 4 ]]; then

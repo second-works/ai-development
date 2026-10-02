@@ -38,6 +38,8 @@ assert_contains "$repo_root/docs/nine-standard-ai-development-flow.md" 'Security
 assert_contains "$repo_root/docs/template-guide.md" 'SECURITY_UNAVAILABLE'
 assert_contains "$repo_root/.github/pull_request_template.md" 'Security Preflight判定'
 
+python3 "$repo_root/tests/security-preflight/test-bash-version-guard.py"
+
 fixture_dir="$(mktemp -d)"
 trap 'rm -rf "$fixture_dir"' EXIT
 git -C "$fixture_dir" init -q

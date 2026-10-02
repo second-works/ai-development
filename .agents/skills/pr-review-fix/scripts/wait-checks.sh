@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if (( BASH_VERSINFO[0] < 5 )); then
+  printf 'ERROR: Bash 5 or newer required (current %s)\n' "$BASH_VERSION" >&2
+  exit 4
+fi
+
 set -Eeuo pipefail
 
 if [[ $# -lt 2 || $# -gt 6 ]]; then
@@ -46,7 +51,7 @@ if [[ -n "$SECURITY_PREFLIGHT_SCRIPT" ]]; then
     printf '%s\n' 'SECURITY_STATUS=SECURITY_UNAVAILABLE' 'SECURITY_REASON=security preflight script is not executable' >"$SECURITY_PREFLIGHT_OUTPUT"
   else
     set +e
-    "$SECURITY_PREFLIGHT_SCRIPT" "$PWD" >"$SECURITY_PREFLIGHT_OUTPUT" 2>&1
+    "$BASH" "$SECURITY_PREFLIGHT_SCRIPT" "$PWD" >"$SECURITY_PREFLIGHT_OUTPUT" 2>&1
     PREFLIGHT_EXIT=$?
     set -e
     if ! grep -qE '^SECURITY_STATUS=(SECURITY_PASSED|SECURITY_FAILED|SECURITY_NOT_APPLICABLE|SECURITY_UNAVAILABLE)$' "$SECURITY_PREFLIGHT_OUTPUT"; then
