@@ -125,6 +125,39 @@ def findings_in(body):
     explicit_blocking = bool(re.search(r'(?im)^\s*(?:classification|分類)\s*[:：=]\s*BLOCKING\b', body or ''))
     return [(sev, sev in ('P0', 'P1') or explicit_blocking) for sev in severities]
 
+def review_body_findings_in(body):
+    """Count structured findings, not summary text such as 'No P0/P1 findings'."""
+    found = []
+    current = None
+    heading = re.compile(r'^\s*(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?\[(P[012])\](?:\*\*)?(?=\s|:|$)', re.I)
+    badge = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:<sub>)*!\[(P[012]) Badge\]\([^)]*\)(?:</sub>)*', re.I)
+    field = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:severity|priority|重大度|優先度)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?(P[012])\b', re.I)
+    blocking = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?(?:classification|分類)(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?BLOCKING\b', re.I)
+    finding_detail = re.compile(r'^\s*(?:[-*]\s*)?(?:\*\*)?Finding ID(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*([A-Za-z0-9_-]+)', re.I)
+    embedded_severity = re.compile(r'(?:\*\*)?Severity(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?(P[012])\b', re.I)
+    embedded_blocking = re.compile(r'(?:\*\*)?Classification(?:\*\*)?\s*[:：=]\s*(?:\*\*)?\s*(?:\*\*)?BLOCKING\b', re.I)
+    for line in (body or '').splitlines():
+        match = heading.match(line) or badge.match(line) or field.match(line)
+        detail_match = finding_detail.match(line)
+        detail_line = detail_match is not None
+        detail_id = detail_match.group(1) if detail_match else None
+        if match is None and detail_line:
+            match = embedded_severity.search(line)
+        if match:
+            severity = match.group(1).upper()
+            if detail_line and current is not None and current[0] == severity and (current[2] is None or current[2] == detail_id):
+                current[1] = current[1] or bool(embedded_blocking.search(line))
+                current[2] = detail_id
+                continue
+            if current is not None:
+                found.append(current)
+            current = [severity, severity in ('P0', 'P1') or bool(embedded_blocking.search(line)), detail_id]
+        elif current is not None and blocking.match(line):
+            current[1] = True
+    if current is not None:
+        found.append(current)
+    return [tuple(entry[:2]) for entry in found]
+
 issue_comments = flatten_pages(issue_path)
 review_comments = flatten_pages(review_path)
 reviews = flatten_pages(reviews_path)
@@ -135,10 +168,12 @@ request_comment = next(
     None,
 )
 if request_comment is None:
-    print("ERROR=request comment id was not found")
+    print("ERROR: request comment id was not found", file=sys.stderr)
     sys.exit(4)
 
 eligible_review_ids = set()
+review_body_findings = []
+changes_requested_ids = []
 for r in reviews:
     if not is_allowed_rest_actor(r):
         continue
@@ -150,7 +185,13 @@ for r in reviews:
     body = r.get('body') or ''
     if 'Reviewed commit:' not in body or (short10 not in body and sha not in body):
         continue
+    state = r.get('state') or ''
+    if state not in ('COMMENTED', 'APPROVED', 'CHANGES_REQUESTED'):
+        continue
     eligible_review_ids.add(rid)
+    review_body_findings.extend(review_body_findings_in(body))
+    if state == 'CHANGES_REQUESTED':
+        changes_requested_ids.append(rid)
 
 review_seen = bool(eligible_review_ids)
 review_ids_text = ','.join(str(v) for v in sorted(eligible_review_ids))
@@ -165,7 +206,7 @@ for c in issue_comments:
         review_comment_id = cid
         break
 
-new_findings = []
+new_findings = list(review_body_findings)
 for c in review_comments:
     if not is_allowed_rest_actor(c):
         continue
@@ -211,6 +252,7 @@ print(f"AFTER_REVIEW_ID={after_review_id}")
 print(f"NEW_FINDING_COUNT={len(new_findings)}")
 print(f"UNRESOLVED_FINDING_COUNT={len(unresolved_findings)}")
 print(f"AUTO_BLOCKING_COUNT={len(auto_blocking)}")
+print(f"CHANGES_REQUESTED_COUNT={len(changes_requested_ids)}")
 print(f"P2_CLASSIFICATION_COUNT={len(p2_findings)}")
 print(f"P2_NONBLOCKING_COUNT={len(p2_nonblocking)}")
 if all_severities:
@@ -222,6 +264,7 @@ PY
 
   REVIEW_SEEN="$(printf '%s\n' "$RESULT" | awk -F= '$1=="REVIEW_SEEN"{print $2}')"
   AUTO_BLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="AUTO_BLOCKING_COUNT"{print $2}')"
+  CHANGES_REQUESTED_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="CHANGES_REQUESTED_COUNT"{print $2}')"
   P2_CLASSIFICATION_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="P2_CLASSIFICATION_COUNT"{print $2}')"
   P2_NONBLOCKING_COUNT="$(printf '%s\n' "$RESULT" | awk -F= '$1=="P2_NONBLOCKING_COUNT"{print $2}')"
 
@@ -230,7 +273,7 @@ PY
     echo "EXPECTED_SHA=$EXPECTED_SHA"
     echo "AFTER_COMMENT_ID=$AFTER_COMMENT_ID"
     echo "AFTER_REVIEW_ID=$AFTER_REVIEW_ID"
-    if [[ "$AUTO_BLOCKING_COUNT" -gt 0 ]]; then
+    if [[ "$AUTO_BLOCKING_COUNT" -gt 0 || "$CHANGES_REQUESTED_COUNT" -gt 0 ]]; then
       echo "STATUS=REVIEW_CHANGES_REQUIRED"
       exit 3
     fi

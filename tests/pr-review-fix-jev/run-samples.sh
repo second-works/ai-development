@@ -511,3 +511,5 @@ if grep -Fq 'urllib.request.urlopen(request' "$SCRIPT"; then
   echo "JEV transport must not use redirect-following urllib.request.urlopen" >&2
   exit 1
 fi
+
+python3 "$ROOT_DIR/tests/pr-review-fix-jev/test-wait-codex-review.py"
