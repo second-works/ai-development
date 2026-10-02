@@ -142,9 +142,12 @@ def review_body_findings_in(body):
         if match is None and detail_line:
             match = embedded_severity.search(line)
         if match:
+            severity = match.group(1).upper()
+            if detail_line and current is not None and current[0] == severity:
+                current[1] = current[1] or bool(embedded_blocking.search(line))
+                continue
             if current is not None:
                 found.append(current)
-            severity = match.group(1).upper()
             current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line)) or (detail_line and bool(embedded_blocking.search(line)))]
         elif current is not None and blocking.match(line):
             current[1] = True

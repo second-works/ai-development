@@ -71,6 +71,7 @@ run_case("severity field P1", reviews=[review(body="**Severity:** P1\n**Finding 
 run_case("Codex priority badge P1", reviews=[review(body="**<sub><sub>![P1 Badge](https://example.invalid/p1.svg)</sub></sub> title**")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 run_case("Codex priority badge P2", reviews=[review(body="**<sub><sub>![P2 Badge](https://example.invalid/p2.svg)</sub></sub> title**\n\nClassification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 run_case("structured finding detail", reviews=[review(body="**Finding ID:** F-1; **Severity:** P2; **Classification:** BLOCKING; **Claim:** fix")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
+run_case("badge and detail describe one finding", reviews=[review(body="**<sub><sub>![P2 Badge](https://example.invalid/p2.svg)</sub></sub> title**\n**Finding ID:** F-1; **Severity:** P2; **Classification:** BLOCKING; **Claim:** fix")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3, extra=["P2_CLASSIFICATION_COUNT=1", "P2_NONBLOCKING_COUNT=0"])
 run_case("negated severity summary", reviews=[review(body="No P0/P1 findings and 0 P1 findings")], expected_status="REVIEW_PASSED", expected_code=0, extra=["AUTO_BLOCKING_COUNT=0"])
 run_case("requested changes without severity", reviews=[review(state="CHANGES_REQUESTED")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 run_case("blocking P2 body", reviews=[review(body="[P2] needs fix\nClassification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
