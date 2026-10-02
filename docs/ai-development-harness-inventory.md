@@ -395,7 +395,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **発火条件**：PR作成前とPR更新後、GitHub Actions実行時。tests/harness-minimalism/run-samples.sh は台帳または関連テンプレートを変更するPRで実行する。
 - **入力 / Context**：Repository、変更差分、標準検証入口、依存関係、docs/ai-development-harness-inventory.md、AGENTS.md、Issue / PRテンプレート。
 - **出力 / State変更**：CI結果、検証ログ、merge可否に使う状態。台帳契約違反がある場合はCIを失敗させる。
-- **決定論的判定可能か**：lint、type check、test、build、テスト入口とCIの直接実行stepの一致、台帳の必須フィールド、フィールド重複、集約表と詳細レコードのID・ETCSLV分類・判定一致は決定論的に判定する。構文チェックへの登録だけは実行済みと数えず、理由なし除外は認めない。
+- **決定論的判定可能か**：lint、type check、test、build、テスト入口とCIの直接実行stepの一致、台帳の必須フィールド、フィールド重複、集約表と詳細レコードのID・ETCSLV分類・判定一致は決定論的に判定する。入口照合はHarness suite内と独立CI stepの両方で実行し、片方のstep欠落をもう片方で検出する。構文チェックへの登録だけは実行済みと数えず、理由なし除外は認めない。
 - **実行コスト / 運用負荷**：ローカルとCIは異なるtrust boundaryであり、同一結果として省略しない。台帳契約テストはShell、awk、grepによる軽量な1 CIステップで、外部サービスや追加依存を必要としない。
 - **重複する仕組み**：CIはPR検証、verify.shはローカル入口で役割が異なる。tests/harness-minimalism/run-samples.sh は通常のlint、型、test、buildでは検出しない台帳スキーマと集約表の整合性を対象とし、L-02a SecurityはSecurity Boundaryを検証するため、いずれも通常CIの品質検証を代替しない。
 - **安全上必須か**：変更の機械的な再検証と、ハーネス追加・変更時の追跡可能性を維持するために必要。Security Boundary、Human Approval Boundary、Production保護の代替ではない。
