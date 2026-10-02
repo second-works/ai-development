@@ -316,7 +316,7 @@ CodeQLは通常のCIとは役割が異なります。
 
 GitHub Security checkの有無にかかわらず、CIとSecurityの判定は分離します。利用可能なGitHub Security checkがないプロジェクトでは、`templates/security/security-preflight.sh` を `scripts/security-preflight.sh` としてコピーし、`chmod +x scripts/security-preflight.sh` を実行します。Security Preflightは既知のsecret patternと、対応するlockfileがある場合のnpm auditを検査し、全体の `SECURITY_STATUS` と依存チェックの `DEPENDENCY_STATUS` を機械可読に出力します。
 
-Security Preflightとレビュー用helperはBash 5以上が必要です。macOS標準`/bin/bash` 3.2で実行すると外部操作前に停止し、Preflightは`SECURITY_UNAVAILABLE`を出します。使用するBashの絶対パスを `BASH5` に設定して `"$BASH5" --version` で確認し、Preflightは `"$BASH5" scripts/security-preflight.sh .` として起動します。以下の待機例も `bash` の代わりに `"$BASH5"` を使います。待機helperはfallback Preflightを同じBashで起動します。インストールやPATH変更は自動化しません。
+Security Preflightと通常のレビュー用helperはBash 5以上が必要です。macOS標準`/bin/bash` 3.2で実行すると外部操作前に停止し、Preflightは`SECURITY_UNAVAILABLE`を出します。使用するBashの絶対パスを `BASH5` に設定して `"$BASH5" --version` で確認し、Preflightは `"$BASH5" scripts/security-preflight.sh .` として起動します。以下の待機例も `bash` の代わりに `"$BASH5"` を使います。待機helperはfallback Preflightを同じBashで起動します。手動JEV評価用helperは今回のBash 5前提に含めません。インストールやPATH変更は自動化しません。
 
 - `SECURITY_PASSED`
 - `SECURITY_FAILED`

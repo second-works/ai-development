@@ -12,7 +12,7 @@ description: 既存GitHub PRのCodex Code Review指摘・レビューコメン�
 
 ## 実行環境
 
-このSkillのshell helperとSecurity PreflightはBash 5以上を使う。macOS標準の`/bin/bash` 3.2は非対応で、外部操作前に説明付きで停止する。利用するBashの絶対パス（例: Apple SiliconのHomebrew版 `/opt/homebrew/bin/bash`）を `BASH5` に設定し、`"$BASH5" --version` で5以上を確認してから、以下の `bash "$RUNTIME_DIR/scripts/..."` の例では `bash` を `"$BASH5"` に置き換える。Security Preflightも同じBashで実行し、非対応環境の `SECURITY_UNAVAILABLE` を成功として扱わない。スクリプトはインストールやPATH変更を行わない。
+通常レビューのshell helperとSecurity PreflightはBash 5以上を使う。macOS標準の`/bin/bash` 3.2は非対応で、外部操作前に説明付きで停止する。利用するBashの絶対パス（例: Apple SiliconのHomebrew版 `/opt/homebrew/bin/bash`）を `BASH5` に設定し、`"$BASH5" --version` で5以上を確認してから、以下の `bash "$RUNTIME_DIR/scripts/..."` の例では `bash` を `"$BASH5"` に置き換える。Security Preflightも同じBashで実行し、非対応環境の `SECURITY_UNAVAILABLE` を成功として扱わない。手動JEV評価用の`triage-with-jev.sh`はこのBash 5前提の対象外で、従来の起動経路を維持する。スクリプトはインストールやPATH変更を行わない。
 
 ## Structured Current State
 

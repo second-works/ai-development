@@ -14,7 +14,6 @@ SCRIPTS = [
     (".agents/skills/pr-review-fix/scripts/verify-pr-head.sh", ["1", "a" * 40, "b" * 40], False),
     (".agents/skills/pr-review-fix/scripts/wait-checks.sh", ["github.com/owner/repo", "a" * 40], False),
     (".agents/skills/pr-review-fix/scripts/wait-codex-review.sh", ["github.com/owner/repo", "1", "a" * 40, "100", "200", "0"], False),
-    (".agents/skills/pr-review-fix/scripts/triage-with-jev.sh", ["github.com/owner/repo", "1", "a" * 40, "/dev/null", "/dev/null"], False),
 ]
 
 
