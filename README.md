@@ -40,6 +40,8 @@ P0 / P1 / P2の修正に `@codex address that feedback` は標準手順として
 
 レビュー指摘の修正ではrepo-local Skill `.agents/skills/pr-review-fix/` を利用できます。Codexへ `PR #XXのレビュー修正を進めて` と依頼すると、既存PRのhead branch固定、同一branchへの修正/push、SHA一致確認、CI/セキュリティチェック待機、更新後headへの再レビュー確認までを行い、Merge前で停止します。
 
+Security PreflightとPRレビュー用shell helperはBash 5以上で実行します。macOS標準の`/bin/bash` 3.2では説明付きで非成功終了し、Security Preflightは`SECURITY_UNAVAILABLE`を返します。使用するBashのパスを確認し、例えばApple SiliconのHomebrew版なら `BASH5=/opt/homebrew/bin/bash`、`"$BASH5" --version` で確認してから `"$BASH5" .agents/skills/pr-review-fix/scripts/prepare-pr.sh <PR番号>` や `"$BASH5" scripts/security-preflight.sh .` を実行してください。スクリプトはBashをインストールしたりPATHを書き換えたりしません。
+
 詳細は [`docs/nine-standard-ai-development-flow.md`](docs/nine-standard-ai-development-flow.md) を参照してください。
 
 新規Web/UI案件では、UI設計前に [`docs/architecture/framework-decision.md`](docs/architecture/framework-decision.md) を確認し、結果をPlan Reviewへ引き継ぎます。`NEEDS_DECISION` の間はFramework依存のIssue化・実装を停止し、CLIや文書のみの変更は理由付きで `NOT_APPLICABLE` とします。

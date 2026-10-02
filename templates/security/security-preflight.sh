@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+if (( BASH_VERSINFO[0] < 5 )); then
+  printf '%s\n' 'SECURITY_STATUS=SECURITY_UNAVAILABLE' \
+    "SECURITY_REASON=Bash 5 or newer required (current ${BASH_VERSION})"
+  exit 4
+fi
+
 set -Eeuo pipefail
 
 if [[ $# -gt 1 ]]; then
