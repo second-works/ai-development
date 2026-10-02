@@ -77,6 +77,8 @@ run_case("negated severity summary", reviews=[review(body="No P0/P1 findings and
 run_case("requested changes without severity", reviews=[review(state="CHANGES_REQUESTED")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 run_case("blocking P2 body", reviews=[review(body="[P2] needs fix\nClassification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 run_case("blocking P2 after blank line", reviews=[review(body="[P2] needs fix\n\nClassification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
+run_case("blocking P2 on severity line", reviews=[review(body="Severity: P2; Classification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3, extra=["P2_NONBLOCKING_COUNT=0"])
+run_case("blocking P2 on heading line", reviews=[review(body="[P2] needs fix; Classification: BLOCKING")], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3, extra=["P2_NONBLOCKING_COUNT=0"])
 run_case("nonblocking P2 body", reviews=[review(body="[P2] suggestion")], expected_status="REVIEW_PASSED", expected_code=0, extra=["P2_NONBLOCKING_COUNT=1"])
 run_case("inline P1", reviews=[review()], inline=[{"body": "P1 broken", "commit_id": SHA, "pull_request_review_id": 201, "user": ACTOR}], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)
 run_case("unresolved old-head thread", reviews=[review()], threads=[{"data": {"repository": {"pullRequest": {"reviewThreads": {"nodes": [{"id": "thread-1", "isResolved": False, "comments": {"nodes": [{"author": {"login": ACTOR["login"], "__typename": "Bot"}, "body": "P1 still broken", "outdated": False}]}}]}}}}}], expected_status="REVIEW_CHANGES_REQUIRED", expected_code=3)

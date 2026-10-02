@@ -151,7 +151,7 @@ def review_body_findings_in(body):
                 continue
             if current is not None:
                 found.append(current)
-            current = [severity, severity in ('P0', 'P1') or bool(blocking.search(line)) or (detail_line and bool(embedded_blocking.search(line))), detail_id]
+            current = [severity, severity in ('P0', 'P1') or bool(embedded_blocking.search(line)), detail_id]
         elif current is not None and blocking.match(line):
             current[1] = True
     if current is not None:
