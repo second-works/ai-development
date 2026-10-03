@@ -23,6 +23,7 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 
 | 条件付き責務 | 適用trigger | 記録先・既存正本 / 停止条件 |
 | --- | --- | --- |
+| テンプレート変更評価 | 外部記事・新技術・他projectの実践の採否、重複、棚卸しを評価 | `.agents/skills/template-change-evaluator/SKILL.md` を採否決定前に読む。既存責務確認前にRule / Skill / script / CIを追加しない。単純要約・一般質問・既存PR指摘修正は対象外 |
 | 計画・Issue生成 | 合意済み計画をIssueへ変換 | [Plan Review](plan-review-gate.md)、[Child Issue Quality](issue-quality-check.md)。MUST不足・NEEDS_DECISIONは登録/実装を停止し、重要判断を人間へ。詳細欄の省略はMUST免除ではない |
 | Framework | 新規Web/UI、rendering / runtime / hosting / architectureの選定・変更 | [Framework Decision](architecture/framework-decision.md)。承認済み判断をContextから参照し、重要未決なら停止 |
 | UI / PRODUCT | UI追加・変更。PRODUCTなら重要flow、states、visual、accessibility | [PRODUCT UI](product-ui-standard.md)。PRODUCT実装前はFramework Decision → UI Level → PRODUCT UI Standard / Component Decision Rules → 案件 `docs/design.md` → 採用component / library固有docsの順。参照順・適用対象・例外根拠をIssue / PRで追跡。重要判断不足はNEEDS_DECISIONで停止。非UIにNONE記入を強制せず、UTILITYにPRODUCT完全性を強制しない |
@@ -66,6 +67,7 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 - head変更後は旧結果を使わず、同じ新headのlocal / CI / Security / Reviewを確認する。最終Mergeは人間が判断する。
 
 ## 必要時の参照
+- 外部記事・新技術・他projectの実践の採否・重複・棚卸し評価: .agents/skills/template-change-evaluator/SKILL.md を判断前に読む。既存PRの指摘修正は対象外。
 - 合意済み計画のIssue生成: .agents/skills/plan-to-issues/SKILL.md。生成だけの依頼から実装を始めない。
 - PRODUCT UIの実装前はFramework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docsの順で読む。重要UX判断に必要な正本の欠落・矛盾・取得不能はNEEDS_DECISIONで停止する。
 - 親IssueのClose前は docs/parent-issue-completion.md に従い、全子Issue、親チェックボックス、全体Doneと検証証拠、残課題・後続Issue、人間最終確認を照合する。
@@ -165,6 +167,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 | 旧節（全35節） | 保持先 / 最小本文の入口 |
 | --- | --- |
 | Purpose / Core Rules / Issue・PR Rule / Prohibited Actions / Human Decision Points / Standard Codex Instruction | 役割・作業境界・標準フロー入口。1子Issue=1 PR、範囲・仕様矛盾・依存・人間Merge。指示例の重複だけ削減 |
+| Core Rules内のTemplate Change Evaluation Routing | 外部案の採否・重複・棚卸しtrigger → template-change-evaluator/SKILL.md。評価前の既存責務確認、単純要約・一般質問・既存PR修正の適用除外を保持 |
 | AI生成ドキュメント原則 / GitHub上の言語 | 必要時の参照の日本語・判断優先・簡潔な証拠記録。固有名・コードは原文維持 |
 | Adaptive Development Flow / Risk Tier | 作業境界 → adaptive-development-flow.md。全変更Tier/理由・再判定・既定値/混在/不明時規則 |
 | Design / State Modeling | 作業境界 → design-state-modeling.md（先行作成）。外部境界・不正状態・網羅性と元節の例外 |
@@ -203,3 +206,5 @@ MDC-01 / MDC-02はP2 BLOCKINGとして原文で確認。全変更の軽量Risk�
 追加レビューのPRODUCT UI参照順序・親Issue完了監査もP2 BLOCKING。最小AGENTSの条件付き入口と保証先の先行整備を補い、現行のUI参照契約全体と親完了5項目を移行対象へ固定した。
 
 MDC-05 / MDC-06 / MDC-07も原文で確認し、情報読取・外部書込のSecurity入口、検証/self-review成功前のcommit・PR・review停止、複数Issueの選択順と競合停止を補った。全35節の対応表で今回指摘以外の移行先も照合し、通常実装から既存標準フローへの入口を明記した。
+
+MDC-08: Core Rules内のTemplate Change Evaluation Routingを最小AGENTS・条件表・対応表へ追加。全35節だけでなく節内routing（template-change-evaluator / plan-to-issues / 通常reviewの直接対応）も照合した。
