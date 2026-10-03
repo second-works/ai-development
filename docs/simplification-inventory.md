@@ -40,7 +40,8 @@ bytesはUTF-8ファイルサイズでありtoken数ではない。CIの直接実
 | --- | --- | --- |
 | [AGENTS](../AGENTS.md) Purpose、Core Rules、Issue Selection、Issue / PR Rule、Prohibited Actions、Human Decision Points | KEEP | Issue仕様、範囲、依存、1子Issue=1 PR、Secrets禁止、main直接push/force push禁止、重要判断と人間Mergeを短く維持 |
 | AGENTS Implementation Workflow、Before PR、Standard Verification Gate、GitHub Actions CI | MOVE_TO_DOCS | [標準フロー](nine-standard-ai-development-flow.md)と[検証雛形](../templates/verification/verify.sh)へ工程詳細を集約。検証不能・重大問題時の停止は常駐 |
-| AGENTS Code Review Rules、Review Evidence Contract、Rule Promotion、修正ループ | MOVE_TO_SKILL | [pr-review-fix](../.agents/skills/pr-review-fix/SKILL.md)に分類・同じbranch・SHA照合・再検証を集約。現head ReviewとBLOCKING停止は常駐 |
+| AGENTS Code Review Rules、Review Evidence Contract、Rule Promotion | KEEP / MOVE_TO_DOCS | 初回レビューの探索観点・証拠要件・Rule Promotionは一般レビューから到達できるAGENTS入口と正本に保持。専用docsへ移す場合は先に作成し、初回reviewから明示参照。既存指摘対応だけのpr-review-fixを唯一の保証先にしない |
+| AGENTS 修正ループ | MOVE_TO_SKILL | [pr-review-fix](../.agents/skills/pr-review-fix/SKILL.md)に分類・同じbranch・SHA照合・再検証を集約。現head ReviewとBLOCKING停止は常駐 |
 | AGENTS Plan Review、Plan to Issues Routing、Child Issue Quality Gate | MOVE_TO_SKILL | [plan-to-issues](../.agents/skills/plan-to-issues/SKILL.md)でGoal / Context / Boundaries / Done / Verification / Dependenciesを確認。重要未決は推測しない |
 | AGENTS Framework Decision、AI / Codex Reference Contract、RAG Architecture、Design / State Modeling | MOVE_TO_DOCS | Framework / PRODUCT UI / RAG適用時だけ関連docsへ。Design / State Modelingは専用正本未整備のため、移動先確定前には消さない |
 | AGENTS Adaptive Development Flow、Structured Current State、Parent Completion、Deployment / Acceptance詳細 | MOVE_TO_DOCS | Tier・schema・RC・artifact・検収詳細は既存正本へ。高リスク承認と未実施を成功にしない原則はKEEP |
@@ -78,7 +79,7 @@ bytesはUTF-8ファイルサイズでありtoken数ではない。CIの直接実
 | [app template](../templates/app/) | KEEP / MOVE_TO_DOCS | setup / doctorの非破壊・冪等・Secret非表示を保持。UI/Framework設計雛形は条件付き |
 | [planning sample](../templates/planning/web-todo-app-plan.sample.md) | MOVE_TO_DOCS | 任意の記入例。sampleが全案件の必須構造にならないよう整理 |
 | [GitHub Actions templates](../templates/github-actions/)、[Dependabot](../templates/dependabot/)、[ruleset guide](../templates/github-security/ruleset-guide.md) | KEEP | verify入口、脆弱性・更新・保護の配置資産。実設定適用は別人間承認 |
-| [.cursor/environment.json](../.cursor/environment.json) | REMOVE_CANDIDATE | host/tool依存の準備設定。標準フローの必須常駐資産か再判定。任意化前に利用先確認 |
+| [.cursor/environment.json](../.cursor/environment.json) | KEEP | E-10のCloud Agent準備。Python / Node / Bash不在・version失敗・補助script構文不正で停止する責務は保持。同等以上の標準機構への置換と失敗時停止の実行回帰成功前には削除・任意化しない |
 | [Template CI](../.github/workflows/ci.yml) | KEEP / REMOVE_CANDIDATE | 実効的回帰・構文検査はKEEP。各文書の固定文言・台帳登録のためだけのstepは後続で整理 |
 | [Security](../.github/workflows/security.yml) | KEEP | PR exact headをcheckout、contents:readでPreflightを実行。Template CIとは別Gate |
 | [JEV Triage](../.github/workflows/jev-triage.yml)、[Decision Shadow](../.github/workflows/decision-shadow.yml)、[Local Judge smoke](../.github/workflows/local-judge-smoke.yml) | MOVE_TO_DOCS | workflow_dispatchの手動レーン。trusted branch、Secret exposure、head再照合、sanitized artifactの安全条件を維持 |
@@ -121,7 +122,7 @@ baselineは現行repoの契約・実装を固定したもの。branch protection
 | [github-state](../tests/github-state/run-samples.sh) | read-only収集、異常API、ページ、head identity / 実害回帰 | KEEP。collectorを残す間の観測保証 |
 | [html-status-report](../tests/html-status-report/run-samples.sh) | escaping、入力非破壊、上書き/不正schema拒否 / 実害回帰 | KEEP。rendererを残す間の安全保証 |
 | [instruction-architecture](../tests/instruction-architecture/run-samples.sh) | 配置marker + HEAD/refs/index/worktreeの非変更 / 混在 | KEEP / REMOVE_CANDIDATE。read-only実行保証は保持、台帳の固定構造は候補 |
-| [harness-minimalism](../tests/harness-minimalism/run-samples.sh) | 台帳marker、workflow登録、設定、他suite間接呼出 / 混在 | REMOVE_CANDIDATE。自主管理部分を整理。間接呼出を消す前に子suiteの直接CI責務を確保 |
+| [harness-minimalism](../tests/harness-minimalism/run-samples.sh) | 台帳marker、workflow登録、Cloud Agent install失敗時停止、他suite間接呼出 / 混在 | KEEP / REMOVE_CANDIDATE。181–199行のCloud Agent実行回帰（Bash不在・Bash version失敗伝播）はKEEPとして分離。子suiteの直接CI化だけでは代替できない。具体的な独立回帰入口へ移してCI成功を先に確認するまで現行入口を保持。自主管理markerだけ整理候補 |
 | [jev-triage-workflow](../tests/jev-triage-workflow/run-samples.sh) | trusted checkout/Secret/head/artifact配置 + YAML parse / 混在 | KEEP。手動経路の安全検証。単なる表示markerだけ整理候補 |
 | [agent-security-boundary](../tests/agent-security-boundary/run-samples.sh) | 安全規則のmarker / 文書契約 | KEEP。最小境界と参照に合わせて縮小。実行Security検査の代替ではない |
 | [review-evidence](../tests/review-evidence/run-samples.sh) | P2 / evidence / Pre-PR規則のmarker / 文書契約 | KEEP / REMOVE_CANDIDATE。Skillの停止・分類責務を保持し重複markerを削減 |
@@ -141,7 +142,7 @@ baselineは現行repoの契約・実装を固定したもの。branch protection
 | [document-concision](../tests/document-concision/run-samples.sh) | 文章原則marker / 文書契約 | REMOVE_CANDIDATE。固定文言より生成Issueの読解dry-runで検証 |
 | [template-change-evaluator](../tests/template-change-evaluator/run-samples.sh) | 自己管理Skill/routing marker / 文書契約 | REMOVE_CANDIDATE。Skill任意化の決定後に関連固定文言検査を整理 |
 
-直接stepがない6入口は `github-state / current-state / html-status-report / adaptive-development-flow / issue-quality / template-simplification`。mainのHarness suiteはこのうちHTML以外の5入口を間接呼出しており、**直接stepなし=全6入口が一切実行されない**という意味ではない。HTMLは当該CIに直接・Harness経由の実行がない。
+直接stepがない6入口は `github-state / current-state / html-status-report / adaptive-development-flow / issue-quality / template-simplification`。mainのHarness suiteはこの6入口すべてを間接呼出している。HTMLは205行、他5入口は末尾で実行される。**直接stepなし=未実行ではない**。現行CIには28入口の直接または間接実行経路があり、#161の提案は間接依存をなくして各入口の直接登録を保証する変更として区別する。
 
 PR #167は28入口の直接実行と `tests/harness-minimalism/test-ci-entrypoints.py` の独立実行を提案中。これはmainに存在しない追加メタテストで、#168の削減候補に含めるが削除済みとは扱わない。安全回帰のCI保証と、全旧文書contractの無条件登録を別責務として再判定する。
 
@@ -175,3 +176,7 @@ PR #167は28入口の直接実行と `tests/harness-minimalism/test-ci-entrypoin
 - 相対リンクの存在、28系統の列挙、ファイルサイズ、CI直接step、間接呼出、原文の安全条件と禁止範囲を照合。Pre-PR self-reviewで重大な問題なし。
 - この管理repositoryには `scripts/verify.sh` がなく、生成project用原本は `templates/verification/verify.sh`。管理repoの既存28入口を標準の検証対象として実行した。
 - 現headのGitHub CI / Security / Codex Reviewの証拠はPRに記録する。人間の棚卸し確認・Merge・後続変更承認は未完了。
+
+## PR #170のレビュー修正
+
+P2 3件をBLOCKINGと判断し、#169の原文根拠・安全保証先・CI観測の完了条件違反として修正した。初回レビューの入口と探索/証拠/Rule PromotionをKEEPし、反復修正だけSkillへ移す。Cloud Agent install回帰をKEEPとして分離し、代替入口のCI成功前は削除しない。HTMLを含む全6入口のHarness経由実行を原文で再照合した。既存ルール・test・CIの変更はない。
