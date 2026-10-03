@@ -23,7 +23,7 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 
 | 条件付き責務 | 適用trigger | 記録先・既存正本 / 停止条件 |
 | --- | --- | --- |
-| テンプレート変更評価 | 外部記事・新技術・改善提案・他projectの実践の採否、重複、棚卸しを評価 | `.agents/skills/template-change-evaluator/SKILL.md` を採否決定前に読む。既存責務確認前にRule / Skill / script / CIを追加しない。単純要約・一般質問・既存PR指摘修正は対象外 |
+| テンプレート変更評価 | ai-developmentまたはNine標準テンプレートへの取り込み・重複・配置・棚卸しを、外部記事・新技術・改善提案・他projectの実践から評価 | `.agents/skills/template-change-evaluator/SKILL.md` を採否決定前に読む。既存責務確認前にRule / Skill / script / CIを追加しない。単純要約・一般質問・既存PR指摘修正は対象外 |
 | 計画・Issue生成 | 合意済み計画をIssueへ変換 | [Plan Review](plan-review-gate.md)、[Child Issue Quality](issue-quality-check.md)。MUST不足・NEEDS_DECISIONは登録/実装を停止し、重要判断を人間へ。詳細欄の省略はMUST免除ではない |
 | Framework | 新規Web/UI、rendering / runtime / hosting / architectureの選定・変更 | [Framework Decision](architecture/framework-decision.md)。承認済み判断をContextから参照し、重要未決なら停止 |
 | UI / PRODUCT | UI追加・変更。PRODUCTなら重要flow、states、visual、accessibility | [PRODUCT UI](product-ui-standard.md)。PRODUCT実装前はFramework Decision → UI Level → PRODUCT UI Standard / Component Decision Rules → 案件 `docs/design.md` → 採用component / library固有docsの順。参照順・適用対象・例外根拠をIssue / PRで追跡。重要判断不足はNEEDS_DECISIONで停止。非UIにNONE記入を強制せず、UTILITYにPRODUCT完全性を強制しない |
@@ -68,7 +68,7 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 - head変更後は旧結果を使わず、同じ新headのlocal / CI / Security / Reviewを確認する。通常レーンの最終Mergeは人間が判断する。人間が既に採用した例外レーンは docs/safe-auto-fix-auto-merge.md の全Safety Gateを満たす場合だけ記録された主体が実行できる。新規採用は別承認とする。
 
 ## 必要時の参照
-- 外部記事・新技術・改善提案・他projectの実践の採否・重複・棚卸し評価: .agents/skills/template-change-evaluator/SKILL.md を判断前に読む。既存PRの指摘修正は対象外。
+- ai-developmentまたはNine標準テンプレートへ取り込む外部記事・新技術・改善提案・他project実践の採否・重複・配置・棚卸し評価は .agents/skills/template-change-evaluator/SKILL.md を判断前に読む。単純要約、テンプレート変更を伴わない一般質問・project自身の機能改善、既存PRの指摘修正は対象外。
 - 合意済み計画のIssue生成: .agents/skills/plan-to-issues/SKILL.md。生成だけの依頼から実装を始めない。
 - PRODUCT UIの実装前はFramework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docsの順で読む。重要UX判断に必要な正本の欠落・矛盾・取得不能はNEEDS_DECISIONで停止する。
 - 親IssueのClose前は docs/parent-issue-completion.md に従い、全子Issue、親チェックボックス、全体Doneと検証証拠、残課題・後続Issue、人間最終確認を照合する。
@@ -212,3 +212,5 @@ MDC-05 / MDC-06 / MDC-07も原文で確認し、情報読取・外部書込のSe
 MDC-08: Core Rules内のTemplate Change Evaluation Routingを最小AGENTS・条件表・対応表へ追加。全35節だけでなく節内routing（template-change-evaluator / plan-to-issues / 通常reviewの直接対応）も照合した。
 
 MDC-09 / MDC-10: 内部の改善提案を含む評価triggerへ原文どおり戻し、人間が既に採用したSafe Auto-Fix / Auto-Merge例外の参照入口と全Safety Gate保持を明記。通常レビューの直接対応化と例外レーンの安全制限を区別した。本作業で新規採用・Merge・Gate緩和を行わない。
+
+追加のIN-SCOPE FIX: template-change-evaluatorはai-development / Nine標準テンプレートの変更評価に限定し、生成project自身の機能改善やテンプレート変更を伴わない一般質問へ誤適用しないことを本文案自身に明記した。
