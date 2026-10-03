@@ -303,3 +303,22 @@ UI Acceptanceでは最低限、次を確認する。
 - `NONE` に不要なUIチェックを課さず、`UTILITY` にPRODUCT相当の重いVisual Reviewを強制しない。
 - 自動検証はsemantic HTML、lint、既知のaccessibility ruleなど決定論的な範囲を優先し、主観的なデザイン品質を自動合否にしない。
 - 重要なUX判断、既存状態モデルとの衝突、Design Systemの強制につながる変更はDesign Decisionへエスカレーションする。
+
+## AGENTSからの参照契約の移行準備
+
+[#173](https://github.com/second-works/ai-development/issues/173)の準備として、基準AGENTSの参照順序・適用範囲・停止条件を保持する。現行AGENTSの参照規則はまだ置換しない。
+
+## AI / Codex Reference Contract
+
+PRODUCT UIの実装を開始するAI/Codexは、重要なUI判断を行う前に、次の順序でrepositoryとIssueの正本を参照する。
+
+1. Framework Decision結果と正本文書（Frameworkを再選定しない）
+2. UI Level Decisionと適用対象
+3. Nine PRODUCT UI Standard / `Component Decision Rules`
+4. 案件 `docs/design.md`（案件固有のvisual、brand、tokens、採用component、例外）
+5. component / library固有docs（存在する場合）
+
+- 参照順序、適用対象、案件固有の例外と根拠をIssueまたはPRで追跡できる状態にする。
+- Framework Decision、UI Level、標準Design Rules、案件 `docs/design.md` のいずれかが欠落・矛盾・判断不能で、重要UX判断を確定できない場合は推測で補完せず `NEEDS_DECISION` として既存のDesign Decisionへ接続し、実装を停止する。component / library固有docsは採用する場合に参照し、採用を決めたdocsが取得できない場合だけ同じ停止条件を適用する。
+- 案件 `docs/design.md` の決定は、標準Design RulesのUX原則とAccessibility最低条件を満たす範囲で尊重する。標準側と案件側の責務を暗黙に入れ替えない。
+- `NONE` / `UTILITY` の案件にはPRODUCT UI用の必須欄やVisual/UI Acceptanceを過剰適用しない。Framework、component library、brandの採用をこの契約から強制しない。
