@@ -585,3 +585,18 @@ ETCSLV分類:
 - docs/github-repository-security-baseline.md：GitHub側の防御
 - docs/acceptance-verification.md：実利用検証と検収
 - Verification Evidence ContractとResidual Risk Summaryは同文書内でAcceptance Verificationへ接続し、Current State、CI、Security、Reviewを置き換えない
+
+## AGENTS残責務の移行準備
+
+固定原文はmain `d4ee8ee56ad15ca4bcbca604bc3622a1400b667b` のAGENTS。以下は本文短縮に先立つ詳細責務の保存であり、現在のAGENTSを置換しない。既存節は概説・具体手順、以下は旧AGENTSから保持する責務・例外。将来の短縮後も両方を適用し、矛盾があれば推測せず停止する。Security・承認条件は変更しない。重複本文と参照テストの整理は後続Issueで行う。
+
+### 移行契約: Harness Minimalism
+
+既存ハーネスの台帳は docs/ai-development-harness-inventory.md とする。
+ハーネスを追加または変更する場合は、解決する失敗モード、発火条件、入力とContext、出力とState変更、決定論的判定の可否、実行コスト、重複、安全上の必須性、判定、削除・再評価条件、関連Issueを記録する。
+
+- 失敗モードを示せない新規ハーネスは、実装前に停止して設計判断を確認する。
+- AIレビューで繰り返し検出できる問題は、test、type、lint、CI、Security ruleなどの決定論的チェックへ移せるか評価する。
+- Model、Codex、Tool、CIの能力向上だけを理由に、Security Boundary、Human Approval Boundary、Production保護を削除または弱体化しない。
+- 既存ハーネスを簡素化する場合は、対象SHAまたは実測結果、代替制御、影響範囲を記録する。
+- 削除候補は、別のIssueまたはPRで依存関係と代替制御を確認してから判断する。
