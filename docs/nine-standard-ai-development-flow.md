@@ -495,7 +495,7 @@ Dependabot等の自動保守PRは開発本線の子Issueとは別枠として扱
 14. GitHub Actions CIの結果を確認する。CIも同じ `./scripts/verify.sh` を呼び出す。
 15. CI失敗時は原因を修正し、成功するまでPRを完了扱いにしない。
 16. CI成功後にCodex Code Reviewを実行する。Automatic reviewsが有効な場合は自動結果を確認し、無効な場合はPRで `@codex review` を依頼する。
-17. P0 / P1 / BLOCKINGと分類したP2指摘がある場合は、下記「Code Review Rules」の修正ループに従い、既存PRのhead branchをチェックアウトして修正する。非BLOCKING P2は四分類と記録を行い、追加修正ループへ戻さない。
+17. P0 / P1 / BLOCKINGと分類したP2指摘がある場合は、[レビュー契約の修正ループ](code-review-contract.md#修正ループ)に従い、既存PRのhead branchをチェックアウトして修正する。非BLOCKING P2は四分類と記録を行い、追加修正ループへ戻さない。
 18. P0 / P1およびBLOCKING P2が解消され、非BLOCKING P2が四分類・記録され、CIが成功し、利用可能なセキュリティチェックが成功または人間が例外を明示判断した状態で人間の最終確認へ進む。
 19. PR本文に対応Issue、変更内容、標準検証・Pre-PR Review・CI結果、Codexレビュー結果、注意点を記載する。
 20. PR作成後は勝手に次のIssueへ範囲を拡張しない。
