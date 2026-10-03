@@ -24,20 +24,21 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 | 条件付き責務 | 適用trigger | 記録先・既存正本 / 停止条件 |
 | --- | --- | --- |
 | Framework | 新規Web/UI、rendering / runtime / hosting / architectureの選定・変更 | [Framework Decision](architecture/framework-decision.md)。承認済み判断をContextから参照し、重要未決なら停止 |
-| UI / PRODUCT | UI追加・変更。PRODUCTなら重要flow、states、visual、accessibility | [PRODUCT UI](product-ui-standard.md)、案件design。重要判断不足は停止。非UIにNONE記入を強制しない。UTILITYにPRODUCT完全性を強制しない |
+| UI / PRODUCT | UI追加・変更。PRODUCTなら重要flow、states、visual、accessibility | [PRODUCT UI](product-ui-standard.md)。PRODUCT実装前はFramework Decision → UI Level → PRODUCT UI Standard / Component Decision Rules → 案件 `docs/design.md` → 採用component / library固有docsの順。参照順・適用対象・例外根拠をIssue / PRで追跡。重要判断不足はNEEDS_DECISIONで停止。非UIにNONE記入を強制せず、UTILITYにPRODUCT完全性を強制しない |
 | RAG | retrieval / index / grounding等を採用・変更 | [RAG](architecture/rag-guidelines.md)、案件設計。既存検索品質と評価責務を確認 |
 | Risk / Securityの詳細説明 | auth、Secrets、外部送信、権限、Production、破壊操作、Gate意味変更、安全影響不明 | [Adaptive flow](adaptive-development-flow.md)、[Agent boundary](ai-agent-security-boundary.md)。HIGHと必要承認・拒否/復旧検証を記録。不明をLOW扱いしない |
 | Deploy / RC監査 | 配備・Release Candidate・本番投入を伴う | [Deployment](deployment-release-design.md)。artifact identity、監査、復旧、承認不足なら投入停止 |
 | Product Acceptance | 実利用・利用者確認がDoneに含まれる、または配備する | [Acceptance](acceptance-verification.md)。実装/merge/deployと受入を区別。対象不一致、未実施、BLOCKERを完了にしない |
 | State / 観測 | 複数段階の再開・配備/検収artifact・レビュー修正の対象識別が必要 | [Execution state](ai-execution-state.md)。今回必要な識別値と取得時刻をPRへ。全Issueへのschema全文転記は廃止候補。旧SHA成功を再利用しない |
 | Harness / 検証変更 | test・Gate・CI・実行環境の保証を追加/統合/削除する | 現行[Harness台帳](ai-development-harness-inventory.md)・関連test。失敗モードと削除後の保証先をIssue/PRへ記載。代替成功前に旧保証を消さない |
+| 親Issue完了 | 子PR merge後の親Issue Close / 全体完了判断 | Phase 3で `docs/parent-issue-completion.md` を先行作成。必要な全子IssueのMerge / Close、親のチェックボックス更新、全体DoneとPR / CI / Security / Review / 手動確認の照合、warning / deprecation等の残課題確認・必要な後続Issue、人間最終確認を必須とする |
 | Technical Reference / HTML | 今回の理解や人向け提示に必要な場合 | 任意の一次資料参照や[HTML report](html-status-report.md)。新しいBlocking Gateや常時の教材欄にしない |
 
 条件付きとは専門説明の読取・記入triggerを限定すること。必要なCI、Security、Review、人間MergeをRisk Tierや非UI判定から免除しない。複数条件が混在すればすべての該当境界を保持する。
 
 ## 最小AGENTS本文案
 
-以下は生成projectのrootへ配置する移行後本文案。リンクはroot基準。`docs/code-review-contract.md`、`docs/test-design.md`、`docs/design-state-modeling.md` はPhase 3で現行AGENTSから詳細を移す予定のpathで、現在は未作成。3正本・Skillの条件付きrouting・関連検証を先に揃えるまでこの本文で現行AGENTSを上書きしない。
+以下は生成projectのrootへ配置する移行後本文案。リンクはroot基準。`docs/code-review-contract.md`、`docs/test-design.md`、`docs/design-state-modeling.md`、`docs/parent-issue-completion.md` はPhase 3で現行AGENTSから詳細を移す予定のpathで、現在は未作成。4正本・Skillの条件付きrouting・関連検証を先に揃えるまでこの本文で現行AGENTSを上書きしない。
 
 ```markdown
 # AGENTS.md
@@ -63,6 +64,8 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 
 ## 必要時の参照
 - 合意済み計画のIssue生成: .agents/skills/plan-to-issues/SKILL.md。生成だけの依頼から実装を始めない。
+- PRODUCT UIの実装前はFramework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docsの順で読む。重要UX判断に必要な正本の欠落・矛盾・取得不能はNEEDS_DECISIONで停止する。
+- 親IssueのClose前は docs/parent-issue-completion.md に従い、全子Issue、親チェックボックス、全体Doneと検証証拠、残課題・後続Issue、人間最終確認を照合する。
 - UI / Framework / RAG / Deploy / 検収 / State / 検証変更を伴う案件: docs/minimal-development-contract.md の条件表と該当正本を読む。重要判断が不足すれば停止する。
 - 検証結果と残存リスクはIssue / PRへ記録する。実装・配備・Product Acceptanceを区別し、未確認を完了にしない。
 ```
@@ -125,7 +128,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 全体を確認するシナリオと成功条件、必要なら実利用検収・承認方法。
 ```
 
-親は全体判断と検収、子は独立した実装契約を持つ。空の親を形式のためだけに作らない。複数PRに分かれる場合は親を設け、親自体を一括実装単位にしない。既存Issueの形式を一括書換しない。
+親は全体判断と検収、子は独立した実装契約を持つ。親Close前の監査は条件表と `docs/parent-issue-completion.md` に従い、子の自動Closeだけで親Doneとしない。空の親を形式のためだけに作らない。複数PRに分かれる場合は親を設け、親自体を一括実装単位にしない。既存Issueの形式を一括書換しない。
 
 ## 初回レビューと反復修正の保証経路
 
@@ -141,7 +144,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 ## Phase 3 / 4への移行条件
 
 1. #170と本契約PRを人間がmerge。修正済みSafety baselineと契約をmainで取得し直す。
-2. Phase 3の責務単位PRでreview/test/Design・State Modeling正本を作成し、参照とSkillを更新。`docs/design-state-modeling.md`へ現行AGENTSの同節全体を移し、外部入力の境界検証、不正状態の表現防止、boolean組合せより明示モデル、網羅性、検証済み型、過剰な型技術の非強制と信頼境界の例外を保持。最小AGENTSから設計・実装時に到達できること、初回review入口と既存停止条件を原文比較・回帰で確認。3正本が揃う前に旧AGENTSを削らない。
+2. Phase 3の責務単位PRでreview/test/Design・State Modeling/親Issue完了正本を作成し、参照とSkillを更新。`docs/design-state-modeling.md`へ現行AGENTSの同節全体を移し、外部入力の境界検証、不正状態の表現防止、boolean組合せより明示モデル、網羅性、検証済み型、過剰な型技術の非強制と信頼境界の例外を保持。最小AGENTSから設計・実装時に到達できること、初回review入口と既存停止条件を原文比較・回帰で確認。`docs/parent-issue-completion.md`へ現行Parent Issue Completionの5確認項目を移し、最小AGENTSから親Close時に到達させる。既存 `docs/product-ui-standard.md`へAI / Codex Reference Contract全体を移し、5段階の参照順序、適用対象・例外根拠の追跡、重要正本欠落・矛盾・判断不能および採用docs取得不能時のNEEDS_DECISION、標準と案件の責務、NONE / UTILITYへの非過剰適用を保持。4正本とUI正本更新が揃う前に旧AGENTSを削らない。
 3. Issue templateを採用するPRではplan-to-issuesと旧欄を要求する文書契約の対応を同時に揃える。旧固定文言を残すためだけの巨大本文や先行skipを作らない。
 4. Phase 4で各削減対象の保証先を成功させてから整理。直接stepなしの6入口は現mainで全6がHarness経由実行。現行の実行網羅を失わない。#161 / PR #167はこの責務判断後に人間が再判定する。
 5. Harness固有のCloud Agent install回帰（Bash不在時停止・version失敗伝播）はKEEP。`.cursor/environment.json` / E-10を残し、独立回帰入口とCIの成功、同等以上の環境確認を示すまでは削除しない。他suiteの直接CI化だけではこの責務を保証できない。
@@ -166,3 +169,5 @@ self-reviewでは上記ケースとPhase 1の安全責務を照合する。相�
 ## PRレビュー修正
 
 MDC-01 / MDC-02はP2 BLOCKINGとして原文で確認。全変更の軽量Risk判定と理由をScope / Boundariesへ残し、詳細節だけ条件付きとした。Design / State Modeling正本の先行作成・AGENTSからの到達・旧節全責務の移行を必須条件へ補った。現行AGENTS / tests / CIは変更しない。
+
+追加レビューのPRODUCT UI参照順序・親Issue完了監査もP2 BLOCKING。最小AGENTSの条件付き入口と保証先の先行整備を補い、現行のUI参照契約全体と親完了5項目を移行対象へ固定した。
