@@ -17,13 +17,13 @@
 | Riskの軽量判定 | 全変更でLOW / MEDIUM / HIGHと理由をScope / Boundariesへ一行記録。Issue化前・実装開始・PR提出前・影響変更時に判定/再判定。既定MEDIUM、混在は最大、安全影響不明はHIGH。専用の長い節は不要 |
 | Doneと独立検証 | 達成条件と確認方法。必要な正常・境界・異常・回帰を影響に応じて選ぶ。全案件に6つの空欄を要求しない |
 | PR前後の品質 | 標準検証とself-review成功後にcommit / PR / reviewへ。失敗・不能・全skip・重大未解決時は後続工程を停止し、原因修正または明示的人間判断が必要。現headのCI / Security / Codex Reviewを確認し、未取得を成功にしない |
-| 人間判断 | 未承認の重要判断、Production / Deploy / destructive action / auth / 権限 / Security Policy / 課金 / 公開 / repo保護設定は停止。最終Mergeは人間 |
+| 人間判断 | 未承認の重要判断、Production / Deploy / destructive action / auth / 権限 / Security Policy / 課金 / 公開 / repo保護設定は停止。通常レーンの最終Mergeは人間 |
 
 Safetyの適用確認は常時行うが、専門項目を全案件へ複製しない。非該当の追加節は削除してよい。省略を安全Gateの免除と解釈しない。適用可否を判断できない場合は重要未決として停止する。対象外理由・例外判断を必要とする現行の安全契約は維持し、該当するVerificationまたはBoundariesへ短く記す。
 
 | 条件付き責務 | 適用trigger | 記録先・既存正本 / 停止条件 |
 | --- | --- | --- |
-| テンプレート変更評価 | 外部記事・新技術・他projectの実践の採否、重複、棚卸しを評価 | `.agents/skills/template-change-evaluator/SKILL.md` を採否決定前に読む。既存責務確認前にRule / Skill / script / CIを追加しない。単純要約・一般質問・既存PR指摘修正は対象外 |
+| テンプレート変更評価 | 外部記事・新技術・改善提案・他projectの実践の採否、重複、棚卸しを評価 | `.agents/skills/template-change-evaluator/SKILL.md` を採否決定前に読む。既存責務確認前にRule / Skill / script / CIを追加しない。単純要約・一般質問・既存PR指摘修正は対象外 |
 | 計画・Issue生成 | 合意済み計画をIssueへ変換 | [Plan Review](plan-review-gate.md)、[Child Issue Quality](issue-quality-check.md)。MUST不足・NEEDS_DECISIONは登録/実装を停止し、重要判断を人間へ。詳細欄の省略はMUST免除ではない |
 | Framework | 新規Web/UI、rendering / runtime / hosting / architectureの選定・変更 | [Framework Decision](architecture/framework-decision.md)。承認済み判断をContextから参照し、重要未決なら停止 |
 | UI / PRODUCT | UI追加・変更。PRODUCTなら重要flow、states、visual、accessibility | [PRODUCT UI](product-ui-standard.md)。PRODUCT実装前はFramework Decision → UI Level → PRODUCT UI Standard / Component Decision Rules → 案件 `docs/design.md` → 採用component / library固有docsの順。参照順・適用対象・例外根拠をIssue / PRで追跡。重要判断不足はNEEDS_DECISIONで停止。非UIにNONE記入を強制せず、UTILITYにPRODUCT完全性を強制しない |
@@ -34,6 +34,7 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 | State / 観測 | 複数段階の再開・配備/検収artifact・レビュー修正の対象識別が必要 | [Execution state](ai-execution-state.md)。今回必要な識別値と取得時刻をPRへ。全Issueへのschema全文転記は廃止候補。旧SHA成功を再利用しない |
 | Harness / 検証変更 | test・Gate・CI・実行環境の保証を追加/統合/削除する | 現行[Harness台帳](ai-development-harness-inventory.md)・関連test。失敗モードと削除後の保証先をIssue/PRへ記載。代替成功前に旧保証を消さない |
 | 親Issue完了 | 子PR merge後の親Issue Close / 全体完了判断 | Phase 3で `docs/parent-issue-completion.md` を先行作成。必要な全子IssueのMerge / Close、親のチェックボックス更新、全体DoneとPR / CI / Security / Review / 手動確認の照合、warning / deprecation等の残課題確認・必要な後続Issue、人間最終確認を必須とする |
+| 既採用Safe Auto-Fix / Auto-Merge | 人間が既に例外レーンを明示採用したprojectのみ | [Safety Gate](safe-auto-fix-auto-merge.md)。全条件・記録された主体・同一head検証を満たす場合だけ既存例外を適用。未採用projectへの新規導入は別の人間判断。通常の直接コメント対応から例外を推定しない |
 | Repository / 依存保守 | 新project、repo保護・Secrets/scanner設定、依存更新 | [GitHub baseline](github-repository-security-baseline.md)、[標準フロー](nine-standard-ai-development-flow.md)。CI/Security/reviewを維持し、メジャー更新はbreaking changeと用途互換を確認。設定変更は人間承認 |
 | Technical Reference / HTML | 今回の理解や人向け提示に必要な場合 | 任意の一次資料参照や[HTML report](html-status-report.md)。新しいBlocking Gateや常時の教材欄にしない |
 
@@ -64,10 +65,10 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 - PR後は現headのCIとSecurityを別々に確認し、Codex Reviewを実施する。SECURITY_FAILEDは停止、SECURITY_UNAVAILABLEは人間の明示判断なしに通過させない。
 - 初回レビューでは docs/code-review-contract.md を必ず読み、Issueに関係する呼出元・対称実装・契約・境界・共通部品・silent failureも確認する。証拠要件とRule Promotionも同正本を参照する。
 - P0 / P1 / BLOCKING P2を未解決で進めない。P2は4分類して記録する。指摘は根拠・今回の差分との因果・受入条件で判断し、同じPR branchで修正する。docs/code-review-contract.md を参照し、回数だけを停止理由にしない。
-- head変更後は旧結果を使わず、同じ新headのlocal / CI / Security / Reviewを確認する。最終Mergeは人間が判断する。
+- head変更後は旧結果を使わず、同じ新headのlocal / CI / Security / Reviewを確認する。通常レーンの最終Mergeは人間が判断する。人間が既に採用した例外レーンは docs/safe-auto-fix-auto-merge.md の全Safety Gateを満たす場合だけ記録された主体が実行できる。新規採用は別承認とする。
 
 ## 必要時の参照
-- 外部記事・新技術・他projectの実践の採否・重複・棚卸し評価: .agents/skills/template-change-evaluator/SKILL.md を判断前に読む。既存PRの指摘修正は対象外。
+- 外部記事・新技術・改善提案・他projectの実践の採否・重複・棚卸し評価: .agents/skills/template-change-evaluator/SKILL.md を判断前に読む。既存PRの指摘修正は対象外。
 - 合意済み計画のIssue生成: .agents/skills/plan-to-issues/SKILL.md。生成だけの依頼から実装を始めない。
 - PRODUCT UIの実装前はFramework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docsの順で読む。重要UX判断に必要な正本の欠落・矛盾・取得不能はNEEDS_DECISIONで停止する。
 - 親IssueのClose前は docs/parent-issue-completion.md に従い、全子Issue、親チェックボックス、全体Doneと検証証拠、残課題・後続Issue、人間最終確認を照合する。
@@ -142,6 +143,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 | PR前self-review | AGENTS → projectのverify → 差分全体 | Issue受入、範囲、必要test、重大問題修正後再検証 |
 | 初回Codex Review | AGENTS → `docs/code-review-contract.md` | 現行AGENTS Code Review Rulesのレビュー観点・初回標準探索、Review Evidence Contract、Severity/分類、Rule Promotion。一般reviewから必ず到達 |
 | 指摘の分類・修正・再検証 | AGENTS → `docs/code-review-contract.md` → GitHubのcomment / head / checksを直接確認 | 同じPR branch、full SHA照合、P2四分類、根拠あるBLOCKINGの修正、現head再検証・再review。全関連責務をまとめて確認し、回数だけで停止しない |
+| 既採用のSafe Auto-Fix / Auto-Merge | AGENTS / 条件表 → `docs/safe-auto-fix-auto-merge.md` | 人間の明示採用・全Safety Gate・記録主体・制限回数・現head検証。通常レビューの回数停止廃止をこの例外レーンの制限緩和に転用しない |
 | 手動比較評価 | 明示的な評価依頼 → auto-triage / Local Judge README | 通常レーンでは呼ばない。非権威・Secret・送信/課金・trusted branch等の境界は維持 |
 
 初回reviewを既存指摘専用Skillの自動起動に依存させない。新review正本は、現在の [AGENTS Code Review Rules](../AGENTS.md#code-review-rules)、[Review Evidence Contract](../AGENTS.md#review-evidence-contract)、[Rule Promotion](../AGENTS.md#rule-promotion)を移す。初回探索の全責務と証拠項目を先に移し、AGENTSの明示入口から読めることを検証してから旧詳細を短くする。本文案の対象pathを置くだけでは移行完了ではない。
@@ -167,7 +169,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 | 旧節（全35節） | 保持先 / 最小本文の入口 |
 | --- | --- |
 | Purpose / Core Rules / Issue・PR Rule / Prohibited Actions / Human Decision Points / Standard Codex Instruction | 役割・作業境界・標準フロー入口。1子Issue=1 PR、範囲・仕様矛盾・依存・人間Merge。指示例の重複だけ削減 |
-| Core Rules内のTemplate Change Evaluation Routing | 外部案の採否・重複・棚卸しtrigger → template-change-evaluator/SKILL.md。評価前の既存責務確認、単純要約・一般質問・既存PR修正の適用除外を保持 |
+| Core Rules内のTemplate Change Evaluation Routing | 外部案・内部改善提案の採否・重複・棚卸しtrigger → template-change-evaluator/SKILL.md。評価前の既存責務確認、単純要約・一般質問・既存PR修正の適用除外を保持 |
 | AI生成ドキュメント原則 / GitHub上の言語 | 必要時の参照の日本語・判断優先・簡潔な証拠記録。固有名・コードは原文維持 |
 | Adaptive Development Flow / Risk Tier | 作業境界 → adaptive-development-flow.md。全変更Tier/理由・再判定・既定値/混在/不明時規則 |
 | Design / State Modeling | 作業境界 → design-state-modeling.md（先行作成）。外部境界・不正状態・網羅性と元節の例外 |
@@ -179,7 +181,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 | Test Design / Safe Test Deletion | 検証入口 → test-design.md（先行作成）。削除前の代替成功と検証責務 |
 | Implementation Workflow / Standard Verification Gate / GitHub Actions CI / Before PR / PR Description | 通常実装入口 → nine-standard-ai-development-flow.md。verify順/対象外理由/環境固定、commit・PR前停止、self-review、CI、証拠・残課題 |
 | Parent Issue Completion | 親Close入口 → parent-issue-completion.md（先行作成）。元の5項目全体 |
-| Code Review Rules / Review Evidence Contract / Rule Promotion | 初回・指摘対応入口 → code-review-contract.md（先行作成）。探索・根拠・四分類・保証昇格。通常Skill起動/回数停止のみ最新人間指示へ変更 |
+| Code Review Rules / Review Evidence Contract / Rule Promotion | 初回・指摘対応入口 → code-review-contract.md（先行作成）。探索・根拠・四分類・保証昇格。通常Skill起動/回数停止のみ最新人間指示へ変更。既採用Safe Auto-Fix / Auto-Merge例外は条件表とSafety Gate正本へ到達させ、同レーン固有の制限を保持 |
 | Harness Minimalism | 検証変更trigger → ai-development-harness-inventory.md。失敗モード、代替、実測、削除順、安全境界を保持。毎Issue台帳のみ削減 |
 | GitHub Guardrails / Dependabot / CodeQL・Code Scanning | repo設定・依存保守trigger → github-repository-security-baseline.md / 標準フロー。人間設定承認・メジャー用途互換・利用不能記録 |
 | Secrets / AI Agent Security Boundary | 常駐禁止と情報読取・外部書込入口 → ai-agent-security-boundary.md。分類/環境/allowlist/承認、非trusted、例外理由・代替・承認者 |
@@ -208,3 +210,5 @@ MDC-01 / MDC-02はP2 BLOCKINGとして原文で確認。全変更の軽量Risk�
 MDC-05 / MDC-06 / MDC-07も原文で確認し、情報読取・外部書込のSecurity入口、検証/self-review成功前のcommit・PR・review停止、複数Issueの選択順と競合停止を補った。全35節の対応表で今回指摘以外の移行先も照合し、通常実装から既存標準フローへの入口を明記した。
 
 MDC-08: Core Rules内のTemplate Change Evaluation Routingを最小AGENTS・条件表・対応表へ追加。全35節だけでなく節内routing（template-change-evaluator / plan-to-issues / 通常reviewの直接対応）も照合した。
+
+MDC-09 / MDC-10: 内部の改善提案を含む評価triggerへ原文どおり戻し、人間が既に採用したSafe Auto-Fix / Auto-Merge例外の参照入口と全Safety Gate保持を明記。通常レビューの直接対応化と例外レーンの安全制限を区別した。本作業で新規採用・Merge・Gate緩和を行わない。
