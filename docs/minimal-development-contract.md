@@ -327,3 +327,7 @@ Phase 4の削減準備。基準main `059fc9ea043b6b724cbfd68fad4f2859a23b350e` �
 #181/PR #182の独立回帰成功とmain包含後、2026-10-04の人間による提示差分の個別承認に基づき、Harnessの台帳schema・固定文言・CI登録だけの検査を削減する。台帳資料は保持し、書式一致をCI条件にする責務を外す。削減前原文と責務分類・保証先は [削減記録](simplification-inventory.md#issue-183-harness台帳検査の削減) を参照する。
 
 残存28suite、Cloud Agentと旧間接6suiteの独立CI、安全正本と必要時参照は保持する。Security / Review / Human Approvalの意味を緩めず、既存projectに移行を強制しない。#161/PR #167の追加メタ検査は採用せず、既存Issue/PRは人間の整理判断まで保持する。Phase 5受入は別途確認する。
+
+## Issue #185: 最小フローの実利用受入
+
+READMEをIssue生成・Codex実装の入口へ同期する。最小Issue #181/#183/#185、直接コメント修正、guideの実copyと非上書き、生成verify正常/失敗時停止、安全境界、旧Issue #157/#161〜#163の再判定は [実利用受入記録](simplification-acceptance.md) を参照する。最終headのCI/Security/Reviewと親の完了照合はPRとGitHub親 #168へ記録する。検証前の結果を完了としない。

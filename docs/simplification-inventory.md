@@ -214,3 +214,7 @@ Issue #179: 親子Issueとplan-to-issuesの最小入力を有効化する。非�
 | PRODUCT UI / Issue UIのCI | 既存独立stepを維持し、Harnessから同じ配線を再検査する追加メタ検査は削減 |
 
 CI権限contents: read、timeout 10分、Security workflowは変更しない。他の28入口は全て直接CI実行する。残る文書suiteには安全責務があるため一括削除しない。過去baselineの削除入口リンクは固定commit参照へ直し、Harness台帳L-01/L-03から削除入口への現行参照と台帳schemaのCI必須扱いを外す。適用後に28suiteと同じ最終headのCI/Security/Codex Reviewを確認する。Phase 5受入は後続。
+
+## Issue #185: 最小フローの実利用受入
+
+READMEをIssue生成・Codex実装の入口へ同期する。最小Issue #181/#183/#185、直接コメント修正、guideの実copyと非上書き、生成verify正常/失敗時停止、安全境界、旧Issue #157/#161〜#163の再判定は [実利用受入記録](simplification-acceptance.md) を参照する。最終headのCI/Security/Reviewと親の完了照合はPRとGitHub親 #168へ記録する。検証前の結果を完了としない。

@@ -91,4 +91,42 @@ for file in "${ROOT_DIR}/AGENTS.md" "$REVIEW_FILE" "$SKILL_FILE" "$FLOW_FILE" "$
   assert_absent "$file" 'P2は解消または人間が残置理由を確認済みか'
 done
 
+# READMEから開始しても、PR前の検証とレビューを逆転・省略しない。
+python3 - "$README_FILE" <<'PYREADME'
+from pathlib import Path
+import re, sys
+text = Path(sys.argv[1]).read_text()
+
+def valid_flow(text):
+    parts = text.split('## 標準フロー\n', 1)
+    if len(parts) != 2:
+        return False
+    flow = parts[1].split('\n## ', 1)[0]
+    steps = re.findall(r'^\d+\. (.+)$', flow, re.M)
+    markers = ('標準検証を実行', 'Pre-PR Review', 'PR作成後')
+    positions = []
+    for marker in markers:
+        matches = [i for i, step in enumerate(steps) if marker in step]
+        if len(matches) != 1:
+            return False
+        positions.append(matches[0])
+    if not positions[0] < positions[1] < positions[2]:
+        return False
+    review = steps[positions[1]]
+    return all(marker in review for marker in (
+        '必要修正 → 再verify → 重大問題なし',
+        '重大問題・検証不能時',
+        'commit・PR作成・レビュー依頼へ進まず停止する',
+    ))
+
+assert valid_flow(text), 'README must verify and self-review before PR, stopping on failure'
+review_line = next(line for line in text.splitlines() if re.match(r'^\d+\. Pre-PR Review', line))
+pr_line = next(line for line in text.splitlines() if re.match(r'^\d+\. PR作成後', line))
+assert not valid_flow(text.replace(review_line, '')), 'missing Pre-PR Review must fail'
+swapped = text.replace(review_line, '__REVIEW_STEP__').replace(pr_line, review_line).replace('__REVIEW_STEP__', pr_line)
+assert not valid_flow(swapped), 'PR before self-review must fail'
+assert not valid_flow(text.replace('重大問題・検証不能時', '確認事項がある場合')), 'missing failure stop must fail'
+print('README Pre-PR order: positive and 3 negative cases PASS')
+PYREADME
+
 printf 'Review Evidence documentation contract passed\n'
