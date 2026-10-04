@@ -178,31 +178,12 @@ require_marker "docs/ai-development-harness-inventory.md" "現行Deploy target"
 require_marker "docs/ai-development-harness-inventory.md" "### E-10 Cloud Agent開発環境確認"
 require_marker ".cursor/environment.json" "command -v bash >/dev/null"
 
-environment_install="$(python3 -c 'import json, pathlib, sys; print(json.loads(pathlib.Path(sys.argv[1]).read_text())["install"])' "$ROOT/.cursor/environment.json")"
-mock_path="$(mktemp -d)"
-ln -s "$(command -v python3)" "$mock_path/python3"
-ln -s "$(command -v node)" "$mock_path/node"
-ln -s "$(command -v head)" "$mock_path/head"
-if (cd "$ROOT" && PATH="$mock_path" /bin/sh -c "$environment_install") >/dev/null 2>&1; then
-  printf 'Cloud Agent install must fail when bash is unavailable\n' >&2
-  failures=1
-fi
-
-cat > "$mock_path/bash" <<'SH'
-#!/bin/sh
-exit 42
-SH
-chmod +x "$mock_path/bash"
-if (cd "$ROOT" && PATH="$mock_path" /bin/sh -c "$environment_install") >/dev/null 2>&1; then
-  printf 'Cloud Agent install must propagate bash version failure\n' >&2
-  failures=1
-fi
-rm -rf "$mock_path"
+# Cloud Agent installの実行回帰はtests/cloud-agent-environmentへ移行。
+# 各suiteはTemplate CIの独立stepから実行し、この文書検査へ依存しない。
 
 require_workflow_run "bash tests/product-ui-standard/run-samples.sh"
 require_workflow_run "bash tests/issue-template-ui/run-samples.sh"
 require_marker ".github/workflows/ci.yml" "PRODUCT UI standard documentation contract"
-bash "$ROOT/tests/html-status-report/run-samples.sh" "$ROOT"
 ledger_headings=()
 while IFS= read -r heading; do
   ledger_headings+=("$heading")
@@ -351,12 +332,6 @@ require_marker "docs/nine-standard-ai-development-flow.md" "## 4.2 Harness Minim
 require_marker ".github/pull_request_template.md" "# Harness Minimalism / ETCSLV"
 require_marker ".github/pull_request_template.md" "対象ハーネス / 台帳ID:"
 require_marker ".github/pull_request_template.md" "削除・再評価条件:"
-
-bash "$ROOT/tests/current-state/run-samples.sh" "$ROOT"
-bash "$ROOT/tests/adaptive-development-flow/run-samples.sh" "$ROOT"
-bash "$ROOT/tests/github-state/run-samples.sh" "$ROOT"
-bash "$ROOT/tests/issue-quality/run-samples.sh" "$ROOT"
-bash "$ROOT/tests/template-simplification/run-samples.sh" "$ROOT"
 
 require_marker ".github/ISSUE_TEMPLATE/child-issue.md" 'Harness Minimalism台帳'
 require_marker ".github/ISSUE_TEMPLATE/child-issue.md" '失敗モード・代替保証・再評価条件'

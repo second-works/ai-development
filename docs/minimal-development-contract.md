@@ -159,7 +159,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 1. #170と本契約PRを人間がmerge。修正済みSafety baselineと契約をmainで取得し直す。
 2. Phase 3の責務単位PRでreview/test/Design・State Modeling/親Issue完了正本を作成し、参照とSkillを更新。`docs/design-state-modeling.md`へ現行AGENTSの同節全体を移し、外部入力の境界検証、不正状態の表現防止、boolean組合せより明示モデル、網羅性、検証済み型、過剰な型技術の非強制と信頼境界の例外を保持。最小AGENTSから設計・実装時に到達できること、初回review入口と実害・安全上の停止条件を原文比較・回帰で確認。回数停止とSkill自動起動は人間の最新指示へ更新する。`docs/parent-issue-completion.md`へ現行Parent Issue Completionの5確認項目を移し、最小AGENTSから親Close時に到達させる。既存 `docs/product-ui-standard.md`へAI / Codex Reference Contract全体を移し、5段階の参照順序、適用対象・例外根拠の追跡、重要正本欠落・矛盾・判断不能および採用docs取得不能時のNEEDS_DECISION、標準と案件の責務、NONE / UTILITYへの非過剰適用を保持。既存標準フローへIssue Selection / Implementation Workflow / Before PR / PR Description全体の責務を対応付け、最小本文から通常実装時に到達させる。既存Security正本は情報読取・外部書込時の明示入口を保持。4正本とUI・標準フローの必要更新が揃う前に旧AGENTSを削らない。
 3. Issue templateを採用するPRではplan-to-issuesと旧欄を要求する文書契約の対応を同時に揃える。旧固定文言を残すためだけの巨大本文や先行skipを作らない。
-4. Phase 4で各削減対象の保証先を成功させてから整理。直接stepなしの6入口は現mainで全6がHarness経由実行。現行の実行網羅を失わない。#161 / PR #167はこの責務判断後に人間が再判定する。
+4. Phase 4で各削減対象の保証先を成功させてから整理。棚卸し基準mainで直接stepなしの6入口は全6がHarness経由実行。Issue #181で独立CI入口へ移し、移行前後の成功証拠で実行網羅を保持する。#161 / PR #167はこの責務判断後に人間が再判定する。
 5. Harness固有のCloud Agent install回帰（Bash不在時停止・version失敗伝播）はKEEP。`.cursor/environment.json` / E-10を残し、独立回帰入口とCIの成功、同等以上の環境確認を示すまでは削除しない。他suiteの直接CI化だけではこの責務を保証できない。
 6. Security Preflight、Codex review待機判定、Bash 5 guard、read-only / HTML escaping / 非破壊の実行回帰を維持。marker検査だけを実行回帰の代替にしない。
 7. Phase 5で最小templateから実サンプル生成・Codex読解・標準フローdry-run・既存project互換を確認し、READMEを合わせる。#162のself-review要点と#163の独立したmain保護責務を失わない。
@@ -310,3 +310,14 @@ docs/migration.mdと隔離fixture testのみ。Risk Tier: HIGH、本番データ
 #### 依存が未確定の場合
 
 上の文言修正のDependenciesが「後で決める」なら、なしと補完せず登録・実装を停止する。依存する設計や仕様を特定して再判定する。PRODUCTの重要UXが未確定、安全境界が不明、または6 MUSTの一つでも欠落した場合も同様。
+
+## Issue #181: 実行保証をHarness文書検査から分離
+
+Phase 4の削減準備。基準main `059fc9ea043b6b724cbfd68fad4f2859a23b350e` では、28 suiteのうち6件がHarness経由で実行され、Cloud Agentの異常系もHarness内にあった。未実行の補修ではなく、今後の文書検査整理で実害回帰が消えないための配置変更とする。
+
+代替追加head `6da4ffd001d925cb9672cdc7496812a598763f21` の全29 suite、[CI #1052](https://github.com/second-works/ai-development/actions/runs/37191762831)、[Security #346](https://github.com/second-works/ai-development/actions/runs/37191762830)が成功。CI jobの新入口と6件の各stepもsuccessを確認してから、Harness内の2異常系と6重複呼出を移した。
+
+- Cloud AgentのBash不在・version失敗伝播は `tests/cloud-agent-environment/run-samples.sh` が保持する。正常compileと構文不正時停止も追加し、fixtureは隔離project/cacheとEXIT cleanupを使用する。
+- github-state / current-state / html-status-report / adaptive-development-flow / issue-quality / template-simplificationは各既存suiteをCIから直接実行。collectorのread-only・head identity、HTML escaping/非破壊、State identity等の元回帰を変更しない。
+- Harnessは台帳/文書契約の入口として維持する。文書markerやsuite自体の削除、実install設定・Security workflow変更、新coverageメタ検査導入は行わない。
+- 後続削減は責務と保証先の確認を続ける。#161 / PR #167の採否、Phase 4全体・Phase 5の実利用受入は本変更だけで完了としない。最終headの検証はPR本文へ記録する。

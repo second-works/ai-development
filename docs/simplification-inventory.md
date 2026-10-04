@@ -142,7 +142,7 @@ baselineは現行repoの契約・実装を固定したもの。branch protection
 | [document-concision](../tests/document-concision/run-samples.sh) | 文章原則marker / 文書契約 | REMOVE_CANDIDATE。固定文言より生成Issueの読解dry-runで検証 |
 | [template-change-evaluator](../tests/template-change-evaluator/run-samples.sh) | 自己管理Skill/routing marker / 文書契約 | REMOVE_CANDIDATE。Skill任意化の決定後に関連固定文言検査を整理 |
 
-直接stepがない6入口は `github-state / current-state / html-status-report / adaptive-development-flow / issue-quality / template-simplification`。mainのHarness suiteはこの6入口すべてを間接呼出している。HTMLは205行、他5入口は末尾で実行される。**直接stepなし=未実行ではない**。現行CIには28入口の直接または間接実行経路があり、#161の提案は間接依存をなくして各入口の直接登録を保証する変更として区別する。
+棚卸し基準mainで直接stepがない6入口は `github-state / current-state / html-status-report / adaptive-development-flow / issue-quality / template-simplification`。棚卸し基準mainのHarness suiteはこの6入口すべてを間接呼出している。HTMLは205行、他5入口は末尾で実行される。**直接stepなし=未実行ではない**。棚卸し基準CIには28入口の直接または間接実行経路があり、#161の提案は間接依存をなくして各入口の直接登録を保証する変更として区別する。
 
 PR #167は28入口の直接実行と `tests/harness-minimalism/test-ci-entrypoints.py` の独立実行を提案中。これはmainに存在しない追加メタテストで、#168の削減候補に含めるが削除済みとは扱わない。安全回帰のCI保証と、全旧文書contractの無条件登録を別責務として再判定する。
 
@@ -188,3 +188,15 @@ P2 3件をBLOCKINGと判断し、#169の原文根拠・安全保証先・CI観�
 Issue #177: 詳細責務を正本へ移し、root AGENTSを合意済み最小本文へ切り替える。28系統の実行回帰とCIを保持し、文書markerの検査先だけを正本へ変更する。Phase 4のtest削減・Phase 5の生成サンプル検収は未完了。
 
 Issue #179: 親子Issueとplan-to-issuesの最小入力を有効化する。非該当のUI / Framework / Harness / State欄を省略し、Riskと安全境界、MUST不足・未決定時停止を保持。文書見出し検査の同期と記入例3件・負例13件を追加するが、既存28入口の削除やCI縮小は行わない。Phase 4 / 5の実行受入は後続である。
+
+### Issue #181: Phase 4の独立保証先
+
+棚卸し表の分類を一括削除へ転用しない。Cloud Agent実行回帰と間接6suiteの独立入口を先に成功させ、Harnessへの依存を外す。
+
+| 移行責務 | 保持する保証先 / 判断 |
+| --- | --- |
+| Cloud Agent installのBash不在・version失敗伝播 | [独立実行回帰](../tests/cloud-agent-environment/run-samples.sh)、CIのCloud Agent step。KEEP。実設定を隔離fixtureへ適用し正常compile/構文不正も確認 |
+| 間接6suiteの実行 | 各既存run-samples.shとCI独立step。29入口を直接実行し、台帳文書検査の削減と実行網羅を分離 |
+| Harnessの文書/台帳契約 | 元入口を保持。旧2異常系と6呼出だけ代替成功後に移行し、marker削減は別の責務判断へ |
+
+代替追加head `6da4ffd001d925cb9672cdc7496812a598763f21` の29 suite、CI #1052、Security #346と各独立step成功を移行前に確認した。原文の2異常系を維持し、既存6suiteの本体は変更しない。#161/PR #167のメタ検査は追加・merge・closeしていない。最終headの検証結果はPR本文を正本とする。
