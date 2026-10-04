@@ -122,7 +122,7 @@ baselineは現行repoの契約・実装を固定したもの。branch protection
 | [github-state](../tests/github-state/run-samples.sh) | read-only収集、異常API、ページ、head identity / 実害回帰 | KEEP。collectorを残す間の観測保証 |
 | [html-status-report](../tests/html-status-report/run-samples.sh) | escaping、入力非破壊、上書き/不正schema拒否 / 実害回帰 | KEEP。rendererを残す間の安全保証 |
 | [instruction-architecture](../tests/instruction-architecture/run-samples.sh) | 配置marker + HEAD/refs/index/worktreeの非変更 / 混在 | KEEP / REMOVE_CANDIDATE。read-only実行保証は保持、台帳の固定構造は候補 |
-| [harness-minimalism](../tests/harness-minimalism/run-samples.sh) | 台帳marker、workflow登録、Cloud Agent install失敗時停止、他suite間接呼出 / 混在 | KEEP / REMOVE_CANDIDATE。181–199行のCloud Agent実行回帰（Bash不在・Bash version失敗伝播）はKEEPとして分離。子suiteの直接CI化だけでは代替できない。具体的な独立回帰入口へ移してCI成功を先に確認するまで現行入口を保持。自主管理markerだけ整理候補 |
+| [harness-minimalism（固定baseline）](https://github.com/second-works/ai-development/blob/7a52b2b3f46487b91190a6c923926c9325913046/tests/harness-minimalism/run-samples.sh) | 台帳marker、workflow登録、Cloud Agent install失敗時停止、他suite間接呼出 / 混在 | KEEP / REMOVE_CANDIDATE。181–199行のCloud Agent実行回帰（Bash不在・Bash version失敗伝播）はKEEPとして分離。子suiteの直接CI化だけでは代替できない。具体的な独立回帰入口へ移してCI成功を先に確認するまで現行入口を保持。自主管理markerだけ整理候補 |
 | [jev-triage-workflow](../tests/jev-triage-workflow/run-samples.sh) | trusted checkout/Secret/head/artifact配置 + YAML parse / 混在 | KEEP。手動経路の安全検証。単なる表示markerだけ整理候補 |
 | [agent-security-boundary](../tests/agent-security-boundary/run-samples.sh) | 安全規則のmarker / 文書契約 | KEEP。最小境界と参照に合わせて縮小。実行Security検査の代替ではない |
 | [review-evidence](../tests/review-evidence/run-samples.sh) | P2 / evidence / Pre-PR規則のmarker / 文書契約 | KEEP / REMOVE_CANDIDATE。Skillの停止・分類責務を保持し重複markerを削減 |
@@ -200,3 +200,17 @@ Issue #179: 親子Issueとplan-to-issuesの最小入力を有効化する。非�
 | Harnessの文書/台帳契約 | 元入口を保持。旧2異常系と6呼出だけ代替成功後に移行し、marker削減は別の責務判断へ |
 
 代替追加head `6da4ffd001d925cb9672cdc7496812a598763f21` の29 suite、CI #1052、Security #346と各独立step成功を移行前に確認した。原文の2異常系を維持し、既存6suiteの本体は変更しない。#161/PR #167のメタ検査は追加・merge・closeしていない。最終headの検証結果はPR本文を正本とする。
+
+### Issue #183: Harness台帳検査の削減
+
+#181/PR #182で実行回帰と間接6suiteを独立させた後、残る345行の台帳schema・ID・集約表一致・固定文言・CI登録だけの検査を削減する。台帳書式の機械的強制は最小フローに不要と判断する。安全正本、Security/Review停止条件、他28suiteは保持する。実行回帰を代替成功前に消さない。2026-10-04に人間が提示差分の適用を個別承認した。
+
+| 対象 | 保証先 / 理由 |
+| --- | --- |
+| 台帳12欄・ID・enum・集約表一致 | 台帳は参照資料として保持。書式一致をCI条件にする責務は不要 |
+| Cloud Agent install / 旧間接6suite | tests/cloud-agent-environmentと各既存suiteの独立CI。PR #182の現head CI成功済み |
+| Security / Human Approval / State・Deploy identity | AGENTSと各安全正本・既存suiteを変更せず保持 |
+| 条件付き参照・最小Issue・安全な検証削除 | instruction-architecture / plan-to-issues / template-simplification、AGENTS / minimal-development-contract / test-design正本を維持 |
+| PRODUCT UI / Issue UIのCI | 既存独立stepを維持し、Harnessから同じ配線を再検査する追加メタ検査は削減 |
+
+CI権限contents: read、timeout 10分、Security workflowは変更しない。他の28入口は全て直接CI実行する。残る文書suiteには安全責務があるため一括削除しない。過去baselineの削除入口リンクは固定commit参照へ直し、Harness台帳L-01/L-03から削除入口への現行参照と台帳schemaのCI必須扱いを外す。適用後に28suiteと同じ最終headのCI/Security/Codex Reviewを確認する。Phase 5受入は後続。
