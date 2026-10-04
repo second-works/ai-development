@@ -235,7 +235,7 @@ Security、権限、Productionなどの既知重大リスクは、実際の事�
 - **安全上必須か**：Security、Production、Secretsを保護するハーネスではないが、Cloud Agent上の再現可能な検証入口を確保するために必要。
 - **判定**：KEEP。
 - **削除・再評価条件**：Cloud Agentが同じToolと補助scriptの構文をプロビジョニング前に同等以上に検証し、失敗を停止できる標準機構へ置換した場合に再評価する。
-- **関連Issue / 正本文書**：PR #114、E-10。PR #114のCloud Agent開発環境追加とこの判定を追跡する。正本：`.cursor/environment.json`、`.gitignore`。
+- **関連Issue / 正本文書**：PR #114、E-10。PR #114のCloud Agent開発環境追加とこの判定を追跡する。正本：`.cursor/environment.json`、`.gitignore`。Issue #181で実行回帰を `tests/cloud-agent-environment/run-samples.sh` へ移し、Template CIから直接実行する。隔離project/cacheで正常compile、Bash不在、version終了code伝播、Python構文不正時停止を確認する。実install設定は変更しない。
 
 ### T-01 CodexとSkills
 
