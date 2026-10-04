@@ -20,7 +20,7 @@
 
 その後、原則として以下を準備します。
 
-1. `AGENTS.md`
+1. `AGENTS.md` と、その参照先を支える `docs/` 一式（下記配置手順）
 2. `docs/ai-agent-security-boundary.md`
 3. `docs/ai-development-harness-inventory.md`
 4. `.github/ISSUE_TEMPLATE/parent-issue.md`
@@ -35,9 +35,41 @@
 13. `Automatically delete head branches` の有効化
 14. Framework Decision正本文書（`docs/architecture/framework-decision.md`）を配置
 15. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
+16. `.agents/skills/` と参照用 `templates/` 一式を配置し、Skill / State契約 / 標準検証原本への入口を保つ
 
 設定後、計画書を親Issue・子Issueへ変換します。新規Web/UI案件ではFramework DecisionをUI Level DecisionとPlan Reviewより前に確認し、その結果を引き継ぎます。子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
 
+
+
+
+### 最小AGENTSと参照先の配置
+
+最小AGENTSは単体で配布しない。`AGENTS.md` と `docs/` 一式を同じ原本revisionから配置する。必須入口には `docs/nine-standard-ai-development-flow.md`、`docs/code-review-contract.md`、`docs/test-design.md`、`docs/design-state-modeling.md`、`docs/parent-issue-completion.md`、`docs/minimal-development-contract.md` があり、条件表から参照するSecurity / Framework / UI / RAG / State / Acceptance等も含める。directory構造を維持し、参照先を選別して欠落させない。
+
+Skillの入口・State契約・文書からの原本参照も維持するため、`.agents/skills/` と `templates/` を参照資産として併せて配置する。配置はSkill/helperの実行許可や自動起動を意味しない。通常reviewはCodexが直接対応する。Actions・Dependabot・verifyの実行設定は引き続き技術構成に合うものを選び、以下の原本copyだけで実行設定済みと扱わない。
+
+次の例は新規projectの未配置directoryに限定する。`template_source_root` は原本checkout、`project_output_root` は対象projectのabsolute pathへ設定する。既存projectへ一括上書きせず、既存のAGENTS / docsとの責務・差分を個別に確認する。
+
+```bash
+set -e
+: "${template_source_root:?原本checkoutのabsolute pathを設定する}"
+: "${project_output_root:?対象projectのabsolute pathを設定する}"
+for path in AGENTS.md docs .agents/skills templates; do
+  test -e "$template_source_root/$path"
+  if test -e "$project_output_root/$path"; then
+    printf '既存の配置先を上書きしません: %s\n' "$path" >&2
+    exit 1
+  fi
+done
+mkdir -p "$project_output_root/.agents"
+# ai-development自身の検証行は生成projectへ持ち込まない。
+awk '!/^このrepoの検証は全 /' "$template_source_root/AGENTS.md" > "$project_output_root/AGENTS.md"
+cp -R "$template_source_root/docs" "$project_output_root/docs"
+cp -R "$template_source_root/.agents/skills" "$project_output_root/.agents/skills"
+cp -R "$template_source_root/templates" "$project_output_root/templates"
+```
+
+配置後、root AGENTS内の `docs/` / Skill path、および `docs/minimal-development-contract.md` の条件表の参照先が対象projectで開けることを確認する。案件固有の `docs/design.md` はPRODUCT案件で別途作成する。必要な正本が欠落・取得不能ならIssue生成・実装開始へ進まず、配置を修復する。`scripts/verify.sh` とCIは下記の標準検証・技術スタック別手順で設定する。
 
 
 ## 2.1 Risk Tierの記入
@@ -105,7 +137,7 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 
 ### 新規プロジェクトでの扱い
 
-`ai-development/AGENTS.md` を原本として各プロジェクトのルートへ配置し、そのプロジェクト固有のコマンド、ディレクトリ構成、禁止事項などを追記します。
+上記「最小AGENTSと参照先の配置」に従い、`ai-development/AGENTS.md` と `docs/` / Skill / 参照原本を併せて配置します。AGENTS末尾のai-development自身に固有な検証・配置履歴行は持ち込まず、対象projectの `./scripts/verify.sh`、技術構成、禁止事項を設定します。AGENTSだけのコピーで移行完了にしません。
 
 ## 4. 親Issueテンプレート
 
@@ -446,7 +478,10 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 
 新しい開発リポジトリを作成したら以下を確認します。
 
-- [ ] `AGENTS.md` を配置
+- [ ] 最小 `AGENTS.md` と同revisionの `docs/` 一式を配置（単体copyしない）
+- [ ] `.agents/skills/` と参照原本 `templates/` を配置
+- [ ] `docs/nine-standard-ai-development-flow.md` / `docs/code-review-contract.md` / `docs/test-design.md` / `docs/minimal-development-contract.md` と条件表の参照先を対象projectで開ける
+- [ ] ai-development自身の検証行を除き、対象projectの `scripts/verify.sh` とCIを設定
 - [ ] `docs/ai-agent-security-boundary.md` を配置
 - [ ] `docs/ai-development-harness-inventory.md` を配置
 - [ ] `docs/architecture/framework-decision.md` を配置

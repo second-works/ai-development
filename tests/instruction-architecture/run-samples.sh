@@ -131,6 +131,34 @@ for target in re.findall(r'\]\(([^)#]+\.md)(?:#[^)]*)?\)',conditions):
     if '://' in target: continue
     assert (contract.parent/target).is_file(),target
 PYROUTES
+# Run the actual guide's placement example in a fresh temporary project.
+python3 - "$ROOT" <<'PYPLACEMENT'
+from pathlib import Path
+import os,re,subprocess,sys,tempfile
+root=Path(sys.argv[1])
+section=(root/'docs/template-guide.md').read_text().split('### 最小AGENTSと参照先の配置',1)[1].split('## 2.1 Risk Tierの記入',1)[0]
+commands=re.search(r'```bash\n(.*?)\n```',section,re.S).group(1)
+with tempfile.TemporaryDirectory(prefix='minimal-agents-placement-') as temp:
+    project=Path(temp)/'project'
+    env=dict(os.environ,template_source_root=str(root),project_output_root=str(project))
+    subprocess.run(['bash','-c',commands],check=True,env=env,capture_output=True,text=True)
+    agents=(project/'AGENTS.md').read_text()
+    assert 'このrepoの検証は全' not in agents
+    for target in re.findall(r'(?:docs|\.agents/skills)/[\w./-]+\.md',agents):
+        if target=='docs/design.md':continue # 案件固有のPRODUCT designは別作成
+        assert (project/target).is_file(),target
+    contract=project/'docs/minimal-development-contract.md'
+    conditions=contract.read_text().split('## 常時必須と条件付きの分離',1)[1].split('## 採用した最小AGENTS本文',1)[0]
+    for target in re.findall(r'\]\(([^)#]+\.md)(?:#[^)]*)?\)',conditions):
+        if '://' in target:continue
+        assert (contract.parent/target).is_file(),target
+    assert (project/'templates/verification/verify.sh').is_file()
+    assert (project/'.agents/skills/pr-review-fix/scripts/verify-pr-head.sh').is_file()
+    before=(project/'AGENTS.md').read_bytes()
+    repeat=subprocess.run(['bash','-c',commands],env=env,capture_output=True,text=True)
+    assert repeat.returncode!=0,'existing project must not be overwritten'
+    assert (project/'AGENTS.md').read_bytes()==before
+PYPLACEMENT
 require ".agents/skills/pr-review-fix/SKILL.md" 'ユーザーがSkill名やPR番号を明示しなくても'
 require ".agents/skills/pr-review-fix/SKILL.md" '「コメント確認して修正して」'
 require ".agents/skills/pr-review-fix/SKILL.md" '単なるIssueコメント閲覧'
