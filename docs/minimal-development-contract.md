@@ -6,7 +6,7 @@
 
 親 [#168](https://github.com/second-works/ai-development/issues/168)、Phase 2 [#171](https://github.com/second-works/ai-development/issues/171)。基準mainは `7a52b2b3f46487b91190a6c923926c9325913046`。棚卸しは [#169 / PR #170](https://github.com/second-works/ai-development/pull/170)、そのレビュー修正は `7d6c419da5bdc729ad0ee9c8696a615c4baaef11`。2026-10-03の人間確認と「次のフェーズへ」の指示を受けて設計を進めた。
 
-本書は後続実装の契約案をレビューするPhase 2の成果物。現行AGENTS・templates・Skills・tests・CIを置換しない。Phase 1の未マージPRを完了と扱わず、現行ルールの置換・削除は先行PRと本契約PRの人間Merge後に直列化する。人間の次Issue着手指示により、独立したdocs追加・移行準備は未マージ中にも進められるが、現行AGENTSを短縮・新契約を有効化しない。既存projectへの一括適用や自動Mergeは導入しない。
+本書はPhase 2で合意しPR #172でマージした最小契約。現行AGENTS・templates・Skills・tests・CIを置換しない。先行PR #170 / #172 / #174は2026-10-04の人間指示でマージ済み。現行ルールの置換・削除は責務移行と参照検証の成功後に直列化する。今回の残責務移行でも現行AGENTSを短縮・新契約を有効化しない。既存projectへの一括適用や自動Mergeは導入しない。
 
 ## 常時必須と条件付きの分離
 
@@ -42,7 +42,7 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 
 ## 最小AGENTS本文案
 
-以下は生成projectのrootへ配置する移行後本文案。リンクはroot基準。`docs/code-review-contract.md`、`docs/test-design.md`、`docs/design-state-modeling.md`、`docs/parent-issue-completion.md` はPhase 3で現行AGENTSから詳細を移す予定のpathで、現在は未作成。4正本・Skillの条件付きrouting・関連検証を先に揃えるまでこの本文で現行AGENTSを上書きしない。
+以下は生成projectのrootへ配置する移行後本文案。リンクはroot基準。`docs/code-review-contract.md`、`docs/test-design.md`、`docs/design-state-modeling.md`、`docs/parent-issue-completion.md` はPR #174で作成済み。残る詳細責務・条件付きrouting・関連検証を先に揃えるまでこの本文で現行AGENTSを上書きしない。
 
 ```markdown
 # AGENTS.md
@@ -146,7 +146,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 | 既採用のSafe Auto-Fix / Auto-Merge | AGENTS / 条件表 → `docs/safe-auto-fix-auto-merge.md` | 人間の明示採用・全Safety Gate・記録主体・制限回数・現head検証。通常レビューの回数停止廃止をこの例外レーンの制限緩和に転用しない |
 | 手動比較評価 | 明示的な評価依頼 → auto-triage / Local Judge README | 通常レーンでは呼ばない。非権威・Secret・送信/課金・trusted branch等の境界は維持 |
 
-初回reviewを既存指摘専用Skillの自動起動に依存させない。新review正本は、現在の [AGENTS Code Review Rules](../AGENTS.md#code-review-rules)、[Review Evidence Contract](../AGENTS.md#review-evidence-contract)、[Rule Promotion](../AGENTS.md#rule-promotion)を移す。初回探索の全責務と証拠項目を先に移し、AGENTSの明示入口から読めることを検証してから旧詳細を短くする。本文案の対象pathを置くだけでは移行完了ではない。
+初回reviewを既存指摘専用Skillの自動起動に依存させない。[review正本](code-review-contract.md)はPR #174で旧AGENTSのCode Review Rules / Review Evidence Contract / Rule Promotionを移した。初回探索の全責務と証拠項目を先に移し、AGENTSの明示入口から読めることを検証してから旧詳細を短くする。本文案の対象pathを置くだけでは移行完了ではない。
 
 2026-10-03の人間指示により、今後の通常コメント対応はpr-review-fixを自動起動せず、Codexが根拠を確認して直接実施する。同Skill・helperは手動資産として保持し、削除・Securityの回避はしない。レビュー回数ではなく未解決の実害・安全境界・仕様判断を停止条件とする。実ファイルのrouting同期は後続Issueで行う。
 
@@ -214,3 +214,12 @@ MDC-08: Core Rules内のTemplate Change Evaluation Routingを最小AGENTS・条�
 MDC-09 / MDC-10: 内部の改善提案を含む評価triggerへ原文どおり戻し、人間が既に採用したSafe Auto-Fix / Auto-Merge例外の参照入口と全Safety Gate保持を明記。通常レビューの直接対応化と例外レーンの安全制限を区別した。本作業で新規採用・Merge・Gate緩和を行わない。
 
 追加のIN-SCOPE FIX: template-change-evaluatorはai-development / Nine標準テンプレートの変更評価に限定し、生成project自身の機能改善やテンプレート変更を伴わない一般質問へ誤適用しないことを本文案自身に明記した。
+
+## 残責務の保存先（Issue #175）
+
+- 標準フローの「AGENTS残責務の移行準備」: GitHub言語、Issue/PR、CI、Dependabot、Security Preflight、禁止事項・人間判断。
+- ハーネス台帳の同節: 追加・変更時の記録、安全境界、簡素化の実測と代替。
+- Repository Security Baselineの同節: GitHub Guardrails、CodeQL、Secrets。
+- Agent Security Boundaryの同節: 分類・allowlist・git push・例外・承認。
+
+この追加はAGENTS短縮・新契約の有効化ではない。後続Issueで各条件付き入口の到達と既存検証を更新し、旧本文の重複を減らす。Phase 4 / 5の完了証拠とは区別する。

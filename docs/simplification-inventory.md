@@ -180,3 +180,7 @@ PR #167は28入口の直接実行と `tests/harness-minimalism/test-ci-entrypoin
 ## PR #170のレビュー修正
 
 P2 3件をBLOCKINGと判断し、#169の原文根拠・安全保証先・CI観測の完了条件違反として修正した。初回レビューの入口と探索/証拠/Rule PromotionをKEEPし、反復修正だけSkillへ移す。Cloud Agent install回帰をKEEPとして分離し、代替入口のCI成功前は削除しない。HTMLを含む全6入口のHarness経由実行を原文で再照合した。既存ルール・test・CIの変更はない。
+
+## 移行進捗（2026-10-04）
+
+本書の件数・byte数・分類は上記固定baselineの記録。PR #170 / #172 / #174は人間指示でマージ済み。Issue #175で残る運用・安全責務を既存docsへ保存する。AGENTS短縮、参照テスト変更、Gate削減、生成サンプル検収は後続であり、この棚卸しから完了と推定しない。

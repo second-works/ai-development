@@ -550,3 +550,133 @@ PRには最低限以下を書く。
 テストを削除・統合した場合は、削除対象が担っていた検証責務と、その責務を削除後にどこで保証するかを記載する。
 
 可能な場合は `Closes #<Issue番号>` を使用し、PRのmergeとIssueの完了を関連付ける。
+
+## AGENTS残責務の移行準備
+
+固定原文はmain `d4ee8ee56ad15ca4bcbca604bc3622a1400b667b` のAGENTS。以下は本文短縮に先立つ詳細責務の保存であり、現在のAGENTSを置換しない。既存節は概説・具体手順、以下は旧AGENTSから保持する責務・例外。将来の短縮後も両方を適用し、矛盾があれば推測せず停止する。Security・承認条件は変更しない。重複本文と参照テストの整理は後続Issueで行う。
+
+### 移行契約: GitHub上の言語
+
+人間が読むGitHub上の文章は、原則として日本語で記述する。
+
+日本語を原則とする対象:
+
+- Pull Requestのタイトル
+- Pull Requestの本文
+- Issueへのコメント
+- Pull Requestへの作業報告・修正報告
+- レビュー指摘への返信
+- Commit message
+- READMEや運用ドキュメントなどの人間向け文書
+
+以下は英語のままでよい:
+
+- ソースコード
+- 変数名、関数名、クラス名等の識別子
+- API名、ライブラリ名、パッケージ名
+- CLIコマンド、ファイルパス、設定キー
+- 外部サービスやツールが出力したエラーメッセージの原文
+- GitHub Actions等で技術上英語が適切な識別子
+- Dependabot等の外部サービスが自動生成するタイトル・本文
+
+英語の技術用語を無理に翻訳して意味を曖昧にしない。日本語説明の中で必要に応じて英語の固有名詞・識別子をそのまま使用する。
+
+### 移行契約: Issue / PR Rule
+
+実装前にIssueから以下を確認する。
+
+1. 目的
+2. 実装範囲
+3. やらないこと
+4. 変更可能範囲
+5. 変更を避ける範囲
+6. 完了条件
+7. テスト条件
+8. 依存Issue
+
+Issue本文とコードベースに矛盾がある場合は、勝手に仕様を変更せず問題を明示する。
+
+### 移行契約: GitHub Actions CI
+
+各プロジェクトでは、原則として `main` 向けPull RequestでGitHub Actions CIを自動実行する。
+
+CIでは、技術スタックに応じて以下を可能な範囲で自動検証する。
+
+- dependency install
+- lint
+- type check
+- unit / integration tests
+- build
+
+標準テンプレートは以下を使用する。
+
+- Node.js: `templates/github-actions/node-ci.yml`
+- Python: `templates/github-actions/python-ci.yml`
+- その他: `templates/github-actions/generic-ci.yml`
+
+各プロジェクトでは選択したテンプレートを `.github/workflows/ci.yml` として配置し、そのプロジェクトの実コマンドに合わせて調整する。
+
+PythonのBootstrap例外は、まだテストファイルが存在しない初期基盤期間だけに限定する。最初のテストが追加された後はpytestが実行・成功することを必須とする。
+
+CIが失敗しているPRは原則mergeしない。
+
+Codexがローカルでテスト済みと報告していても、GitHub Actionsによる再検証を省略しない。
+
+### 移行契約: Dependabot
+
+依存関係は技術スタックに応じてDependabotで定期確認する。
+
+標準テンプレート:
+
+- Node.js: `templates/dependabot/dependabot-node.yml`
+- Python: `templates/dependabot/dependabot-python.yml`
+
+各プロジェクトでは `.github/dependabot.yml` として配置する。
+
+Dependabotが作成したPRは開発本線のIssue番号とは別の保守PRである。PR番号が本線の番号の間に入ることは正常であり、作業順序の根拠にはしない。
+
+Dependabot PRも通常のCIとレビューを通してからmergeする。古いベースで作成されCIが失敗している場合は、最新mainへrebase / updateしてCIを再実行してから判断する。
+
+メジャーバージョン更新ではrelease notesとbreaking changesを確認し、CI成功だけでなくワークフローの用途との互換性も確認する。
+
+### 移行契約: Security Preflight
+
+CIの成功をSecurityの成功として扱わない。標準の待機処理はCIとSecurityを別々に分類し、利用可能なGitHub Code Scanning / Security checkがない場合はプロジェクトへ配置した `scripts/security-preflight.sh` をfallbackとして実行する。
+
+原本は [`templates/security/security-preflight.sh`](../templates/security/security-preflight.sh) とする。スクリプトは全体の `SECURITY_STATUS` と依存チェックの `DEPENDENCY_STATUS` として、機械可読な次の状態を出力する。
+
+- `SECURITY_PASSED`: 秘密情報検出と利用可能な依存脆弱性検査が成功
+- `SECURITY_FAILED`: 秘密情報またはHigh/Critical脆弱性を検出。Merge禁止
+- `SECURITY_NOT_APPLICABLE`: 依存チェックの対象マニフェストがなく、`DEPENDENCY_STATUS` が対象外。理由を記録する
+- `SECURITY_UNAVAILABLE`: 必要なscanner、実行環境、または結果が利用できない。人間の判断なしに通過させない
+
+fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lockfileがある場合は各lockfileのディレクトリで `npm audit --json --audit-level=high --package-lock-only` を使用する。Python等の未対応マニフェストやscanner未導入は `SECURITY_UNAVAILABLE` とし、対象マニフェストがない場合の `DEPENDENCY_STATUS=SECURITY_NOT_APPLICABLE` と混同しない。パス由来の状態理由はCR/LFをエスケープし、機械可読な状態行を汚染しない。修正後は新しいPR head SHAに対してCIとSecurityをそれぞれ再実行する。
+複数の依存マニフェストがある場合、`package.json` は同じディレクトリのnpm lockfileと対応付け、未対応のPython / pnpm / Yarnマニフェストを別のlockfileの監査成功で隠さない。検出したHigh/Critical脆弱性の `SECURITY_FAILED` は未監査の `SECURITY_UNAVAILABLE` より優先する。
+
+### 移行契約: Prohibited Actions
+
+- Issueにない機能を先回りして追加する。
+- 別Issueの作業を同じPRへ混ぜる。
+- テスト失敗を隠す。
+- 検証責務の移行先を確認せず、単にCI高速化やコード削減を目的としてテストを削除する。
+- GitHub Actions CIの失敗を無視して完了扱いにする。
+- Codex Code ReviewのP0 / P1を未解決のままMergeする。
+- セキュリティチェックを回避する。
+- 秘密情報をコードへ埋め込む。
+- 人間の承認なしに破壊的変更を行う。
+- `main`へ直接pushする。
+- force pushする。
+
+### 移行契約: Human Decision Points
+
+以下は人間の判断を優先する。
+
+- 仕様確定
+- Issue範囲の変更
+- Issue間の優先順位が不明確な場合の判断
+- 破壊的変更
+- セキュリティ上重要な判断
+- CI例外の許可
+- セキュリティチェック例外の許可
+- P2を四分類へ分類できない場合の判断
+- mainへのmerge

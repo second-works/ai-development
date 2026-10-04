@@ -96,3 +96,41 @@ Codexが見落としてもGitHubで止め、GitHub設定だけでは判断でき
 - [ ] Secret scanning / push protectionの利用可否を確認
 - [ ] CodeQLの利用可否を確認し、有効なら設定
 - [ ] CI status checkをmerge条件として必須化
+
+## AGENTS残責務の移行準備
+
+固定原文はmain `d4ee8ee56ad15ca4bcbca604bc3622a1400b667b` のAGENTS。以下は本文短縮に先立つ詳細責務の保存であり、現在のAGENTSを置換しない。既存節は概説・具体手順、以下は旧AGENTSから保持する責務・例外。将来の短縮後も両方を適用し、矛盾があれば推測せず停止する。Security・承認条件は変更しない。重複本文と参照テストの整理は後続Issueで行う。
+
+### 移行契約: GitHub Guardrails
+
+GitHub側の強制チェックは [`docs/github-repository-security-baseline.md`](github-repository-security-baseline.md) を標準とする。
+
+新規プロジェクトでは可能な範囲で以下を設定する。
+
+- Ruleset / branch protectionでPR経由を必須化
+- GitHub Actions CIをrequired status checkにする
+- force pushとmainの直接変更を禁止
+- Dependabotを設定
+- SecretsはGitHub Actions Secrets等で管理
+- Secret scanning / push protectionが利用可能なら有効化
+- CodeQL / code scanningが利用可能なら有効化
+
+Codex側の自己チェックだけ、GitHub側の自動チェックだけ、のどちらか一方に依存しない。
+
+### 移行契約: CodeQL / Code Scanning
+
+利用可能なプロジェクトではCodeQLまたはGitHub code scanningを有効化する。
+
+標準workflow: `templates/github-actions/codeql.yml`
+
+対象言語はプロジェクトに合わせて調整する。
+
+プラン、リポジトリ種別、対象言語等の条件により利用できない場合は、その事実を記録し、通常CIとレビューで補完する。
+
+### 移行契約: Secrets
+
+- `.env` をcommitしない。
+- API key / token / passwordをコード、Issue、PR本文へ直接記載しない。
+- GitHub Actionsで必要な秘密情報は原則としてGitHub Actions Secretsから参照する。
+- ログへ秘密情報を出力しない。
+- Secret scanning / push protectionが利用可能な場合は有効化する。
