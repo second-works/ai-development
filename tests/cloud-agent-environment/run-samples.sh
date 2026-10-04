@@ -7,9 +7,36 @@ fixture="$(mktemp -d)"
 trap 'rm -rf "$fixture"' EXIT
 mkdir -p "$fixture/bin" "$fixture/project/scripts"
 cp "$ROOT/scripts/collect-github-state.py" "$ROOT/scripts/render-status-report.py" "$fixture/project/scripts/"
-for tool in python3 node head; do
-  ln -s "$(command -v "$tool")" "$fixture/bin/$tool"
+
+# pyenv/asdf/Volta等のshimは隔離PATHで動作しないため、実体を先に取得する。
+resolve_runtime() {
+  case "$1" in
+    python3) python3 -c 'import sys; print(sys.executable)' ;;
+    node) node -p 'process.execPath' ;;
+  esac
+}
+for tool in python3 node; do
+  ln -s "$(resolve_runtime "$tool")" "$fixture/bin/$tool"
 done
+
+# 外部commandへ依存するshimを経由しても同じ実体へ解決することを検証。
+mkdir "$fixture/shims"
+cat > "$fixture/shims/python3" <<'SH'
+#!/bin/sh
+set -e
+printf shim | grep shim | sed s/shim/shim/ | tr a-z a-z >/dev/null
+case "$0" in
+  */python3) exec "$CLOUD_AGENT_REAL_PYTHON" "$@" ;;
+  */node) exec "$CLOUD_AGENT_REAL_NODE" "$@" ;;
+esac
+SH
+cp "$fixture/shims/python3" "$fixture/shims/node"
+chmod +x "$fixture/shims/python3" "$fixture/shims/node"
+CLOUD_AGENT_REAL_PYTHON="$(resolve_runtime python3)"
+CLOUD_AGENT_REAL_NODE="$(resolve_runtime node)"
+export CLOUD_AGENT_REAL_PYTHON CLOUD_AGENT_REAL_NODE
+[[ "$(PATH="$fixture/shims:$PATH" resolve_runtime python3)" == "$CLOUD_AGENT_REAL_PYTHON" ]]
+[[ "$(PATH="$fixture/shims:$PATH" resolve_runtime node)" == "$CLOUD_AGENT_REAL_NODE" ]]
 
 # 実設定を隔離projectへ適用する。実repoや共有cacheへbytecodeを残さない。
 run_install() {
