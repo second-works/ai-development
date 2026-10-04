@@ -337,9 +337,11 @@ require_marker "docs/ai-development-harness-inventory.md" "## モデル更新時
 require_marker "docs/ai-development-harness-inventory.md" "Security Boundary"
 require_marker "docs/ai-development-harness-inventory.md" "Human Approval Boundary"
 
-require_marker "AGENTS.md" "docs/ai-development-harness-inventory.md"
-require_marker "AGENTS.md" "失敗モードを示せない新規ハーネス"
-require_marker "AGENTS.md" "削除・再評価条件"
+require_marker "AGENTS.md" "検証変更"
+require_marker "AGENTS.md" "docs/minimal-development-contract.md"
+require_marker "docs/minimal-development-contract.md" "ai-development-harness-inventory.md"
+require_marker "docs/ai-development-harness-inventory.md" "失敗モードを示せない新規ハーネス"
+require_marker "docs/ai-development-harness-inventory.md" "削除・再評価条件"
 
 require_section_marker "docs/template-guide.md" "## 2. 新規プロジェクト開始時の使い方" "## 3. AGENTS.md" "docs/ai-development-harness-inventory.md"
 require_section_marker "docs/template-guide.md" "## 15. 新規リポジトリ初期化チェックリスト" "## 16. 普段の短縮指示" "docs/ai-development-harness-inventory.md"

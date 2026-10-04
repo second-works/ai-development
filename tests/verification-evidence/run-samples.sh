@@ -52,8 +52,9 @@ done
 
 assert_contains "$FLOW" 'Requirement → Risk → Test → Result → Evidence'
 assert_contains "$FLOW" 'Verification Evidence Contract / Residual Risk Summary'
-assert_contains "$AGENTS" 'Review Evidence Contractはレビュー指摘の成立条件とPR因果を記録する契約'
-assert_contains "$AGENTS" 'Verification Evidence Contract / Residual Risk Summary'
+assert_contains "${ROOT_DIR}/docs/code-review-contract.md" 'Review Evidence Contractはレビュー指摘の成立条件とPR因果を記録する契約'
+assert_contains "${ROOT_DIR}/docs/code-review-contract.md" 'Verification Evidence Contract / Residual Risk Summary'
+assert_contains "$AGENTS" '未確認を完了にしない'
 assert_contains "$INVENTORY" 'テスト実行をRequirement検証と混同すること'
 assert_contains "$INVENTORY" 'Residual Risk Summary'
 assert_contains "$INVENTORY" '#119'

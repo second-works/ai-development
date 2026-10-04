@@ -156,3 +156,17 @@ Docker化、Kubernetes導入、全プロジェクトのCloudflare統一、大規
 - [ ] CI、Security Check、秘密情報の扱いを確認した
 - [ ] Full-System Security Auditの結果、対象SHA / artifact identity、証拠参照を記録した
 - [ ] 不要とした工程には理由がある
+
+## AGENTSから移した詳細責務
+
+Issue #177で常駐本文を短縮し、main `2afd63dcfc68e7e0596d70e1fcc350fcbcc71d6c` の詳細責務を本正本へ移した。以下の適用条件・例外は既存の具体手順と併せて適用する。矛盾や重要判断不足があれば推測せず停止する。
+
+### Full-System Security Audit
+
+Release Candidateを作る案件では、Release判定前に [Deployment / Release Design](deployment-release-design.md) のFull-System Security Auditを実施する。
+
+- PR単位Security Checkは個別差分のGateとして維持し、Full-System Security Auditで置き換えない。
+- RC静的監査と必要なStaging上の確認を、同じRelease CandidateのSHA / artifact identityへ結び付ける。
+- 結果は `PASS / FAIL / NOT_APPLICABLE` で記録し、未実施、`FAIL`、証拠不足、identity不一致ではRelease判定とProduction Deployへ進まない。
+- LOW Riskだけを理由に監査を省略しない。`NOT_APPLICABLE` は対象外理由を必要とする。
+- 監査後にコード、依存関係、Secrets設定、Deploy設定、Release Candidateが変わった場合は、変更後の対象を再監査する。

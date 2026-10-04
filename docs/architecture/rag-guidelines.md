@@ -190,3 +190,23 @@ RAGを採用するプロジェクトでは、原則として次のファイル�
 本指針は、Flat RAGからParent–Child、Multi-Representation、RAPTOR、GraphRAGへ段階的に発展させる設計思想、およびHybrid Retrieval、Reranking、引用・検証を組み合わせる実運用RAGの考え方を参考にしている。
 
 実装時は外部記事の構成をそのままコピーせず、対象データ、質問特性、運用コスト、セキュリティ要件に合わせて採用範囲を決定する。
+
+## AGENTSから移した詳細責務
+
+Issue #177で常駐本文を短縮し、main `2afd63dcfc68e7e0596d70e1fcc350fcbcc71d6c` の詳細責務を本正本へ移した。以下の適用条件・例外は既存の具体手順と併せて適用する。矛盾や重要判断不足があれば推測せず停止する。
+
+### RAG Architecture Standard
+
+RAGを新規構築・変更する場合は [`docs/architecture/rag-guidelines.md`](rag-guidelines.md) を標準設計指針として参照する。
+
+原則として最小構成から開始し、検索品質・回答品質・運用コストを評価してから上位Phaseへ進む。高機能であることだけを理由にRAPTORやGraphRAG等を先行導入しない。
+
+RAGを採用する各プロジェクトでは、原則として `docs/architecture/rag-design.md` を作成し、少なくとも次を記録する。
+
+- 採用Phase
+- 採用するRetriever / Reranker / Metadata構成
+- 未採用Phaseと理由
+- 品質評価指標
+- 標準から逸脱する場合の理由
+
+本番RAGでは、引用・出典追跡・根拠整合性・ハルシネーション検証・権限制御を要件に応じて評価対象とする。

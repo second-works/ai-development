@@ -215,3 +215,21 @@ Plan Review後にIssue化する場合も、親Issue・子Issueの目的、範囲
 - 重要判断が確定した計画書は `PASS` として親Issue / 子Issue化へ進める。
 - PASS後の実装中に新たな重大判断が発生した場合は、既存Design Decision Escalationで停止する。
 - Plan Reviewの論点を新しい独自台帳へ重複保存せず、Design Decisionへ統合する。
+
+## AGENTSから移した詳細責務
+
+Issue #177で常駐本文を短縮し、main `2afd63dcfc68e7e0596d70e1fcc350fcbcc71d6c` の詳細責務を本正本へ移した。以下の適用条件・例外は既存の具体手順と併せて適用する。矛盾や重要判断不足があれば推測せず停止する。
+
+### Plan Review Gate
+
+計画書から親Issue / 子Issueへ変換する場合は、Issue化・実装開始前に [docs/plan-review-gate.md](plan-review-gate.md) を参照してPlan Review Gate（Grilling）を実施する。PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_DECISIONの場合は重要な未決定事項を既存のDesign Decisionへ接続して計画書を更新し、再Reviewする。NOT_APPLICABLEとする場合は省略理由を記録する。
+
+Plan Review Gateは計画書の全面書き換えや一問一答の強制ではなく、既存のDesign Decision、Design Decision Escalation、子Issue品質チェック、1 Issue / 1 PRを置き換えない。
+
+#### Plan to Issues Routing
+
+合意済みの計画・方針・設計をGitHub Issueベースの実装単位へ変換するよう依頼された場合は、Issue登録前に必ず `.agents/skills/plan-to-issues/SKILL.md` を読み、そのSkillに従う。ユーザーがSkill名を明示していることを起動条件にしない。
+
+「この方向でIssue化して」「親Issueと子Issueに分けて」「実装できるIssueにして」「この計画をGitHub Issueベースにして」「Codexで進められる形に分割して」など、現在の合意内容を実装可能なIssueへ変換・登録する近い表現も対象とする。
+
+既存Issueの実装・レビュー・コメント確認、Issue一覧や状態確認、単なるIssue本文の文言修正は対象外とする。Issue化依頼でも、Plan ReviewまたはChild Issue Quality Gateの停止条件を満たす場合は、推測でIssue登録へ進まない。

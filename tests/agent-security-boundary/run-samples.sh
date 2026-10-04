@@ -30,15 +30,15 @@ require_marker "docs/ai-agent-security-boundary.md" "git pushによるremote Rep
 require_marker "docs/ai-agent-security-boundary.md" "PUBLICだけを読むRead能力"
 require_marker "docs/ai-agent-security-boundary.md" "INTERNALまたはCONFIDENTIALを読むRead能力"
 require_marker "docs/ai-agent-security-boundary.md" "理由、残るリスク、代替制御、承認者"
-require_marker "AGENTS.md" "git pushによるremote Repositoryへの書き込み"
+require_marker "docs/ai-agent-security-boundary.md" "git pushによるremote Repositoryへの書き込み"
 require_marker ".github/ISSUE_TEMPLATE/parent-issue.md" "各項目はチェックだけで済ませず、実際の値と制御内容を記入する"
 require_marker ".github/ISSUE_TEMPLATE/parent-issue.md" "情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）:"
 require_marker ".github/ISSUE_TEMPLATE/child-issue.md" "適用対象外の項目、理由、残るリスク、代替制御、承認者:"
 require_marker "docs/ai-agent-security-boundary.md" "適用可否"
 
 require_marker "AGENTS.md" "docs/ai-agent-security-boundary.md"
-require_marker "AGENTS.md" "Human Approval Boundary"
-require_marker "AGENTS.md" "Sensitive Read Capability × External Write Capability"
+require_marker "docs/ai-agent-security-boundary.md" "Human Approval Boundary"
+require_marker "docs/ai-agent-security-boundary.md" "Sensitive Read Capability × External Write Capability"
 require_marker "AGENTS.md" "UNMANAGED"
 
 require_marker ".github/ISSUE_TEMPLATE/parent-issue.md" "# Agent Security Boundary"
