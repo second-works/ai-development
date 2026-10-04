@@ -75,52 +75,23 @@ assert_order "$UI_REFERENCE" '2. UI Level Decisionと適用対象' '3. Nine PROD
 assert_order "$UI_REFERENCE" '3. Nine PRODUCT UI Standard / `Component Decision Rules`' '4. 案件 `docs/design.md`'
 assert_order "$UI_REFERENCE" '4. 案件 `docs/design.md`' '5. component / library固有docs（存在する場合）'
 
-assert_exact_line "$PARENT" '# UI Level / PRODUCT UI'
-assert_exact_line "$CHILD" '# UI Level / PRODUCT UI 引き継ぎ'
-
-assert_exact_line "$PARENT" '# AI / Codex Reference Contract（PRODUCT UI実装時）'
-assert_exact_line "$CHILD" '# AI / Codex Reference Contract（PRODUCT UI実装時）'
-assert_order "$PARENT" '# UI Level / PRODUCT UI' '# AI / Codex Reference Contract（PRODUCT UI実装時）'
-assert_order "$PARENT" '# AI / Codex Reference Contract（PRODUCT UI実装時）' '# 今回の範囲'
-assert_order "$CHILD" '# UI Level / PRODUCT UI 引き継ぎ' '# AI / Codex Reference Contract（PRODUCT UI実装時）'
-assert_order "$CHILD" '# AI / Codex Reference Contract（PRODUCT UI実装時）' '# 今回の変更'
-
-assert_exact_line "$PARENT" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
-assert_exact_line "$CHILD" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
-
-assert_contains "$PARENT" '- 分類理由:'
-assert_contains "$PARENT" '- PRODUCT時の適用仕様: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)'
-assert_contains "$PARENT" '- PRODUCT時のDesign Profile / docs/design.md: [Design Profile / design.md雛形](../blob/main/templates/app/docs/design.md)'
-assert_contains "$PARENT" '- UI LevelがNEEDS_DECISIONの場合の未決定事項・決定期限:'
-assert_contains "$PARENT" 'AI/Codexが分類や重要UX判断を推測せず、子Issue化・実装開始を停止する'
-assert_contains "$PARENT" 'PRODUCT以外ではPRODUCT用の必須欄やVisual/UI Acceptanceを強制しない'
-
-assert_contains "$CHILD" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
-assert_contains "$CHILD" '- UI対象範囲:'
-assert_contains "$CHILD" '- 分類理由 / 親Issue参照（非UIは `NONE` と対象外理由を必ず記録）:'
-assert_contains "$CHILD" '- PRODUCT時の設計参照: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)、[Design Profile / docs/design.md雛形](../blob/main/templates/app/docs/design.md)'
-assert_contains "$CHILD" '- UI受入対象外の理由（NONE/UTILITYでPRODUCT項目を適用しない場合）:'
-assert_contains "$CHILD" '- NEEDS_DECISIONの未決定事項 / 決定期限:'
-assert_contains "$CHILD" 'UI Levelは親Issueの有無にかかわらず全案件で明示する'
-assert_contains "$CHILD" 'UIを持たないCLI・library・文書案件も省略せず `NONE` と対象外理由を記録する'
-assert_contains "$CHILD" 'UI Levelが `NEEDS_DECISION` の場合、AI/Codexは推測で子Issue化・実装開始せず、決定まで停止する'
-assert_contains "$CHILD" 'PRODUCT以外ではPRODUCT用の仕様・Design Profile・Visual/UI Acceptanceを必須化しない'
-
+# Issueは専門本文を複製せず、条件表からUI正本と案件設計へ到達する。
 for file in "$PARENT" "$CHILD"; do
-  assert_contains "$file" '参照順序: Framework Decision結果 → UI Level → Nine PRODUCT UI Standard / `Component Decision Rules` → 案件 `docs/design.md` → component / library固有docs（存在時）'
-  assert_contains "$file" 'Standard Design Rules: [Component Decision Rules](../blob/main/docs/product-ui-standard.md#component-decision-rules)'
-  assert_contains "$file" '案件固有のvisual、brand、tokens、採用component、例外、根拠:'
-  assert_contains "$file" '推測で補完せず `NEEDS_DECISION` としてDesign Decisionへ接続し、実装を停止する'
+  assert_exact_line "$file" '# Context'
+  assert_exact_line "$file" '# Scope / Boundaries'
+  assert_contains "$file" '../blob/main/docs/minimal-development-contract.md#条件付き参照'
+  assert_contains "$file" '重要判断がNEEDS_DECISION'
+  if grep -Eq '^# (UI Level|AI / Codex Reference)' "$file"; then
+    printf 'non-applicable UI sections must not be prefilled\n' >&2
+    exit 1
+  fi
 done
-assert_contains "$PARENT" '未決定事項・矛盾・候補不足・Design Decision参照:'
-assert_contains "$CHILD" '親Issue・前Issueから引き継ぐ未決定事項・矛盾・Design Decision参照:'
-
+CONTRACT="${ROOT_DIR}/docs/minimal-development-contract.md"
+assert_contains "$CONTRACT" '[PRODUCT UI](product-ui-standard.md)'
+assert_contains "$CONTRACT" 'Framework Decision → UI Level → PRODUCT UI Standard / Component Decision Rules → 案件 `docs/design.md` → 採用component / library固有docs'
+assert_contains "$CONTRACT" '非UIにNONE記入を強制せず'
 assert_contains "$STANDARD" 'Nine PRODUCT UI Standard v1'
 assert_contains "$DESIGN_TEMPLATE" '# Product Design'
-assert_contains "$PARENT" 'docs/product-ui-standard.md'
-assert_contains "$PARENT" 'templates/app/docs/design.md'
-assert_contains "$CHILD" 'docs/product-ui-standard.md'
-assert_contains "$CHILD" 'templates/app/docs/design.md'
 
 
 assert_contains "${ROOT_DIR}/AGENTS.md" 'Framework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docs'

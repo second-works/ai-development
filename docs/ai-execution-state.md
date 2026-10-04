@@ -1,5 +1,8 @@
 # Structured Current State
 
+最小Issueには空のCurrent State欄を常設しない。長時間・複数ラウンドの再開、PR headの検証引き継ぎ、Deploy / Acceptance対象識別が必要な場合にこの契約を適用し、IssueまたはPRから記録へ到達できるようにする。該当時のschema、停止条件、対象SHA・artifactの照合は省略しない。
+
+
 ## 目的と位置付け
 
 Structured Current Stateは、長時間・複数ラウンドのAI実装を中断・再開するときに、過去の会話全文ではなく「固定ルール、現在の状態、最新の外部観測、必要な証拠参照」を入力として扱うための契約である。

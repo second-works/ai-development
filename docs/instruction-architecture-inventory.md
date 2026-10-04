@@ -193,3 +193,5 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 | `作業境界` | `RESIDENT` | `KEEP` | Issue仕様、risk、状態設計、情報境界、停止条件 |
 | `検証とレビュー` | `ENTRYPOINT` | `KEEP` | 標準フロー、test設計、review契約、例外Safety Gate |
 | `必要時の参照` | `ENTRYPOINT` | `KEEP` | 条件付きSkill、UI、親完了、最小契約の条件表 |
+
+Issue #179で親子Issueとplan-to-issuesの入力を最小契約へ切り替える。7見出しと6 MUST、Risk / 安全境界を維持し、専門本文は条件付き参照へ集約する。旧見出し検査は入力契約・正本への到達へ同期し、PR template、helper、CIの実行回帰は維持する。責務対応と記入例は[Issue #179の入力責務移行](minimal-development-contract.md#issue-179-入力責務の移行)を参照。

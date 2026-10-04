@@ -167,12 +167,13 @@ require_marker "$DOC" "### Structured Current State"
 require_marker "$AGENTS" "State /"
 require_marker "$AGENTS" "docs/minimal-development-contract.md"
 require_marker "$FLOW" "### 4.3 Structured Current State"
-require_marker "$CHILD_TEMPLATE" "# Current State"
-require_marker "$CHILD_TEMPLATE" "Issue acceptance status:"
-require_marker "$CHILD_TEMPLATE" "Product Acceptance result:"
 require_marker "$PR_TEMPLATE" "# Current State"
 require_marker "$PR_TEMPLATE" "Issue acceptance status:"
 require_marker "$PR_TEMPLATE" "Product Acceptance result:"
 require_marker "$INVENTORY" "| S-04 | Structured Current State契約 | S | STRENGTHEN |"
+
+require_marker "$CHILD_TEMPLATE" '../blob/main/docs/minimal-development-contract.md#条件付き参照'
+require_marker "$DOC" '最小Issueには空のCurrent State欄を常設しない'
+require_marker "$ROOT/docs/minimal-development-contract.md" '(ai-execution-state.md)'
 
 printf 'Structured Current State contract: PASS\n'

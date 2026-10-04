@@ -132,7 +132,7 @@ Prompt Injectionへの対策は、禁止文を追加するだけで終わらせ�
 
 ## 適用可否チェックリスト
 
-Parent Issue、Child Issue、PRでは、次を記録する。
+適用確認はすべてのIssueで行う。最小IssueではScope / Boundariesへ今回の情報分類・送信先・権限範囲・承認要否を短く示し、次の該当項目の実際の値と制御内容を記録する。PRの既存記録は維持する。非該当の空欄を省くことと、適用される制御を免除する例外は区別する。
 
 - [ ] 情報分類（`PUBLIC` / `INTERNAL` / `CONFIDENTIAL`）を決めた。
 - [ ] LLM環境（`MANAGED` / `UNMANAGED`）と `CONFIDENTIAL` 情報の扱いを確認した。

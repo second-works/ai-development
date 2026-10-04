@@ -24,7 +24,6 @@ require docs/plan-authoring.md '## Non-goals'
 require docs/plan-authoring.md '推測で埋めない'
 
 for template in \
-  .github/ISSUE_TEMPLATE/parent-issue.md \
   templates/app/docs/framework-decision.md \
   templates/app/docs/design.md; do
   require "$template" 'Decision Summary'
@@ -39,20 +38,26 @@ if grep -Fq -- 'Rejected candidates and reasons:' "$ROOT/templates/app/docs/fram
   failures=1
 fi
 
-require .github/ISSUE_TEMPLATE/child-issue.md 'Decision Summary'
-require .github/ISSUE_TEMPLATE/child-issue.md 'Non-goals（今回扱わないこと）'
+require .github/ISSUE_TEMPLATE/child-issue.md '# Context'
+require .github/ISSUE_TEMPLATE/child-issue.md '# Non-goals'
 require .github/pull_request_template.md '# 差分・判断・レビュー上の注意点'
 require .github/pull_request_template.md 'GitHubから確認できる変更ファイル一覧は再掲しない'
 require docs/template-guide.md 'Design Decisionの最小構成'
 require docs/template-guide.md '意思決定の理解に必要な場合のみ記載'
 
-# 簡潔化後も既存Gateの情報がテンプレートに残ることを確認する。
-require .github/ISSUE_TEMPLATE/parent-issue.md '# Framework Decision'
-require .github/ISSUE_TEMPLATE/parent-issue.md '# Agent Security Boundary とリリース判断'
-require .github/ISSUE_TEMPLATE/parent-issue.md '# 検収計画'
-require .github/ISSUE_TEMPLATE/child-issue.md '# テストと受入条件'
-require .github/ISSUE_TEMPLATE/child-issue.md '# Agent Security Boundary（安全境界と停止条件）'
-require .github/ISSUE_TEMPLATE/child-issue.md '# Current State'
+# 最小入力から条件表と安全正本へ到達し、非該当の巨大節を再導入しない。
+for template in parent child; do
+  file=".github/ISSUE_TEMPLATE/$template-issue.md"
+  require "$file" '# Scope / Boundaries'
+  require "$file" '# Verification'
+  require "$file" '../blob/main/docs/minimal-development-contract.md#条件付き参照'
+  require "$file" '../blob/main/docs/ai-agent-security-boundary.md'
+  if grep -Eq '^# (Framework Decision|Agent Security Boundary|Current State|Harness|Alternatives)' "$ROOT/$file"; then
+    printf 'non-applicable specialist sections remain: %s\n' "$file" >&2
+    failures=1
+  fi
+done
+require .github/ISSUE_TEMPLATE/parent-issue.md 'Acceptance Verification'
 require .github/pull_request_template.md '# 検証とGitHub観測'
 require .github/pull_request_template.md '# レビュー収束'
 require templates/app/docs/framework-decision.md '## Completion Checklist'

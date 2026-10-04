@@ -1,5 +1,8 @@
 # Framework Decision v1
 
+最小Issueでは適用確認を行い、Framework選定に影響しないCLI / library / 文書変更へ空のFramework欄やNOT_APPLICABLE欄を強制しない。適用時は結果・理由・正本参照をContextから引き継ぎ、未決定事項 / 停止範囲を明示する。既存の適用条件を例外で免除する場合の理由記録は維持する。
+
+
 ## 1. 目的
 
 Framework Decisionは、AIや実装者が慣性で特定Frameworkを選ぶことを防ぎ、案件の要件、実行環境、配備条件、運用制約から採用技術を説明可能にするための設計記録である。

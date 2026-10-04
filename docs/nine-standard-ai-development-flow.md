@@ -85,7 +85,7 @@ UI Level Decision
   └─ PRODUCT: 重要UI/UX前提の完全性を確認する
 ```
 
-UI Level DecisionとPRODUCT前提整理の結果は、Plan Review標準出力のUI Level、適用対象、PRODUCT UI completeness、未決定事項へ記録する。
+UI適用を確認し、UIがある場合にUI Levelと分類理由・参照を記録する。PRODUCTでは前提整理の結果とcompleteness・未決定事項も記録する。非UIのIssueにNONE欄やPRODUCTの空欄は強制しない。
 
 ## 2.2 Plan Review Gate（計画書Grilling）
 
@@ -98,11 +98,11 @@ PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み、NEEDS_
 
 親Issueは実装指示ではなくプロジェクト全体のロードマップとして使う。Plan Review GateがPASSまたは理由付きのNOT_APPLICABLEとなった後に作成する。
 
-テンプレートはDecision Firstで今回値（Plan Reviewの結論、主要理由、影響、範囲、子Issue、依存、検収計画、現在状態）だけを記入する。Non-goalsに対象外を記録し、安全境界、Release、検収の詳細は各正本文書を参照して、今回の承認・例外・停止理由を残す。
+テンプレートは今回値をGoal / Context / Scope・Boundaries / Non-goals / Done / Verification / Children・Dependenciesへ記入する。Plan Reviewの判定・理由・正本参照はContextへ短く保存する。Non-goalsに対象外を記録し、安全境界、Release、検収の詳細は各正本文書を参照して、今回の承認・例外・停止理由を残す。
 
 ## 4. 子Issue
 
-子IssueはCodexが実装でき、かつ人間が1 PRとしてレビューできるサイズにする。テンプレートは今回値（採用する実装、主要理由と影響、目的、範囲、Non-goals、完了条件、依存、Risk Tier、テスト、対象SHA）を記入し、停止条件、安全境界、Harness、Current State、レビュー収束の詳細は正本文書を参照する。
+子IssueはCodexが実装でき、かつ人間が1 PRとしてレビューできるサイズにする。テンプレートは今回値をGoal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependenciesへ記入する。Risk Tierと理由、安全境界は常時残す。Framework / UI / Harness / Current Stateは[条件付き参照](minimal-development-contract.md#条件付き参照)に従い該当時だけ記録する。対象SHAはPR / 再開 / 検収など識別が必要な段階で記録する。
 
 子IssueはGitHub登録前に `docs/issue-quality-check.md` に従ってMUSTを確認する。MUST不足時はScoreにかかわらず登録・実装開始を停止する。
 

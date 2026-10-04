@@ -71,12 +71,13 @@ assert_contains "$guide" 'Issue化前にPlan Review（Grilling）を実施'
 assert_contains "$agents" 'docs/minimal-development-contract.md'
 assert_contains "$doc" 'plan-review-gate.md'
 assert_contains "$doc" 'PASSまたは理由付きNOT_APPLICABLEの場合だけIssue化へ進み'
-assert_contains "$parent" '# Plan Review / Design Decision'
-assert_contains "$parent" '- Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`'
-assert_contains "$parent" '# Framework Decision'
-assert_contains "$parent" '- Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`'
-assert_contains "$child" '# Framework Decision 引き継ぎ'
-assert_contains "$child" 'Framework依存の未決定事項 / 停止範囲:'
+for template in "$parent" "$child"; do
+  assert_contains "$template" '# Context'
+  assert_contains "$template" 'Plan Reviewの判定（PASS / NOT_APPLICABLE）、理由'
+  assert_contains "$template" '../blob/main/docs/plan-review-gate.md'
+  assert_contains "$template" '重要判断がNEEDS_DECISION'
+done
+assert_contains "$doc" 'Framework依存の未決定事項 / 停止範囲:'
 assert_contains "$design" '## Framework Decision Boundary'
 assert_contains "$design" 'このファイルはFrameworkを再選定せず'
 assert_contains "$readme" 'docs/plan-review-gate.md'
@@ -122,11 +123,11 @@ parent_line="$(grep -nF '## 3. 親Issue' "$flow" | cut -d: -f1)"
   exit 1
 }
 
-parent_framework_line="$(grep -nF '# Framework Decision' "$parent" | head -1 | cut -d: -f1)"
-parent_plan_line="$(grep -nF '# Plan Review / Design Decision' "$parent" | head -1 | cut -d: -f1)"
-[[ -n "$parent_framework_line" && -n "$parent_plan_line" && "$parent_framework_line" -lt "$parent_plan_line" ]] || {
-  printf 'Framework Decision must precede Plan Review in the parent Issue template\n' >&2
-  exit 1
-}
+# 条件付き参照先でFramework → UI → Plan Reviewの順序を保持する。
+skill="$repo_root/.agents/skills/plan-to-issues/SKILL.md"
+framework=$(grep -nF 'Framework Decision（適用時）' "$skill" | head -1 | cut -d: -f1)
+ui=$(grep -nF 'UI Level Decision（UI適用を確認し、UIがある場合だけ記録）' "$skill" | head -1 | cut -d: -f1)
+plan=$(grep -nFx 'Plan Review Gate' "$skill" | head -1 | cut -d: -f1)
+[[ "$framework" -lt "$ui" && "$ui" -lt "$plan" ]] || exit 1
 
 printf 'plan review gate documentation contract: ok\n'

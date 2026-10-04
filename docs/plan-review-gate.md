@@ -32,16 +32,16 @@ Framework DecisionまたはUI Level Decisionが `NEEDS_DECISION` の間は、親
 新規Web/UI案件、またはRendering Strategy、Application Architecture、Runtime、Deployment / hostingの変更を伴う案件では、[Framework Decision v1](architecture/framework-decision.md) をPlan Reviewの入力として参照する。Frameworkの判断順序は `Requirements → Rendering Strategy → Application Architecture → Framework` とし、特定Frameworkを暗黙に採用しない。
 
 - `DECIDED`: 正本文書の結果、選定理由、参照先をPlan Reviewへ引き継ぐ。
-- `NOT_APPLICABLE`: Framework選定が実装結果へ影響しない理由と正本文書の参照先を記録する。
+- `NOT_APPLICABLE`: 適用条件の例外として選定を省く場合は理由・正本文書参照を記録する。通常の非該当案件へ独立の空欄は設けない。
 - `NEEDS_DECISION`: 未決定事項を既存のDesign Decisionへ接続し、Framework依存のIssue化・実装開始を停止する。
 
-Plan ReviewはFramework候補の比較を再評価・再記録せず、結果が要件・UI Level・Deployment設計の前提と矛盾しないことを確認する。CLI、library、文書のみの変更などは、正本文書の対象外理由があれば `NOT_APPLICABLE` として扱う。
+Plan ReviewはFramework候補の比較を再評価・再記録せず、結果が要件・UI Level・Deployment設計の前提と矛盾しないことを確認する。CLI、library、文書のみでFramework判断に影響しない変更は `NOT_APPLICABLE` として扱い、Issueへ独立の対象外欄を強制しない。既存の適用条件を変更する例外は理由・参照を記録する。
 
 ### UI Level Decision（Plan Reviewの入力）
 
-Plan Review Gateの前に、案件のUI Levelを `NONE / UTILITY / PRODUCT / NEEDS_DECISION` から明示する。UIを持つ可能性があるのに分類できない場合は `NEEDS_DECISION` とし、AI/Codexが推測で分類してIssue化・実装開始へ進めない。
+Plan Review Gateの前にUI適用を確認する。UIがある案件はUI Levelを `UTILITY / PRODUCT / NEEDS_DECISION` から明示する。非UIは内部判定を `NONE` として扱い、Issue本文へのNONE欄は強制しない。UIを持つ可能性があるのに分類できない場合は `NEEDS_DECISION` とし、AI/Codexが推測で分類してIssue化・実装開始へ進めない。
 
-- `NONE`: UI仕様を適用しない。対象外の理由を記録する。
+- `NONE`: UI仕様を適用しない。非UIのIssueに専門欄や対象外理由の羅列は不要。既存のUI受入条件を対象外とする変更なら理由を記録する。
 - `UTILITY`: 主要操作、状態表示、Error Recovery、最低限のAccessibilityを確認する。PRODUCT用の完全性チェックを必須化しない。
 - `PRODUCT`: 次の重要なUI/UX前提をPlan Reviewで確認する。
   - Primary screen structure
@@ -122,6 +122,8 @@ Deploymentと検収はここで再設計しない。Deploymentの設計項目は
 - **Design Decision Escalation**: PASS後の実装中に、計画書・親IssueのDesign Decisionにない新たな重大判断が発生した場合に停止し、人間へ戻す。Plan Reviewが完了していても削除・置換しない。
 
 ## 6. 標準出力
+
+合意済み計画からIssueへ変換する場合、Plan Reviewの判定・理由・正本参照をContextへ短く保存する。以下は詳細レビュー用の記録例であり、非該当のFramework / UI節や空の未決定事項を毎Issueへ転記しない。適用時の判断材料と停止条件は省略しない。
 
 ~~~markdown
 ## Plan Review

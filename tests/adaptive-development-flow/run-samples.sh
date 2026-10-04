@@ -55,7 +55,7 @@ for file in AGENTS.md README.md docs/template-guide.md docs/nine-standard-ai-dev
   require "$file" 'adaptive-development-flow.md'
   require "$file" 'LOW / MEDIUM / HIGH'
 done
-for file in .github/ISSUE_TEMPLATE/child-issue.md .github/pull_request_template.md; do
+for file in .github/pull_request_template.md; do
   require "$file" '# Risk Tier'
   require "$file" '判定理由・影響範囲:'
   require "$file" '再判定（実装開始 / PR提出 / 影響変更時）:'
@@ -80,6 +80,9 @@ while IFS= read -r target; do
     failures=1
   fi
 done < <(sed -nE 's/.*\]\(([^)#]+\.md)\).*/\1/p' "$ROOT/$doc")
+
+require .github/ISSUE_TEMPLATE/child-issue.md '# Scope / Boundaries'
+require .github/ISSUE_TEMPLATE/child-issue.md 'Risk Tier: LOW / MEDIUM / HIGH。判定理由・影響範囲'
 
 (( failures == 0 )) || exit 1
 echo 'Adaptive Development Flow documentation contract: PASS'
