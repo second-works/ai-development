@@ -20,7 +20,7 @@ Issue登録前に必要な範囲で次を読む。
 - PRODUCT UIが適用される場合は、Plan Reviewから参照されるUI正本と案件Design Decision
 - Security / Deployment / Acceptanceなど条件発生時の詳細は、上記正本から接続される既存文書
 
-同じ詳細をSkill本文へ複製して独自基準を作らない。
+同じ詳細をSkill本文へ複製して独自基準を作らない。[最小契約の条件付き参照](../../../docs/minimal-development-contract.md#条件付き参照)に従い、非該当のFramework / UI / State / Harnessの空欄は出力しない。該当する安全制御・承認・例外とAcceptance対象は省略しない。
 
 ## 1. 入力となる合意を固定する
 
@@ -45,7 +45,7 @@ Requirements / agreed plan
   ↓
 Framework Decision（適用時）
   ↓
-UI Level Decision（全案件。非UIは NONE + 理由）
+UI Level Decision（UI適用を確認し、UIがある場合だけ記録）
   ↓
 PRODUCT前提（PRODUCT時のみ）
   ↓
@@ -62,7 +62,7 @@ Child Issue Quality Gate
 GitHub Issue登録
 ```
 
-- UI Levelは全案件で `NONE / UTILITY / PRODUCT / NEEDS_DECISION` のいずれかを明示する。UIを持たないCLI・library・文書案件でも省略せず `NONE` と対象外理由を記録する。
+- UIの適用確認は全案件で行う。UIがある場合は `UTILITY / PRODUCT` と分類理由・参照をContextに記録する。非UIに `NONE` 欄を強制しない。UIを持つ可能性があるのに分類できない場合は `NEEDS_DECISION` として停止する。
 - Framework Decision、UI LevelまたはPlan Reviewが `NEEDS_DECISION` の場合はIssue登録へ進まない。
 - Plan Reviewが `PASS` または理由付き `NOT_APPLICABLE` の場合だけIssue構造案へ進み、その判定・理由・正本参照をGitHub上のIssue本文へ保存する。
 - 重要な判断を推測で埋めない。
@@ -90,11 +90,11 @@ GitHub Issue登録
 
 親Issueは `.github/ISSUE_TEMPLATE/parent-issue.md`、子Issueまたは単一Issueは `.github/ISSUE_TEMPLATE/child-issue.md` を入力契約として使う。
 
-子Issueでは少なくとも、正本が要求する今回値を埋める。
+子IssueはGoal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependenciesの最小入力契約を使い、正本が要求する今回値を埋める。合意済み計画のPlan Review結果はContextへ一行で保存する。
 
 - 目的
 - Plan Review結果（`PASS / NOT_APPLICABLE`）、理由、正本参照
-- UI Level（全案件。非UIは `NONE`）と分類理由
+- UIがある場合のUI Level、分類理由、必要なDesign Decision参照
 - 変更範囲
 - Non-goals / 変更禁止範囲
 - 完了条件
@@ -108,7 +108,7 @@ GitHub Issue登録
 
 ## 5. 登録前に全Issueを検査する
 
-GitHubへ書き込む前に、すべての子Issueまたは単一IssueへChild Issue Quality Gateを適用する。単一Issueでも、Plan Reviewの判定・理由・正本参照とUI Level分類をチャットだけに残さずIssue本文へ保存する。
+GitHubへ書き込む前に、すべての子Issueまたは単一IssueへChild Issue Quality Gateを適用する。単一Issueでも、Plan Reviewの判定・理由・正本参照をContextへ、UIがある場合の分類と参照もIssue本文へ保存する。
 
 - MUST不足があれば、まずdraftを補完・分割・統合・依存整理する。
 - 不足を解消するために未承認の設計判断が必要なら、Issue登録を停止してDesign Decisionへ戻す。
@@ -138,7 +138,7 @@ Issue登録が完了したら、このSkillの作業は終了する。
 - Mergeしない。
 - 次のIssueへ自動着手しない。
 
-実装開始は、ユーザーの次の明示指示と既存Implementation Workflowに従う。
+生成だけの依頼から実装を始めない。実装も既に明示指示されている場合は再承認を要求せず、Skillの登録作業を終えて既存Implementation Workflowへ進む。
 
 ## 停止条件
 
@@ -161,6 +161,6 @@ Issue登録が完了したら、このSkillの作業は終了する。
 - 子Issue / 単一Issue
 - 実装順序・依存関係
 - 登録しなかった項目またはNon-goals
-- 次のアクション: 人間が実装開始を指示
+- 次のアクション: 実装指示が未取得なら人間判断を待つ。既に実装も指示済みなら、このSkillを終了して標準実装フローへ進む
 
 停止した場合は、作成していないことを明示し、`NEEDS_DECISION` または不足MUSTと、解消に必要な判断だけを示す。

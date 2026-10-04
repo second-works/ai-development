@@ -348,11 +348,6 @@ require_section_marker "docs/template-guide.md" "## 15. 新規リポジトリ初
 require_marker "docs/template-guide.md" "## 12.2 Harness MinimalismとETCSLV台帳"
 require_marker "docs/nine-standard-ai-development-flow.md" "## 4.2 Harness Minimalism確認"
 
-require_marker ".github/ISSUE_TEMPLATE/parent-issue.md" "# Harness Minimalism / ETCSLV"
-require_marker ".github/ISSUE_TEMPLATE/parent-issue.md" "解決する失敗モード:"
-require_marker ".github/ISSUE_TEMPLATE/parent-issue.md" "削除・再評価条件:"
-require_marker ".github/ISSUE_TEMPLATE/child-issue.md" "# Harness Minimalism / ETCSLV"
-require_marker ".github/ISSUE_TEMPLATE/child-issue.md" "判定（KEEP / STRENGTHEN / SIMPLIFY / REMOVE_CANDIDATE）:"
 require_marker ".github/pull_request_template.md" "# Harness Minimalism / ETCSLV"
 require_marker ".github/pull_request_template.md" "対象ハーネス / 台帳ID:"
 require_marker ".github/pull_request_template.md" "削除・再評価条件:"
@@ -362,6 +357,11 @@ bash "$ROOT/tests/adaptive-development-flow/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/github-state/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/issue-quality/run-samples.sh" "$ROOT"
 bash "$ROOT/tests/template-simplification/run-samples.sh" "$ROOT"
+
+require_marker ".github/ISSUE_TEMPLATE/child-issue.md" 'Harness Minimalism台帳'
+require_marker ".github/ISSUE_TEMPLATE/child-issue.md" '失敗モード・代替保証・再評価条件'
+require_marker ".github/ISSUE_TEMPLATE/child-issue.md" '代替成功前に旧保証を消さない'
+require_marker ".github/ISSUE_TEMPLATE/parent-issue.md" 'docs/minimal-development-contract.md#条件付き参照'
 
 if (( failures != 0 )); then
   exit 1

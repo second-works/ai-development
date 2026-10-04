@@ -46,11 +46,6 @@ assert_contains "$doc" "Monitoring / Rollback"
 assert_contains "$doc" "GitHub Environments"
 assert_contains "$doc" "macOS固有アプリ"
 assert_contains "$doc" "一律に強制しない"
-assert_contains "$parent" "# Agent Security Boundary とリリース判断"
-assert_contains "$parent" "- Release / Production方針、または対象外の理由:"
-assert_contains "$parent" "Deployment / Release Design"
-assert_contains "$parent" 'Full-System Security Audit対象のRelease Candidate SHA / artifact identity'
-assert_contains "$parent" 'Full-System Security Audit結果（PASS / FAIL / NOT_APPLICABLE）と理由'
 assert_contains "$flow" "docs/deployment-release-design.md"
 assert_contains "$flow" 'Full-System Security Audit判定'
 assert_contains "$flow" 'PR単位Security Checkを置き換えない'
@@ -70,5 +65,10 @@ grep -Fq 'SECURITY_STATUS=SECURITY_PASSED' <<<"$security_result" || {
   printf 'security preflight did not pass for the repository\n' >&2
   exit 1
 }
+
+assert_contains "$parent" '../blob/main/docs/deployment-release-design.md'
+assert_contains "$parent" '監査結果とRC identityを照合'
+assert_contains "$parent" '../blob/main/docs/acceptance-verification.md'
+assert_contains "$doc" 'Release Candidate SHA / artifact identity、RC静的監査・Staging確認、Full-System Security Auditの結果・理由'
 
 printf 'deployment design documentation contract: ok\n'

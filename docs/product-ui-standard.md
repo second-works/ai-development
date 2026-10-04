@@ -4,11 +4,11 @@
 
 この標準は、案件ごとのUI設計品質を揃えるための最低契約である。特定の案件の色・フォント・レイアウトや、特定のフロントエンドframeworkを固定するものではない。
 
-案件計画時にUI Levelを宣言する。
+案件計画時にUI適用を確認し、UIがある場合にUI Levelと理由・参照を記録する。非UIのIssue本文にNONE欄を強制しない。既存のUI受入条件を対象外へ変更する場合は理由を残す。
 
 | UI Level | 対象 | 適用する契約 |
 | --- | --- | --- |
-| `NONE` | CLI / API / Batchなど、利用者向けUIを持たない案件 | UI仕様は原則不要。UI関連の受入項目は対象外理由を記録する |
+| `NONE` | CLI / API / Batchなど、利用者向けUIを持たない案件 | UI仕様と専門欄は原則不要。既存UI受入項目の対象外への変更は理由を記録する |
 | `UTILITY` | 管理画面、個人ツール、内部ツール | 機能性、現在状態、入力結果、エラーと回復を確認する |
 | `PRODUCT` | 一般利用者向けWeb / App | 本文書、UI Specification、Design Profile、`docs/design.md`、Visual/UI Acceptanceを適用する |
 

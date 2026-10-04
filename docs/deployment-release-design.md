@@ -1,5 +1,8 @@
 # Deployment as Code 設計・Release / Production運用標準
 
+最小Issueに非Deploy案件の空のRelease欄は設けない。Release / Productionが適用される場合はScope / BoundariesとVerificationから設計記録へ接続し、承認状態、Release Candidate SHA / artifact identity、RC静的監査・Staging確認、Full-System Security Auditの結果・理由を記録する。対象外判定の適格性と理由、identity不一致・FAIL時停止は省略しない。
+
+
 ## 1. 文書の目的
 
 この文書は、GitHub上の実装完了と、本番投入可能な状態を分けて記録するための設計標準である。

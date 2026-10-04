@@ -4,6 +4,9 @@ Nine標準AI開発フローでは、子IssueをGitHubへ登録する前に品質
 
 目的は、CodexがIssue単位で安全に実装でき、1 Issue = 1 PRでレビュー可能な状態にすること。
 
+
+最小IssueのGoal、Scope / Boundaries、Done・Verification、1 PRの実装単位、Dependenciesは以下の6 MUSTへ対応する。ContextとNon-goalsも入力契約に残す。Risk Tierと理由、安全境界は短く記録し、非該当のUI / Framework / State / Harnessの専門欄は要求しない。重要な条件が不明なら省略で補わず停止する。
+
 ## 判定対象と判定順
 
 子Issueは、まず次のMUSTをすべて満たす必要がある。1つでも欠落した場合は、ScoreにかかわらずGitHub登録・実装開始を停止し、Issueを補完、分割、統合、または依存関係を整理する。

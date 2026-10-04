@@ -143,13 +143,13 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 
 ファイル: `.github/ISSUE_TEMPLATE/parent-issue.md`
 
-親Issueはロードマップ、Plan Reviewの結論、採用案、主要理由と影響、Non-goals、範囲、子Issue、依存関係、検収計画、現在状態だけを記録する。Deployment、安全境界、検収の詳細はそれぞれの正本文書を参照し、今回の承認状態と例外だけを記入する。
+親IssueはGoal / Context / Scope・Boundaries / Non-goals / Done / Verification / Children・Dependenciesでロードマップを記録する。Plan Reviewの判定・理由・正本参照はContextへ短く保存する。Risk Tierと安全境界は常時必要。専門事項は[最小契約の条件付き参照](minimal-development-contract.md#条件付き参照)に従い該当時だけ追加し、非該当の空欄は作らない。親の全体Doneは子Mergeだけでなく目的と人間確認で判定する。
 
 ## 4.1 デプロイ設計とRelease / Production計画
 
 Issue計画時に、実装完了と本番投入可能を分けて記録します。
 Deployment as Codeの正本は [docs/deployment-release-design.md](deployment-release-design.md) です。
-親Issueテンプレートには、Production runtime、Container、Persistent data、Deployment method、Secrets、backup / migration、Full-System Security Audit、Smoke Test、Health Check、Monitoring、Rollbackを記録する欄を設けています。
+Release / Productionが適用される場合に、Production runtime、Container、Persistent data、Deployment method、Secretsの扱い、backup / migration、Full-System Security Audit、Smoke Test、Health Check、Monitoring、Rollbackの今回値または設計記録への参照を追加します。非Deploy案件には空欄を設けません。
 
 プロジェクトごとにCloudflare、Home PC / VPS、self-hosted runner、Docker / Compose、Staging、自動Deploy、人間承認の要否を判断し、不要なものは理由を記録します。
 MergeはProduction Deployを意味しません。CI、PR単位Security Check、Full-System Security Auditの`PASS`または理由と適格性を確認した`NOT_APPLICABLE`、Release判定、必要なbackupとmigration確認を経てProductionへ進み、Deploy後のHealth CheckとRollbackまで確認可能にします。
@@ -183,7 +183,7 @@ Plan Reviewは子Issue品質チェックを置き換えません。Issue化後�
 
 ファイル: `.github/ISSUE_TEMPLATE/child-issue.md`
 
-子Issueは採用する実装、主要理由と影響、目的、変更範囲、Non-goals、完了条件、依存、Risk Tier、6観点のテスト条件、今回の安全境界と対象SHAを記入する。1子Issue = 1 PRを維持し、MUST不足時は[Issue Quality Check](issue-quality-check.md)に従って停止する。
+子IssueはGoal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependenciesを記入する。Risk Tierと理由、安全境界はScope / Boundaries、独立した完了判定はDoneとVerificationへ置く。6観点から影響に応じた検証を選び、6つの空欄は要求しない。対象SHAはPR / 再開 / 検収など識別が必要な段階で記録する。1子Issue = 1 PRを維持し、MUST不足時は[Issue Quality Check](issue-quality-check.md)に従って停止する。
 
 詳細なDesign Decision Escalation、Security Boundary、Harness、Current Stateのenum、検収とレビュー収束は正本文書を参照する。テンプレートには今回の例外、承認、停止理由、引き継ぎ先だけを記録する。
 

@@ -6,133 +6,38 @@ labels: []
 assignees: []
 ---
 
-# 目的
+> 非該当の専門欄を作らず、[条件付き参照](../blob/main/docs/minimal-development-contract.md#条件付き参照)から該当する正本だけを読む。適用可否が不明、重要判断がNEEDS_DECISION、MUST不足なら登録・実装開始を停止する。
 
-<!-- このIssueだけで達成すること -->
+# Goal
 
-# Decision Summary
+この1子Issue = 1 PRで達成すること。
 
-- 採用する実装:
-- 主要理由:
-- 影響:
+# Context
 
-# Framework Decision 引き継ぎ
+必要な理由、採用済み判断と関連仕様への参照。合意済み計画から生成する場合はPlan Reviewの判定（PASS / NOT_APPLICABLE）、理由、[正本参照](../blob/main/docs/plan-review-gate.md)を短く保存する。単一Issueでも省略しない。
 
-- 親IssueのFramework Decision Result: `DECIDED / NOT_APPLICABLE / NEEDS_DECISION`
-- 正本文書 / 親Issueの参照:
-- 決定内容・この子Issueへの前提:
-- Framework依存の未決定事項 / 停止範囲:
+# Scope / Boundaries
 
-> `NEEDS_DECISION` の場合はFramework依存の子Issue化・実装開始を停止し、既存のDesign Decisionへ接続する。候補比較をこの子Issueで再定義しない。
+- 変更可能なpath・責務:
+- Risk Tier: LOW / MEDIUM / HIGH。判定理由・影響範囲（[判定基準](../blob/main/docs/adaptive-development-flow.md)）:
+- 安全境界と停止条件: 情報読取・外部書込の適用を確認し、今回の情報分類・送信先・権限範囲とHuman Approvalの要否を短く示す。[AI Agent Security Boundary](../blob/main/docs/ai-agent-security-boundary.md)に該当する制御・例外は理由、残るリスク、代替制御、承認者まで記録する。未承認の本番・Deploy・破壊的操作・Secrets・認証/権限/Security Policy/公開/課金/repo保護設定変更は停止する。
 
-# Plan Review / Design Decision 引き継ぎ
+# Non-goals
 
-- Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`
-- 記録・正本: [Plan Review Gate](../blob/main/docs/plan-review-gate.md)
-- 親Issueまたは単一Issueでの判定理由:
-- Framework Decision / UI Level結果の参照:
-- 採用済みDesign Decision / 未決定事項:
+今回変更しない範囲。
 
-> 単一IssueでもPlan Reviewの判定・理由・正本参照をこのIssue本文へ保存する。`NEEDS_DECISION` の間はIssue登録・実装開始を停止する。親Issueがある場合は判定を引き継ぎ、同じ詳細を再定義しない。
+# Done
 
-# UI Level / PRODUCT UI 引き継ぎ
+- [ ] 実装手順とは独立した利用者の結果・確認方法で判定できる条件。
 
-- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`
-- UI対象範囲:
-- 分類理由 / 親Issue参照（非UIは `NONE` と対象外理由を必ず記録）:
-- PRODUCT時の設計参照: [Nine PRODUCT UI Standard v1](../blob/main/docs/product-ui-standard.md)、[Design Profile / docs/design.md雛形](../blob/main/templates/app/docs/design.md)
-- UI受入対象外の理由（NONE/UTILITYでPRODUCT項目を適用しない場合）:
-- NEEDS_DECISIONの未決定事項 / 決定期限:
+# Verification
 
-> UI Levelは親Issueの有無にかかわらず全案件で明示する。UIを持たないCLI・library・文書案件も省略せず `NONE` と対象外理由を記録する。親Issueがある場合はそのUI Levelと分類理由を引き継ぐ。UI Levelが `NEEDS_DECISION` の場合、AI/Codexは推測で子Issue化・実装開始せず、決定まで停止する。PRODUCT以外ではPRODUCT用の仕様・Design Profile・Visual/UI Acceptanceを必須化しない。
+検証コマンド・手動確認と期待結果。正常・範囲・整合性・境界・異常・回帰の6観点から必要なケースを選び、全観点の空欄は作らない。未実施は理由と残るリスクを記録する。標準検証・self-review、現headのCI / Security / Codex Review、人間Mergeを維持する。
 
-# AI / Codex Reference Contract（PRODUCT UI実装時）
+テスト・Gateの保証を変更する場合は[安全なテスト変更](../blob/main/docs/test-design.md)と[Harness Minimalism台帳](../blob/main/docs/ai-development-harness-inventory.md)を確認し、失敗モード・代替保証・再評価条件を記録する。代替成功前に旧保証を消さない。
 
-- 参照順序: Framework Decision結果 → UI Level → Nine PRODUCT UI Standard / `Component Decision Rules` → 案件 `docs/design.md` → component / library固有docs（存在時）
-- 親Issueから引き継ぐFramework Decision結果・正本文書:
-- 親Issueから引き継ぐUI Level・適用対象・分類理由:
-- Standard Design Rules: [Component Decision Rules](../blob/main/docs/product-ui-standard.md#component-decision-rules)
-- 案件 `docs/design.md`: [Design Profile / docs/design.md雛形](../blob/main/templates/app/docs/design.md)
-- 案件固有のvisual、brand、tokens、採用component、例外、根拠:
-- component / library固有docsと採用理由（存在時）:
-- 親Issue・前Issueから引き継ぐ未決定事項・矛盾・Design Decision参照:
+# Dependencies
 
-> PRODUCT UIの重要判断は親Issueの決定と上記順序を引き継ぐ。判断材料が欠落・矛盾・不足する場合は推測で補完せず `NEEDS_DECISION` としてDesign Decisionへ接続し、実装を停止する。NONE / UTILITYではPRODUCT UI用の必須欄やVisual/UI Acceptanceを強制しない。
+Parent / Depends on、実装順。依存がなければ「なし」。未確定の依存をなしと推測しない。
 
-# Technical Reference（このPRの理解支援・非Gate）
-
-<!-- 親IssueのTechnical Referenceから、このPRの実装・レビューに直接必要な技術だけを選ぶ。関係しないカテゴリは削除または「なし」とする。 -->
-
-- 使用する主要技術 / コマンド:
-- 今回理解すべき仕組み・概念:
-- 変更が影響する境界（API / DB / Runtime / Infrastructure等）:
-- AI Verificationで確認する証拠（diff / test / log / CI / 実行結果等）:
-- 公式Reference / 一次資料:
-
-> これはBlocking Gateではない。AI/Codexの出力をそのまま正解とせず、このPRで何が変わり、どの証拠で正しさを確認できるかをIssue内で把握できる状態にする。Referenceは必要最小限とし、長い教材や一般論をIssueへ複製しない。
-
-# 今回の変更
-
-- 実装内容:
-- 変更してよい範囲:
-- 原則変更しない範囲:
-- Non-goals（今回扱わないこと）:
-- 完了条件:
-- Parent / Depends on:
-
-> 1子Issue = 1 PR。登録・実装開始前に [Issue Quality Check](../blob/main/docs/issue-quality-check.md) のMUSTを満たすこと。MUST不足はScoreにかかわらず停止する。
-
-# Risk Tier
-
-- Tier（LOW / MEDIUM / HIGH）:
-- 判定理由・影響範囲:
-- 追加検証・承認、または対象外の理由:
-- 再判定（実装開始 / PR提出 / 影響変更時）:
-
-判定順・例外は [Adaptive Development Flow](../blob/main/docs/adaptive-development-flow.md) を参照する。LOWでも標準検証、CI、Security、Codex Review、人間Merge判断を省略しない。
-
-# テストと受入条件
-
-- 正常値 / 値の範囲 / 整合性:
-- 境界値 / 異常系 / 回帰:
-- 実行する標準検証・手動確認:
-- 既存テストを変更する場合の保証先:
-
-テスト責務・テスト層・既存テスト変更時の保証先は [Test Design / Safe Test Deletion](../blob/main/AGENTS.md#test-design--safe-test-deletion) を正本として参照する。Deploy後の検収は [Acceptance Verification](../blob/main/docs/acceptance-verification.md) を参照する。
-
-# Agent Security Boundary（安全境界と停止条件）
-
-- 情報分類（PUBLIC / INTERNAL / CONFIDENTIAL）:
-- LLM Trust Boundary:
-- Read / Write範囲とLeast Privilege:
-- Human Approvalが必要な操作と状態:
-- 適用対象外の項目、理由、残るリスク、代替制御、承認者:
-- Prompt Injection対策:
-
-[AI Agent Security Boundary](../blob/main/docs/ai-agent-security-boundary.md) の境界に該当する外部送信、権限拡大、Secrets、Security Policy、Production操作は人間承認まで停止する。事前承認のない重要設計変更は、親IssueのDesign Decisionへエスカレーションして決定まで実装を止める。
-
-# Harness（追加・変更時のみ）
-
-- 台帳ID / 判定:
-- 失敗モード・代替制御:
-- 変更理由・再評価条件:
-
-詳細は [Harness Minimalism台帳](../blob/main/docs/ai-development-harness-inventory.md) を参照する。追加・変更がなければ「なし」と理由を記録する。
-
-# Harness Minimalism / ETCSLV
-
-- 判定（KEEP / STRENGTHEN / SIMPLIFY / REMOVE_CANDIDATE）:
-
-# Current State
-
-- Current phase / 次アクション:
-- Issue acceptance status:
-- Product Acceptance result:
-- Product Acceptance target artifact:
-- Current Deploy target artifact:
-- Current head SHA / Expected SHA:
-- Verification status（local / CI / Security / Review）:
-- 対象SHAと local / CI / Security / Review:
-- 停止理由（該当時）:
-
-Current Stateのenumと観測方法は [AI Execution State](../blob/main/docs/ai-execution-state.md) を参照する。Issue記載内容を仕様の基準とし、修正は同じPR branchで行う。最終Mergeは人間が判断する。
+> 登録・実装前は[Issue Quality Check](../blob/main/docs/issue-quality-check.md)の6 MUSTを確認する。Framework / UI / State / Harnessの詳細は条件付き参照に従う。非該当のNONE / NOT_APPLICABLE欄は不要。

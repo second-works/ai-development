@@ -18,7 +18,7 @@ reject() {
   fi
 }
 
-require .github/ISSUE_TEMPLATE/parent-issue.md "Plan Review / Design Decision"
+require .github/ISSUE_TEMPLATE/parent-issue.md "Plan Reviewの判定"
 require .github/ISSUE_TEMPLATE/parent-issue.md "AI Agent Security Boundary"
 require .github/ISSUE_TEMPLATE/parent-issue.md "Acceptance Verification"
 require .github/ISSUE_TEMPLATE/child-issue.md "1子Issue = 1 PR"

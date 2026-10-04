@@ -43,8 +43,8 @@ require "$ROOT/docs/plan-review-gate.md" 'Plan ReviewまたはChild Issue Qualit
 
 require "$skill" 'name: plan-to-issues'
 require "$skill" 'Framework Decision（適用時）'
-require "$skill" 'UI Level Decision（全案件。非UIは NONE + 理由）'
-require "$skill" 'UI Levelは全案件で `NONE / UTILITY / PRODUCT / NEEDS_DECISION` のいずれかを明示する'
+require "$skill" 'UI Level Decision（UI適用を確認し、UIがある場合だけ記録）'
+require "$skill" 'UIの適用確認は全案件で行う'
 require "$skill" 'Plan Review Gate'
 require "$skill" 'Risk Tier'
 require "$skill" 'Child Issue Quality Gate'
@@ -68,15 +68,98 @@ require "$inventory" '`plan-to-issues` は合意済み計画からGitHub Issue�
 require "$harness" '#148'
 require "$harness" '.agents/skills/plan-to-issues/SKILL.md'
 
-require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '# Plan Review / Design Decision 引き継ぎ'
-require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '- Plan Review: `PASS / NEEDS_DECISION / NOT_APPLICABLE`'
-require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '単一IssueでもPlan Reviewの判定・理由・正本参照をこのIssue本文へ保存する'
-require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
-require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '非UIは `NONE` と対象外理由を必ず記録'
-require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" 'UIを持たないCLI・library・文書案件も省略せず `NONE` と対象外理由を記録する'
+for template in parent child; do
+  file="$ROOT/.github/ISSUE_TEMPLATE/$template-issue.md"
+  require "$file" '# Goal'
+  require "$file" '# Context'
+  require "$file" '# Scope / Boundaries'
+  require "$file" '# Non-goals'
+  require "$file" '# Done'
+  require "$file" '# Verification'
+  require "$file" '依存がなければ「なし」'
+  require "$file" 'Plan Reviewの判定（PASS / NOT_APPLICABLE）、理由'
+  require "$file" '../blob/main/docs/plan-review-gate.md'
+  require "$file" '../blob/main/docs/minimal-development-contract.md#条件付き参照'
+  require "$file" 'MUST不足なら登録・実装開始を停止'
+done
+require "$skill" '非UIに `NONE` 欄を強制しない'
 
 
 require "$agents" '.agents/skills/plan-to-issues/SKILL.md を必ず読む'
 require "$agents" '生成だけの依頼から実装を始めない'
+
+# 文書に載せた記入例を検査する限定fixture。任意の計画を判定する実行Gateではない。
+python3 - "$ROOT" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+root = Path(sys.argv[1])
+headings = ['Goal', 'Context', 'Scope / Boundaries', 'Non-goals', 'Done',
+            'Verification', 'Dependencies']
+for kind in ('parent', 'child'):
+    template = (root / f'.github/ISSUE_TEMPLATE/{kind}-issue.md').read_text()
+    metadata = template.split('---', 2)[1]
+    for field in ('name:', 'about:', 'title:', 'labels:', 'assignees:'):
+        assert field in metadata, (kind, field)
+    expected = headings.copy()
+    if kind == 'parent':
+        expected[-1] = 'Children / Dependencies'
+    assert re.findall(r'^# (.+)$', template, re.M) == expected, kind
+    # GitHub Issue本文の参照はrepoのmainに解決する。対象pathの欠落を検出する。
+    for route in re.findall(r'\]\(\.\./blob/main/([^)#]+)', template):
+        assert (root / route).is_file(), route
+
+doc = (root / 'docs/minimal-development-contract.md').read_text()
+examples = doc.split('### 最小子Issueの記入例（入力契約の確認用）', 1)[1]
+bodies = re.findall(r'```markdown\n(.*?)\n```', examples, re.S)
+assert len(bodies) == 3
+
+def sections(body):
+    parts = re.split(r'^# (.+)\n', body, flags=re.M)
+    assert not parts[0].strip()
+    return dict(zip(parts[1::2], parts[2::2]))
+
+def valid_fixture(values):
+    # 六つのMUSTと、今回例で必要な安全記録を別々に確認する。
+    if not all(values.get(key, '').strip() for key in headings):
+        return False
+    boundary = values['Scope / Boundaries']
+    if '1子Issue = 1 PR' not in values['Goal']:
+        return False
+    if not re.search(r'Risk Tier: (LOW|MEDIUM|HIGH)、\S', boundary):
+        return False
+    if not all(token in boundary for token in ('PUBLIC', 'PR branch', 'Human Approval:')):
+        return False
+    if '後で決める' in values['Dependencies'] or 'NEEDS_DECISION' in values['Context']:
+        return False
+    if not re.search(r'Plan Review: (PASS|NOT_APPLICABLE)、.+docs/plan-review-gate.md', values['Context']):
+        return False
+    if 'UI Level: PRODUCT' in values['Context']:
+        if not all(token in values['Context'] for token in
+                   ('Framework Decision: DECIDED', 'product-ui-standard.md', 'docs/design.md')):
+            return False
+        if 'Visual/UI Acceptance' not in values['Verification']:
+            return False
+    if 'Risk Tier: HIGH' in boundary:
+        if not all(token in boundary for token in
+                   ('LLM: MANAGED', 'Tool / Destination allowlist:', '未承認、停止する')):
+            return False
+    return True
+
+values = [sections(body) for body in bodies]
+assert all(valid_fixture(value) for value in values)
+assert not any(token in values[0]['Context'] for token in ('UI Level:', 'Framework Decision:'))
+for key in headings:
+    broken = dict(values[0], **{key: ''})
+    assert not valid_fixture(broken), f'missing {key} must stop'
+assert not valid_fixture(dict(values[0], Dependencies='後で決める'))
+assert not valid_fixture(dict(values[1], Context=values[1]['Context'] + ' NEEDS_DECISION'))
+assert not valid_fixture(dict(values[1], Verification='標準検証のみ'))
+for token in ('Risk Tier: HIGH', 'Tool / Destination allowlist:', '未承認、停止する'):
+    broken = dict(values[2], **{'Scope / Boundaries': values[2]['Scope / Boundaries'].replace(token, '')})
+    assert not valid_fixture(broken), f'missing safety control {token} must stop'
+print('Minimal input examples: 3 positive, 13 negative cases PASS')
+PY
 
 printf 'Plan to Issues Skill contract: PASS\n'
