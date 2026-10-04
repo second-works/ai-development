@@ -321,3 +321,9 @@ Phase 4の削減準備。基準main `059fc9ea043b6b724cbfd68fad4f2859a23b350e` �
 - github-state / current-state / html-status-report / adaptive-development-flow / issue-quality / template-simplificationは各既存suiteをCIから直接実行。collectorのread-only・head identity、HTML escaping/非破壊、State identity等の元回帰を変更しない。
 - Harnessは台帳/文書契約の入口として維持する。文書markerやsuite自体の削除、実install設定・Security workflow変更、新coverageメタ検査導入は行わない。
 - 後続削減は責務と保証先の確認を続ける。#161 / PR #167の採否、Phase 4全体・Phase 5の実利用受入は本変更だけで完了としない。最終headの検証はPR本文へ記録する。
+
+## Issue #183: 独立保証後の台帳検査削減
+
+#181/PR #182の独立回帰成功とmain包含後、2026-10-04の人間による提示差分の個別承認に基づき、Harnessの台帳schema・固定文言・CI登録だけの検査を削減する。台帳資料は保持し、書式一致をCI条件にする責務を外す。削減前原文と責務分類・保証先は [削減記録](simplification-inventory.md#issue-183-harness台帳検査の削減) を参照する。
+
+残存28suite、Cloud Agentと旧間接6suiteの独立CI、安全正本と必要時参照は保持する。Security / Review / Human Approvalの意味を緩めず、既存projectに移行を強制しない。#161/PR #167の追加メタ検査は採用せず、既存Issue/PRは人間の整理判断まで保持する。Phase 5受入は別途確認する。
