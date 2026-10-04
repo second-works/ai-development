@@ -462,7 +462,7 @@ ChatGPTに **「GitHub Issue方式で計画して」** と依頼された場合�
 
 ## AGENTS詳細契約の移行準備
 
-[#173](https://github.com/second-works/ai-development/issues/173)で工程責務を本書に準備する。現行常駐ルールを削除・置換しない。初回レビューと通常コメント対応は [レビュー契約](code-review-contract.md)、test追加・削除は [テスト設計](test-design.md)、設計・実装は [状態設計](design-state-modeling.md)、親Closeは [親Issue完了](parent-issue-completion.md)を参照する。Securityの読取・外部書込境界は既存 [Agent boundary](ai-agent-security-boundary.md)を維持する。
+[#173](https://github.com/second-works/ai-development/issues/173)で準備した工程責務を、Issue #177のAGENTS短縮後の正本として適用する。初回レビューと通常コメント対応は [レビュー契約](code-review-contract.md)、test追加・削除は [テスト設計](test-design.md)、設計・実装は [状態設計](design-state-modeling.md)、親Closeは [親Issue完了](parent-issue-completion.md)を参照する。Securityの読取・外部書込境界は既存 [Agent boundary](ai-agent-security-boundary.md)を維持する。
 
 ## Issue Selection
 
@@ -551,9 +551,9 @@ PRには最低限以下を書く。
 
 可能な場合は `Closes #<Issue番号>` を使用し、PRのmergeとIssueの完了を関連付ける。
 
-## AGENTS残責務の移行準備
+## AGENTSから移した運用・安全責務
 
-固定原文はmain `d4ee8ee56ad15ca4bcbca604bc3622a1400b667b` のAGENTS。以下は本文短縮に先立つ詳細責務の保存であり、現在のAGENTSを置換しない。既存節は概説・具体手順、以下は旧AGENTSから保持する責務・例外。将来の短縮後も両方を適用し、矛盾があれば推測せず停止する。Security・承認条件は変更しない。重複本文と参照テストの整理は後続Issueで行う。
+固定原文はmain `d4ee8ee56ad15ca4bcbca604bc3622a1400b667b` のAGENTS。Issue #177でAGENTS本文を短縮し、以下を詳細責務の正本として適用する。既存節は概説・具体手順、以下は旧AGENTSから保持する責務・例外。短縮後も両方を適用し、矛盾があれば推測せず停止する。Security・承認条件は変更しない。参照テストも正本へ切り替える。docs内の重複整理は後続Issueで行う。
 
 ### 移行契約: GitHub上の言語
 
@@ -680,3 +680,51 @@ fallbackはGit管理対象ファイルとsymlinkのtargetを検査し、npm lock
 - セキュリティチェック例外の許可
 - P2を四分類へ分類できない場合の判断
 - mainへのmerge
+
+## AGENTSから移した詳細責務
+
+Issue #177で常駐本文を短縮し、main `2afd63dcfc68e7e0596d70e1fcc350fcbcc71d6c` の詳細責務を本正本へ移した。以下の適用条件・例外は既存の具体手順と併せて適用する。矛盾や重要判断不足があれば推測せず停止する。
+
+### Core Rules
+
+- GitHub Issueを仕様の基準とする。
+- 原則として **1子Issue = 1 PR** とする。
+- Issueの範囲外を実装しない。
+- Issue設計時のテスト条件では、正常値、値の範囲、整合性、境界値、異常系、回帰テストの6観点を検討する。
+- 不具合修正Issueでは、可能な限り修正前の実装では失敗し、修正後の実装では成功する回帰テストを追加する。
+- 依存Issueが未完了の場合は、原則として着手しない。
+- 不要なリファクタリングをしない。
+- 既存動作を壊さない。
+- 新規機能・バグ修正には必要なテストを追加する。
+- テストの追加・更新・統合・削除では、検証責務がどこで保証されるかを明確にする。
+- 実装後はプロジェクトで定義されたテストを実行する。
+- テンプレートを利用する生成プロジェクトでは、標準検証入口 `./scripts/verify.sh` を使用する。
+- テストを無効化して成功扱いにしない。
+- 秘密情報、APIキー、パスワード、`.env` をcommitしない。
+- `main`へ直接pushしない。IssueごとのbranchとPRを使う。
+- force pushを行わない。
+- 指定外の依存関係を安易に追加しない。
+- 公開APIや既存インターフェースを勝手に変更しない。
+- 判断不能な仕様は推測で拡張せず、Issue上の仕様を優先する。
+- 実装とテストが完了したらPRを作成し、現headのCI / Security / Codex Reviewとコメント対応を確認して人間の最終判断へ進む。
+- warning / deprecationはテスト成功と別に評価し、V1を止めない場合でも必要に応じて後続メンテナンスIssueへ記録する。
+
+#### Template Change Evaluation Routing
+
+外部記事、新技術、改善提案、他プロジェクトの実践などを、このリポジトリまたはNine標準テンプレートへ取り込むべきか、重複していないか、棚卸しすべきかを依頼された場合は、採否や変更を決める前に必ず `.agents/skills/template-change-evaluator/SKILL.md` を読み、そのSkillに従う。Skill名の明示は起動条件にしない。
+
+「テンプレに取り入れる内容を精査して」「現在のテンプレと重複していないか確認して」「この内容をテンプレに追加すべきか判断して」「テンプレを棚卸しして」「過大・重複なら中止して」など、テンプレート改善の採否・重複・配置判断を求める近い表現も対象とする。
+
+記事や技術の単純な要約・解説、テンプレート変更を伴わない一般的な質問、既存PRレビュー指摘の修正は対象外とする。採用候補を見つけても、既存repoの責務確認より先に新しいRule / Skill / script / CIを追加しない。
+
+### AI生成ドキュメント原則
+
+AIが設計文書、Issue、PR本文を生成・更新するときは、網羅性より意思決定の理解速度を優先する。
+
+- **Decision First**: 設計判断は冒頭3行程度で採用案、主要理由、影響を示す。背景より先に結論を置く。ただし、Framework Decisionの判断順序 `Requirements → Rendering Strategy → Application Architecture → Framework` は変更せず、冒頭の要約は判断完了後に記入する。
+- **Non-goals**: 今回扱わない範囲を明示し、未承認の将来拡張や周辺論点を追加しない。
+- **Minimum Documentation**: 意思決定の理解に不要な定型章、コード・diff・Issueから自明な情報、同じ理由の言い換えを省く。安全境界、停止条件、承認、検証、Acceptanceなど既存Gateが要求する今回値は省略しない。
+- **Alternatives**: 原則として `案 / 却下理由` の表で主要な却下理由だけを記録する。比較判断に必要な場合だけ詳細を加える。
+- **PR本文**: 差分、判断、レビュー上の注意点を中心にし、GitHubから確認できる変更ファイル一覧を再掲しない。
+
+生成後は、重複説明、意思決定に不要な章、同じ理由の言い換え、根拠のない将来可能性を削除し、長い背景が結論より前にないことを確認する。簡潔化は既存仕様や必須証拠を削る許可ではない。

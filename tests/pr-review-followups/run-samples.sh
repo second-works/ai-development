@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-AGENTS_FILE="${ROOT_DIR}/AGENTS.md"
+REVIEW_FILE="${ROOT_DIR}/docs/code-review-contract.md"
 SKILL_FILE="${ROOT_DIR}/.agents/skills/pr-review-fix/SKILL.md"
 LEDGER_FILE="${ROOT_DIR}/docs/review-followups.md"
 
@@ -18,7 +18,7 @@ required_initial_review_markers=(
   "既存コード全体の改善探索へ無制限に広げず"
 )
 
-for review_file in "${AGENTS_FILE}" "${SKILL_FILE}"; do
+for review_file in "${REVIEW_FILE}" "${SKILL_FILE}"; do
   for marker in "${required_initial_review_markers[@]}"; do
     grep -Fq -- "${marker}" "${review_file}" || {
       printf 'missing initial review contract marker in %s: %s\n' "${review_file}" "${marker}" >&2
@@ -36,8 +36,8 @@ required_agents_markers=(
 )
 
 for marker in "${required_agents_markers[@]}"; do
-  grep -Fq -- "${marker}" "${AGENTS_FILE}" || {
-    printf 'missing AGENTS review contract marker: %s\n' "${marker}" >&2
+  grep -Fq -- "${marker}" "${REVIEW_FILE}" || {
+    printf 'missing canonical review contract marker: %s\n' "${marker}" >&2
     exit 1
   }
 done

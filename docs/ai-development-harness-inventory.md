@@ -586,9 +586,9 @@ ETCSLV分類:
 - docs/acceptance-verification.md：実利用検証と検収
 - Verification Evidence ContractとResidual Risk Summaryは同文書内でAcceptance Verificationへ接続し、Current State、CI、Security、Reviewを置き換えない
 
-## AGENTS残責務の移行準備
+## AGENTSから移した運用・安全責務
 
-固定原文はmain `d4ee8ee56ad15ca4bcbca604bc3622a1400b667b` のAGENTS。以下は本文短縮に先立つ詳細責務の保存であり、現在のAGENTSを置換しない。既存節は概説・具体手順、以下は旧AGENTSから保持する責務・例外。将来の短縮後も両方を適用し、矛盾があれば推測せず停止する。Security・承認条件は変更しない。重複本文と参照テストの整理は後続Issueで行う。
+固定原文はmain `d4ee8ee56ad15ca4bcbca604bc3622a1400b667b` のAGENTS。Issue #177でAGENTS本文を短縮し、以下を詳細責務の正本として適用する。既存節は概説・具体手順、以下は旧AGENTSから保持する責務・例外。短縮後も両方を適用し、矛盾があれば推測せず停止する。Security・承認条件は変更しない。参照テストも正本へ切り替える。docs内の重複整理は後続Issueで行う。
 
 ### 移行契約: Harness Minimalism
 

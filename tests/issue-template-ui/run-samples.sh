@@ -8,7 +8,7 @@ PARENT="${ROOT_DIR}/.github/ISSUE_TEMPLATE/parent-issue.md"
 CHILD="${ROOT_DIR}/.github/ISSUE_TEMPLATE/child-issue.md"
 STANDARD="${ROOT_DIR}/docs/product-ui-standard.md"
 DESIGN_TEMPLATE="${ROOT_DIR}/templates/app/docs/design.md"
-AGENTS="${ROOT_DIR}/AGENTS.md"
+UI_REFERENCE="${ROOT_DIR}/docs/product-ui-standard.md"
 
 assert_contains() {
   local file="$1"
@@ -47,7 +47,7 @@ assert_reference_stop_boundary() {
     $0 == heading { found=1; next }
     found && /^## / { exit }
     found { print }
-  ' "$AGENTS")"
+  ' "$UI_REFERENCE")"
   boundary_line="$(grep -F 'Framework Decision、UI Level、標準Design Rules、案件 `docs/design.md` のいずれかが欠落・矛盾・判断不能で' <<< "$section" || true)"
   boundary_line="${boundary_line#- }"
   if [[ "$boundary_line" != 'Framework Decision、UI Level、標準Design Rules、案件 `docs/design.md` のいずれかが欠落・矛盾・判断不能で、重要UX判断を確定できない場合は推測で補完せず `NEEDS_DECISION` として既存のDesign Decisionへ接続し、実装を停止する。component / library固有docsは採用する場合に参照し、採用を決めたdocsが取得できない場合だけ同じ停止条件を適用する。' ]]; then
@@ -56,10 +56,8 @@ assert_reference_stop_boundary() {
   fi
 }
 
-assert_exact_line "$AGENTS" '## AI / Codex Reference Contract'
+assert_exact_line "$UI_REFERENCE" '## AI / Codex Reference Contract'
 assert_reference_stop_boundary
-assert_order "$AGENTS" '## Framework Decision' '## AI / Codex Reference Contract'
-assert_order "$AGENTS" '## AI / Codex Reference Contract' '## Child Issue Quality Gate'
 for needle in \
   '1. Framework Decision結果と正本文書（Frameworkを再選定しない）' \
   '2. UI Level Decisionと適用対象' \
@@ -70,12 +68,12 @@ for needle in \
   '推測で補完せず `NEEDS_DECISION` として既存のDesign Decisionへ接続し、実装を停止する' \
   '案件 `docs/design.md` の決定は、標準Design RulesのUX原則とAccessibility最低条件を満たす範囲で尊重する。標準側と案件側の責務を暗黙に入れ替えない。' \
   '`NONE` / `UTILITY` の案件にはPRODUCT UI用の必須欄やVisual/UI Acceptanceを過剰適用しない'; do
-  assert_contains "$AGENTS" "$needle"
+  assert_contains "$UI_REFERENCE" "$needle"
 done
-assert_order "$AGENTS" '1. Framework Decision結果と正本文書（Frameworkを再選定しない）' '2. UI Level Decisionと適用対象'
-assert_order "$AGENTS" '2. UI Level Decisionと適用対象' '3. Nine PRODUCT UI Standard / `Component Decision Rules`'
-assert_order "$AGENTS" '3. Nine PRODUCT UI Standard / `Component Decision Rules`' '4. 案件 `docs/design.md`'
-assert_order "$AGENTS" '4. 案件 `docs/design.md`' '5. component / library固有docs（存在する場合）'
+assert_order "$UI_REFERENCE" '1. Framework Decision結果と正本文書（Frameworkを再選定しない）' '2. UI Level Decisionと適用対象'
+assert_order "$UI_REFERENCE" '2. UI Level Decisionと適用対象' '3. Nine PRODUCT UI Standard / `Component Decision Rules`'
+assert_order "$UI_REFERENCE" '3. Nine PRODUCT UI Standard / `Component Decision Rules`' '4. 案件 `docs/design.md`'
+assert_order "$UI_REFERENCE" '4. 案件 `docs/design.md`' '5. component / library固有docs（存在する場合）'
 
 assert_exact_line "$PARENT" '# UI Level / PRODUCT UI'
 assert_exact_line "$CHILD" '# UI Level / PRODUCT UI 引き継ぎ'
@@ -123,5 +121,8 @@ assert_contains "$PARENT" 'docs/product-ui-standard.md'
 assert_contains "$PARENT" 'templates/app/docs/design.md'
 assert_contains "$CHILD" 'docs/product-ui-standard.md'
 assert_contains "$CHILD" 'templates/app/docs/design.md'
+
+
+assert_contains "${ROOT_DIR}/AGENTS.md" 'Framework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docs'
 
 printf 'Issue template UI Level contract: ok\n'

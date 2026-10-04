@@ -250,3 +250,18 @@ Current StateとGitHub観測が矛盾した場合は、古いStateを正とせ�
 Current Stateは長時間タスクの再開に必要な識別子、enum状態、対象SHA、検証結果、レビュー分類、Product Acceptance結果、Acceptance対象artifact、Deploy対象artifact、Conditionalの条件・期限・追跡Issue・未解決BLOCKER、停止理由、次アクション、証拠参照だけを保持する。
 
 この契約が既存のGitHub metadataだけで同じ再開性とSHA誤適用防止を証明できるようになった場合、または更新負荷が便益を上回る場合は、Issue化して簡素化・削除を再評価する。
+
+## AGENTSから移した詳細責務
+
+Issue #177で常駐本文を短縮し、main `2afd63dcfc68e7e0596d70e1fcc350fcbcc71d6c` の詳細責務を本正本へ移した。以下の適用条件・例外は既存の具体手順と併せて適用する。矛盾や重要判断不足があれば推測せず停止する。
+
+### Structured Current State
+
+長時間・複数ラウンドのAI実装を中断・再開する場合は、[docs/ai-execution-state.md](ai-execution-state.md)のCurrent State契約を使用する。
+
+- Stateは定義済みschemaとenumで保持し、Issue / PR / head SHA / expected SHA、Issue受入状態、Product Acceptance結果と終端アクション、Acceptance対象artifact、現行Deploy target、検証結果、レビューラウンド、P2分類、停止理由、次アクションを表現する。
+- `READY_FOR_HUMAN_MERGE`へ進めるには `issue.acceptance_status=SATISFIED` を要求する。schema v3の`ACCEPTANCE`は、Acceptance対象artifactと現行Deploy targetが一致し、`ACCEPTED`、または条件・期限・追跡Issueが設定済みで未解決BLOCKERのない`CONDITIONAL`だけを`COMPLETED` / `COMPLETE`として記録する。条件未達や対象不一致のConditionalは停止する。 再開時と`COMPLETED`直前はDeployの正本から現行targetを再取得し、`ACCEPTED`を含むtarget未設定・不一致は`next_action=STOP`、`stop_reason=ACCEPTANCE_TARGET_MISMATCH`として停止してAcceptanceを再実行する。 再検収へ戻す際は停止理由をnullにし、Acceptance結果を`NOT_RUN`へ戻し、Conditional専用項目を初期化してから`next_action=RUN_ACCEPTANCE`へ進める。
+- GitHub上の最新Issue / PR / branch / head SHA / CI / Security / Reviewを再取得し、Stateと矛盾する古い観測は再利用しない。
+- head SHAが変わった場合、旧SHAのlocal / CI / Security / Review成功結果を現headへ適用せず、現headを新しい検証対象として再検証する。
+- `merge_allowed`のような派生値を手書き保存せず、既存のCI / Security / Review / Human Approval条件から人間が判断する。
+- chain-of-thought、推論全文、全会話ログ、秘密情報をCurrent Stateへ保存しない。

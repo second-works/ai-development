@@ -11,14 +11,14 @@ require() {
   fi
 }
 
-require AGENTS.md '## AI生成ドキュメント原則'
-require AGENTS.md '**Decision First**'
-require AGENTS.md '**Non-goals**'
-require AGENTS.md '**Minimum Documentation**'
-require AGENTS.md '安全境界、停止条件、承認、検証、Acceptanceなど既存Gateが要求する今回値は省略しない'
-require AGENTS.md '案 / 却下理由'
-require AGENTS.md '変更ファイル一覧を再掲しない'
-require AGENTS.md '重複説明、意思決定に不要な章、同じ理由の言い換え、根拠のない将来可能性を削除'
+require docs/nine-standard-ai-development-flow.md '## AI生成ドキュメント原則'
+require docs/nine-standard-ai-development-flow.md '**Decision First**'
+require docs/nine-standard-ai-development-flow.md '**Non-goals**'
+require docs/nine-standard-ai-development-flow.md '**Minimum Documentation**'
+require docs/nine-standard-ai-development-flow.md '安全境界、停止条件、承認、検証、Acceptanceなど既存Gateが要求する今回値は省略しない'
+require docs/nine-standard-ai-development-flow.md '案 / 却下理由'
+require docs/nine-standard-ai-development-flow.md '変更ファイル一覧を再掲しない'
+require docs/nine-standard-ai-development-flow.md '重複説明、意思決定に不要な章、同じ理由の言い換え、根拠のない将来可能性を削除'
 require docs/plan-authoring.md '## Decision'
 require docs/plan-authoring.md '## Non-goals'
 require docs/plan-authoring.md '推測で埋めない'
@@ -58,6 +58,8 @@ require .github/pull_request_template.md '# レビュー収束'
 require templates/app/docs/framework-decision.md '## Completion Checklist'
 require templates/app/docs/design.md '## Component Decision Rules'
 require templates/app/docs/design.md '## Accessibility'
+
+require AGENTS.md 'docs/nine-standard-ai-development-flow.md'
 
 (( failures == 0 )) || exit 1
 echo 'Document concision contract: PASS'

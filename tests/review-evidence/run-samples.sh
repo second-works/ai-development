@@ -3,7 +3,7 @@
 set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-AGENTS_FILE="${ROOT_DIR}/AGENTS.md"
+REVIEW_FILE="${ROOT_DIR}/docs/code-review-contract.md"
 SKILL_FILE="${ROOT_DIR}/.agents/skills/pr-review-fix/SKILL.md"
 FLOW_FILE="${ROOT_DIR}/docs/nine-standard-ai-development-flow.md"
 PR_FILE="${ROOT_DIR}/.github/pull_request_template.md"
@@ -28,7 +28,7 @@ assert_absent() {
   fi
 }
 
-for file in "$AGENTS_FILE" "$SKILL_FILE"; do
+for file in "$REVIEW_FILE" "$SKILL_FILE"; do
   for marker in \
     'Review Evidence Contract' \
     'Finding ID:' \
@@ -81,7 +81,7 @@ for marker in \
   assert_contains "$PR_FILE" "$marker"
 done
 
-for file in "$AGENTS_FILE" "$SKILL_FILE" "$FLOW_FILE" "$PR_FILE" "$README_FILE" "$GUIDE_FILE"; do
+for file in "${ROOT_DIR}/AGENTS.md" "$REVIEW_FILE" "$SKILL_FILE" "$FLOW_FILE" "$PR_FILE" "$README_FILE" "$GUIDE_FILE"; do
   assert_absent "$file" 'P2は原則としてMerge前に修正する。残す場合は人間が理由を確認して明示判断する。'
   assert_absent "$file" 'P2のみ残る場合は人間の理由確認と明示判断が必要である。'
   assert_absent "$file" 'P2が0件、または残置理由を人間が明示判断'

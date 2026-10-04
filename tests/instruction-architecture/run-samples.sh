@@ -98,15 +98,39 @@ require() {
 }
 
 require "AGENTS.md" 'docs/instruction-architecture-inventory.md'
-require "AGENTS.md" '### Existing PR Review Feedback Routing'
-require "AGENTS.md" '作業開始前に必ず `.agents/skills/pr-review-fix/SKILL.md` を読み、そのSkillに従う'
-require "AGENTS.md" '「コメント確認して修正して」'
-require "AGENTS.md" '「レビュー結果対応して」'
-require "AGENTS.md" '単に「コメント」という語が含まれるだけでは起動しない'
-require "AGENTS.md" '### Plan to Issues Routing'
-require "AGENTS.md" '必ず `.agents/skills/plan-to-issues/SKILL.md` を読み、そのSkillに従う'
-require "AGENTS.md" '「この方向でIssue化して」'
-require "AGENTS.md" '既存Issueの実装・レビュー・コメント確認'
+require "AGENTS.md" 'docs/code-review-contract.md'
+require "AGENTS.md" '失敗・不能・全工程skip時はcommit / PR作成 / review依頼へ進まず停止'
+require "AGENTS.md" 'P0 / P1 / BLOCKING P2'
+require "AGENTS.md" '通常レーンの最終Mergeは人間が判断する'
+require "AGENTS.md" '未承認UNMANAGEDへCONFIDENTIALを送らない'
+require "AGENTS.md" '人間承認まで停止する'
+
+require "AGENTS.md" '回数だけを停止理由にしない'
+require "AGENTS.md" '.agents/skills/plan-to-issues/SKILL.md を必ず読む'
+require "AGENTS.md" '生成だけの依頼から実装を始めない'
+require "AGENTS.md" '計画のIssue化 / UI / Framework / RAG / Security / 外部送信 / Deploy / 検収 / State / 検証変更 / repo設定・依存保守'
+require "AGENTS.md" 'docs/minimal-development-contract.md の条件表と該当正本を読む'
+require "docs/plan-review-gate.md" '「この方向でIssue化して」'
+require "docs/plan-review-gate.md" '既存Issueの実装・レビュー・コメント確認'
+if grep -Fq 'pr-review-fix/SKILL.md' "$ROOT/AGENTS.md"; then
+  printf 'normal review must not auto-route to pr-review-fix Skill\n' >&2
+  exit 1
+fi
+# Every literal root entry and conditional-contract Markdown destination must exist.
+# This is a bounded route check in the existing suite, not a new source resolver.
+python3 - "$ROOT" <<'PYROUTES'
+from pathlib import Path
+import re,sys
+root=Path(sys.argv[1]);agents=(root/'AGENTS.md').read_text()
+for target in re.findall(r'(?:docs|\.agents/skills)/[\w./-]+\.md',agents):
+    if target=='docs/design.md': continue # 案件ごとのPRODUCT design; not this repo's template implementation
+    assert (root/target).is_file(),target
+contract=root/'docs/minimal-development-contract.md'
+conditions=contract.read_text().split('## 常時必須と条件付きの分離',1)[1].split('## 採用した最小AGENTS本文',1)[0]
+for target in re.findall(r'\]\(([^)#]+\.md)(?:#[^)]*)?\)',conditions):
+    if '://' in target: continue
+    assert (contract.parent/target).is_file(),target
+PYROUTES
 require ".agents/skills/pr-review-fix/SKILL.md" 'ユーザーがSkill名やPR番号を明示しなくても'
 require ".agents/skills/pr-review-fix/SKILL.md" '「コメント確認して修正して」'
 require ".agents/skills/pr-review-fix/SKILL.md" '単なるIssueコメント閲覧'
@@ -168,6 +192,11 @@ while IFS= read -r section; do
 done < <(sed -n 's/^## \(.*\)$/\1/p' "$agents")
 
 for path in \
+  docs/code-review-contract.md \
+  docs/test-design.md \
+  docs/design-state-modeling.md \
+  docs/parent-issue-completion.md \
+  docs/product-ui-standard.md \
   docs/adaptive-development-flow.md \
   docs/ai-agent-security-boundary.md \
   docs/ai-development-harness-inventory.md \
@@ -192,6 +221,12 @@ for path in \
     printf 'instruction architecture source is missing: %s\n' "$path" >&2
     exit 1
   }
+  if [[ "$path" == docs/* ]]; then
+    if ! grep -Fq "$path" "$agents" && ! grep -Fq "(${path#docs/})" "$ROOT/docs/minimal-development-contract.md"; then
+      printf 'canonical document is unreachable from AGENTS or its conditional table: %s\n' "$path" >&2
+      exit 1
+    fi
+  fi
 done
 
 grep -Fq -- '## Read-only smoke test' "$inventory"

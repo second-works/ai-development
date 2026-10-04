@@ -1,5 +1,8 @@
 # Instruction Architecture Inventory
 
+本書の旧AGENTS節名・byte数・routing表は当時の固定監査記録。Issue #177以降の現行正本・参照入口は [最小契約の移行表](minimal-development-contract.md#旧agentsとの移行対応) とroot AGENTSに従う。通常レビューはSkillを自動起動せず、[review正本](code-review-contract.md)を使ってCodexが直接対応する。
+
+
 ## Decision First
 
 Issue #121では、既存の機能・Safety Gate・検証責務を移動または削除せず、Instructionの配置判断を先に記録する。
@@ -182,3 +185,11 @@ AIが毎回最初に読む共通境界。Issueを仕様の基準にすること�
 - 変更後 `AGENTS.md`: 47,438 bytes（`+302 bytes`）。
 - 変更理由: Purposeに本台帳への参照と、常駐ルール・詳細仕様・反復手順・機械判定の境界を1段落追加した。
 - 成功条件: 台帳の全セクション列挙、read-only smoke test、既存契約テスト、CI / Security / Review / Human Merge境界の維持。
+
+## Issue #177以降の現行常駐節
+
+| 常駐節 | 配置 | 判定 | 参照先 |
+| --- | --- | --- | --- |
+| `作業境界` | `RESIDENT` | `KEEP` | Issue仕様、risk、状態設計、情報境界、停止条件 |
+| `検証とレビュー` | `ENTRYPOINT` | `KEEP` | 標準フロー、test設計、review契約、例外Safety Gate |
+| `必要時の参照` | `ENTRYPOINT` | `KEEP` | 条件付きSkill、UI、親完了、最小契約の条件表 |

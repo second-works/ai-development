@@ -123,3 +123,17 @@ Framework
 - [ ] 未決定事項と候補のtrade-offが記録されている
 - [ ] Framework依存作業の停止範囲が記録されている
 - [ ] 既存Design Decisionへの参照先が記録されている
+
+## AGENTSから移した詳細責務
+
+Issue #177で常駐本文を短縮し、main `2afd63dcfc68e7e0596d70e1fcc350fcbcc71d6c` の詳細責務を本正本へ移した。以下の適用条件・例外は既存の具体手順と併せて適用する。矛盾や重要判断不足があれば推測せず停止する。
+
+### Framework Decision
+
+新規Web/UI案件、またはRendering Strategy、Application Architecture、Runtime、Deployment / hostingの変更を伴う案件では、[Framework Decision v1](framework-decision.md) をUI Level DecisionとPlan Review Gateより前に確認する。
+
+- 判断順序は `Requirements → Rendering Strategy → Application Architecture → Framework` とし、特定FrameworkをAIが暗黙に採用しない。
+- 結果は `DECIDED / NOT_APPLICABLE / NEEDS_DECISION` で記録する。`NOT_APPLICABLE` は対象外理由を必須とする。
+- `NEEDS_DECISION` の間はFramework依存のUI設計、Issue化、実装開始を停止し、既存のDesign Decisionへ接続する。
+- Framework DecisionはUI Level、Plan Review、Deployment / Release、Security、Acceptanceの責務を置き換えない。Plan Reviewへは結果と正本文書の参照を引き継ぎ、候補比較を重複保存しない。
+- CLI、library、文書のみの変更など、Framework選定が実装結果へ影響しない案件は、理由付きで `NOT_APPLICABLE` とできる。

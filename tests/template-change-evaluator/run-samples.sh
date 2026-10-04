@@ -20,11 +20,11 @@ require() {
   exit 1
 }
 
-require "$agents" '### Template Change Evaluation Routing'
-require "$agents" '.agents/skills/template-change-evaluator/SKILL.md'
-require "$agents" '「テンプレに取り入れる内容を精査して」'
-require "$agents" '記事や技術の単純な要約・解説'
-require "$agents" '既存repoの責務確認より先に新しいRule / Skill / script / CIを追加しない'
+require "$ROOT/docs/nine-standard-ai-development-flow.md" '### Template Change Evaluation Routing'
+require "$ROOT/docs/nine-standard-ai-development-flow.md" '.agents/skills/template-change-evaluator/SKILL.md'
+require "$ROOT/docs/nine-standard-ai-development-flow.md" '「テンプレに取り入れる内容を精査して」'
+require "$ROOT/docs/nine-standard-ai-development-flow.md" '記事や技術の単純な要約・解説'
+require "$ROOT/docs/nine-standard-ai-development-flow.md" '既存repoの責務確認より先に新しいRule / Skill / script / CIを追加しない'
 
 require "$skill" 'name: template-change-evaluator'
 require "$skill" '採否を決める前に、必ず現行repoを確認する'
@@ -45,5 +45,9 @@ require "$skill" '評価依頼だけで自動的にmain変更やMergeを行わ�
 
 require "$harness" '.agents/skills/template-change-evaluator/SKILL.md'
 require "$harness" '#147'
+
+
+require "$agents" '.agents/skills/template-change-evaluator/SKILL.md を判断前に読む'
+require "$agents" '既存PRの指摘修正は対象外'
 
 printf 'Template change evaluator Skill contract: PASS\n'

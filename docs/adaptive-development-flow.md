@@ -64,3 +64,18 @@ Plan Reviewの適用除外、Securityの例外、Acceptanceの対象外は、そ
 
 全体テンプレートの重複削減は #66、実データ収集は #64、HTMLでの状態表示は #67 で検証する。
 今回の文書試行だけで親Issueの実利用検収や全体完了を宣言しない。
+
+## AGENTSから移した詳細責務
+
+Issue #177で常駐本文を短縮し、main `2afd63dcfc68e7e0596d70e1fcc350fcbcc71d6c` の詳細責務を本正本へ移した。以下の適用条件・例外は既存の具体手順と併せて適用する。矛盾や重要判断不足があれば推測せず停止する。
+
+### Adaptive Development Flow / Risk Tier
+
+Issue化前、実装開始時、PR提出前および差分の影響変更時は [docs/adaptive-development-flow.md](adaptive-development-flow.md) に従ってRisk Tierを判定し、Issue / PRへTierと理由を記録する。
+
+- 有効値は `LOW / MEDIUM / HIGH`、既定値はMEDIUM。混在時は最大Tierを使用する。
+- 安全影響不明、認証・認可・Secrets・権限・Production・破壊的変更・Gate自体の変更はHIGHとする。
+- LOWは実行動作・API・依存関係・workflow・安全ルールを変えない文言や表示だけの変更に限定する。
+- Tierで説明量と追加検証を調整し、必須情報は維持する。標準検証・CI・Security・Codex Review・Human Merge判断・適用対象AcceptanceをTierによって省略しない。
+- LOWはAuto-Mergeの許可ではない。既存Safety GateとHuman Approval Boundaryを維持する。
+- 承認済み設計内の作業は継続し、未承認の重要判断だけを既存Design Decision Escalationで停止する。

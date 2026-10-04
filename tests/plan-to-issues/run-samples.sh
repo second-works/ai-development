@@ -34,12 +34,12 @@ for path in \
   }
 done
 
-require "$agents" '### Plan to Issues Routing'
-require "$agents" '.agents/skills/plan-to-issues/SKILL.md'
-require "$agents" '「この方向でIssue化して」'
-require "$agents" '「親Issueと子Issueに分けて」'
-require "$agents" '既存Issueの実装・レビュー・コメント確認'
-require "$agents" 'Plan ReviewまたはChild Issue Quality Gateの停止条件'
+require "$ROOT/docs/plan-review-gate.md" '### Plan to Issues Routing'
+require "$ROOT/docs/plan-review-gate.md" '.agents/skills/plan-to-issues/SKILL.md'
+require "$ROOT/docs/plan-review-gate.md" '「この方向でIssue化して」'
+require "$ROOT/docs/plan-review-gate.md" '「親Issueと子Issueに分けて」'
+require "$ROOT/docs/plan-review-gate.md" '既存Issueの実装・レビュー・コメント確認'
+require "$ROOT/docs/plan-review-gate.md" 'Plan ReviewまたはChild Issue Quality Gateの停止条件'
 
 require "$skill" 'name: plan-to-issues'
 require "$skill" 'Framework Decision（適用時）'
@@ -74,5 +74,9 @@ require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '単一IssueでもPlan Rev
 require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '- UI Level: `NONE / UTILITY / PRODUCT / NEEDS_DECISION`'
 require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" '非UIは `NONE` と対象外理由を必ず記録'
 require "$ROOT/.github/ISSUE_TEMPLATE/child-issue.md" 'UIを持たないCLI・library・文書案件も省略せず `NONE` と対象外理由を記録する'
+
+
+require "$agents" '.agents/skills/plan-to-issues/SKILL.md を必ず読む'
+require "$agents" '生成だけの依頼から実装を始めない'
 
 printf 'Plan to Issues Skill contract: PASS\n'

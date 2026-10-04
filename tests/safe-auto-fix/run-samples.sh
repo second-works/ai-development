@@ -37,7 +37,8 @@ assert_contains "$doc" '追加AUTO-FIXへ戻らず、分類・記録後もAuto-M
 assert_contains "$doc" '自動修正後の再レビューで新しいP2が1件でも発生した場合は、追加AUTO-FIXへ戻らず、分類・記録後もAuto-Mergeせず通常レーンへ戻す'
 assert_contains "$doc" 'AI / automationによるAuto-Merge'
 
-assert_contains "$agents" 'Safe Auto-Fix / Auto-Merge'
+assert_contains "$agents" 'docs/safe-auto-fix-auto-merge.md の全Safety Gate'
+assert_contains "$agents" '新規採用は別承認'
 assert_contains "$flow" 'Safe Auto-Fix / Auto-Merge'
 assert_contains "$guide" 'safe-auto-fix-auto-merge.md'
 assert_contains "$pr" 'Safe Auto-Fix / Auto-Merge'

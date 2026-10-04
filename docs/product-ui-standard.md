@@ -306,7 +306,7 @@ UI Acceptanceでは最低限、次を確認する。
 
 ## AGENTSからの参照契約の移行準備
 
-[#173](https://github.com/second-works/ai-development/issues/173)の準備として、基準AGENTSの参照順序・適用範囲・停止条件を保持する。現行AGENTSの参照規則はまだ置換しない。
+[#173](https://github.com/second-works/ai-development/issues/173)で保存した参照順序・適用範囲・停止条件を、Issue #177のAGENTS短縮後の正本として適用する。
 
 ## AI / Codex Reference Contract
 
