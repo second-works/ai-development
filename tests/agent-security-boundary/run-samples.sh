@@ -43,6 +43,13 @@ require_marker ".github/pull_request_template.md" "Sensitive Read Capability × 
 require_marker ".github/pull_request_template.md" "Prompt Injection"
 
 require_marker "docs/github-repository-security-baseline.md" "ai-agent-security-boundary.md"
+# 未保護・取得不能を成功扱いせず、設定承認と実mainの安全境界を維持する。
+for marker in 'protected=false' '明示的なプラン制約と権限不足を区別' '取得不能' '期限' '追跡Issue' '期限切れ' '文書PRのmergeと保護有効化は別状態'; do
+  require_marker "docs/github-repository-security-baseline.md" "$marker"
+done
+for marker in '人間の設定承認' 'verification' 'Security Preflight' 'github-actions' 'Do not allow bypassing the above settings' '実mainへの直接push・force push・削除で試さない'; do
+  require_marker "templates/github-security/ruleset-guide.md" "$marker"
+done
 require_marker "docs/safe-auto-fix-auto-merge.md" "AI Agent Security Boundary"
 require_marker "docs/safe-auto-fix-auto-merge.md" "Sensitive Read Capability × External Write Capability"
 require_marker "SECURITY.md" "ai-agent-security-boundary.md"

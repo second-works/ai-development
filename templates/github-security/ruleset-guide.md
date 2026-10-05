@@ -16,6 +16,8 @@ Nine標準AI開発フローでは、Codex側の自己チェックとGitHub側の
 
 ## 設定手順
 
+先に[利用条件と未保護時の扱い](../../docs/github-repository-security-baseline.md#利用条件と未保護時の扱い)を確認し、プラン・権限・現在の設定と人間の設定承認を記録する。利用不能・取得不能・承認待ちならここで停止する。
+
 1. 対象GitHubリポジトリを開く。
 2. `Settings` を開く。
 3. 左メニューの `Rules` → `Rulesets` を開く。
@@ -45,7 +47,7 @@ Nine標準AI開発フローでは、Codex側の自己チェックとGitHub側の
 
 GitHub Actionsを一度実行してから、CI workflowのstatus checkを必須対象として選択する。
 
-標準CIでは `CI` workflow配下のjobを必須チェックとして指定する。
+workflow名ではなく、対象PRのcheck-runsで実在するjobのcheck名と発行元Appを確認して選ぶ。このrepoでは `Template CI` の `verification` と `Security` の `Security Preflight`（ともに `github-actions`）を確認済み。他repoへこの名前をそのままコピーせず、配置したworkflowの実結果から選択する。可能なら期待する発行元Appも指定し、最新baseとの整合性を要求する。
 
 初回リポジトリでは、CI workflowを配置しただけではstatus check候補が表示されない場合がある。その場合は一度PRまたはpushでActionsを実行してからRulesetへ戻る。
 
@@ -82,6 +84,8 @@ GitHub Actionsを一度実行してから、CI workflowのstatus checkを必須�
 管理者等へbypass権限を付ける場合も、緊急時やRuleset設定ミス修正用として扱う。
 
 Codexや通常の自動化処理へ安易にbypass権限を与えない。
+
+Rulesetsは対象branchへ適用される全ルールとbypass対象・モードを確認する。classic方式では `Settings` → `Branches` で対象branchの同等ルールを設定し、管理者にも適用する `Do not allow bypassing the above settings` を確認する。既存の別ルールを無効化して置き換えない。
 
 ## Nine標準推奨値
 
@@ -127,10 +131,14 @@ Nine標準Python CIテンプレートでは、テストファイルがまだ存�
 
 Ruleset作成後に以下を確認する。
 
+承認された設定だけを適用し、APIまたはSettingsで対象branch・有効状態・required checks・bypassを再取得する。拒否動作は別途許可された隔離repo / branchに同等設定を用意し、通常actor（bypassなし）で検証する。実mainへの直接push・force push・削除で試さない。隔離検証は実mainの拒否実証とは区別し、未実施項目は未確認と記録する。
+
 - mainへの直接pushが防止されるか
 - PRからMergeできるか
 - CI失敗時にMergeがブロックされるか
 - CI成功後にMerge可能になるか
 - force pushが禁止されているか
+- 保護対象branchの削除が禁止されているか
+- 管理者・Appを含むbypassが承認した範囲だけか
 
 実際のプロジェクトで問題があれば、`ai-development` の標準設定自体を見直す。
