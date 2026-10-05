@@ -17,6 +17,24 @@ Nine標準AI開発フローで新規リポジトリを準備するときのGitHu
 
 AGENTS.mdのルールだけに依存せず、GitHub側でも強制する。
 
+### 利用条件と未保護時の扱い
+
+公開repoはFreeでも利用可能。非公開repoでは個人所有のPro、組織所有のTeam / Enterprise Cloudなど対応プランが必要。プラン条件とactorの管理・ルール編集権限は別に確認する（[Rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)、[Branch Protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)）。
+
+読み取り調査では観測時刻、repo / owner / private / default branch、actor権限と次の応答をIssueへ記録する。Secretやtokenは含めない。
+
+| GET endpoint（`repos/{owner}/{repo}` 以下） | 判断 |
+| --- | --- |
+| `/branches/{branch}` | `protected=false` は未保護。`true` でも必要なルールがすべて有効とは限らない |
+| `/rulesets` と対象rulesetの詳細 | 対象branch、`Active`、PR必須、required checks、force push / deletion禁止、bypassを確認 |
+| `/branches/{branch}/protection` | classic方式のPR・checks・管理者への適用・force push / deletion設定を確認 |
+
+403は本文とactor権限を照合し、明示的なプラン制約と権限不足を区別する。理由不明の403・404・通信失敗は取得不能として扱い、未設定や保護済みと推定しない。一方式の失敗から他方式の可否を推定しない。
+
+未保護または取得不能なら、保護有効化・親Issueの最終受入を停止して人間へ判断を求める。未保護での継続を承認する場合は、残存リスク（GitHubが誤操作を拒否できない）、承認者・日時、対象範囲、期限、追跡Issueを記録する。未承認・期限切れ・必要な検証結果の欠落時はmergeを停止する。代替制御はPR経由、同じ最終headのlocal / CI / Security / Codex Reviewと人間Merge判断であり、GitHub側の強制保護とは呼ばない。
+
+課金・公開化・org移管・権限変更・設定適用は個別の明示承認まで停止する。文書PRのmergeと保護有効化は別状態で記録する。設定手順と安全な確認は[設定ガイド](../templates/github-security/ruleset-guide.md)を参照。
+
 Issue用の短命head branchは保護対象branchとは区別する。新規リポジトリでは `Automatically delete head branches` をONにし、Merge済みPRのIssue用head branchを原則自動削除する。
 
 ## 2. Dependabot
