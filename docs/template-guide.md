@@ -62,8 +62,14 @@ for path in AGENTS.md docs .agents/skills templates; do
   fi
 done
 mkdir -p "$project_output_root/.agents"
-# ai-development自身の検証行は生成projectへ持ち込まない。
-awk '!/^このrepoの検証は全 /' "$template_source_root/AGENTS.md" > "$project_output_root/AGENTS.md"
+# ai-development自身の検証行と Cursor Cloud specific instructions は生成projectへ持ち込まない。
+awk '
+  /^## Cursor Cloud specific instructions$/ { skip = 1; next }
+  /^## / { skip = 0 }
+  skip { next }
+  /^このrepoの検証は全 / { next }
+  { print }
+' "$template_source_root/AGENTS.md" > "$project_output_root/AGENTS.md"
 cp -R "$template_source_root/docs" "$project_output_root/docs"
 cp -R "$template_source_root/.agents/skills" "$project_output_root/.agents/skills"
 cp -R "$template_source_root/templates" "$project_output_root/templates"
@@ -137,7 +143,7 @@ CodexなどのAIエージェントに、プロジェクトで守るべき共通�
 
 ### 新規プロジェクトでの扱い
 
-上記「最小AGENTSと参照先の配置」に従い、`ai-development/AGENTS.md` と `docs/` / Skill / 参照原本を併せて配置します。AGENTS末尾のai-development自身に固有な検証・配置履歴行は持ち込まず、対象projectの `./scripts/verify.sh`、技術構成、禁止事項を設定します。AGENTSだけのコピーで移行完了にしません。
+上記「最小AGENTSと参照先の配置」に従い、`ai-development/AGENTS.md` と `docs/` / Skill / 参照原本を併せて配置します。AGENTS末尾のai-development自身に固有な検証・配置履歴行と、`Cursor Cloud specific instructions` 節は持ち込まず、対象projectの `./scripts/verify.sh`、技術構成、禁止事項を設定します。AGENTSだけのコピーで移行完了にしません。
 
 ## 4. 親Issueテンプレート
 

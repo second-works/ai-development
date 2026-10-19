@@ -28,4 +28,11 @@
 - 計画のIssue化 / UI / Framework / RAG / Security / 外部送信 / Deploy / 検収 / State / 検証変更 / repo設定・依存保守を伴う案件: docs/minimal-development-contract.md の条件表と該当正本を読む。重要判断が不足すれば停止する。
 - 人向け文書は日本語で判断・理由・影響を先に簡潔に書く。検証結果・warning / deprecation・残存リスクはIssue / PRへ記録する。実装・配備・Product Acceptanceを区別し、未確認を完了にしない。
 
+## Cursor Cloud specific instructions
+Cursorのクラウドエージェントは、このrepoでも既存の作業ルールに従う。長い手順はリンク先を正本とし、ここでは対応だけを示す。
+- 検証は Bash 5 で全 `tests/*/run-samples.sh` を実行する。失敗・不能・全工程skip時は [検証とレビュー](#検証とレビュー) のとおり停止する。生成projectは `./scripts/verify.sh`（docs/nine-standard-ai-development-flow.md）。
+- PRを作成したら `@codex review` を依頼する。起動方法は docs/code-review-contract.md。
+- Mergeは人間が判断し、エージェントはMergeしない（[検証とレビュー](#検証とレビュー)）。既採用の例外だけ docs/safe-auto-fix-auto-merge.md。
+- mainへの直接pushとforce pushはしない（[作業境界](#作業境界)）。
+
 このrepoの検証は全 `tests/*/run-samples.sh` をBash 5で実行する。生成projectの入口は `./scripts/verify.sh`。配置判断の履歴は docs/instruction-architecture-inventory.md。

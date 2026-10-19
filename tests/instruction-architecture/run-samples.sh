@@ -144,6 +144,7 @@ with tempfile.TemporaryDirectory(prefix='minimal-agents-placement-') as temp:
     subprocess.run(['bash','-c',commands],check=True,env=env,capture_output=True,text=True)
     agents=(project/'AGENTS.md').read_text()
     assert 'このrepoの検証は全' not in agents
+    assert '## Cursor Cloud specific instructions' not in agents
     for target in re.findall(r'(?:docs|\.agents/skills)/[\w./-]+\.md',agents):
         if target=='docs/design.md':continue # 案件固有のPRODUCT designは別作成
         assert (project/target).is_file(),target
