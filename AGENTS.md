@@ -31,7 +31,7 @@
 ## Cursor Cloud specific instructions
 Cursorのクラウドエージェントは、このrepoでも既存の作業ルールに従う。長い手順はリンク先を正本とし、ここでは対応だけを示す。
 - 検証は Bash 5 で全 `tests/*/run-samples.sh` を実行する。失敗・不能・全工程skip時は [検証とレビュー](#検証とレビュー) のとおり停止する。生成projectは `./scripts/verify.sh`（docs/nine-standard-ai-development-flow.md）。
-- PRを作成したら `@codex review` を依頼する。起動方法は docs/code-review-contract.md。
+- CI成功後に Codex Review を確認する。Automatic reviews が無効または利用できない場合だけ `@codex review` を依頼する。起動方法は docs/code-review-contract.md。
 - Mergeは人間が判断し、エージェントはMergeしない（[検証とレビュー](#検証とレビュー)）。既採用の例外だけ docs/safe-auto-fix-auto-merge.md。
 - mainへの直接pushとforce pushはしない（[作業境界](#作業境界)）。
 
