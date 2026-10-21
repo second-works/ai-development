@@ -13,9 +13,33 @@ block() {
 
 input="$(cat)"
 
-# Fast path: anything that cannot be a git push is allowed untouched.
+# Without jq the command cannot be decoded; anything mentioning git may be a push.
+if ! command -v jq >/dev/null 2>&1; then
+  case "$(printf '%s' "$input" | tr -d "'\"\\")" in
+    *git*) block "jq is not installed, so the push could not be checked" ;;
+  esac
+  exit 0
+fi
+if ! cmd="$(printf '%s' "$input" | jq -er '.tool_input.command' 2>/dev/null)"; then
+  case "$(printf '%s' "$input" | tr -d "'\"\\")" in
+    *git*) block "could not read the command from the hook input" ;;
+  esac
+  exit 0
+fi
+cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)"
+
+# Remove "\<newline>" continuations as the shell does (not replace them with a space),
+# so pu\<newline>sh stays push and ma\<newline>in stays main. A doubled backslash is
+# one literal backslash, so the newline after it still ends the command: protect
+# pairs first, then remove only an odd backslash before a newline.
+nl=$'\n' bs='\' ph=$'\001'
+cmd="${cmd//"$bs$bs"/$ph}"
+cmd="${cmd//"$bs$nl"/}"
+cmd="${cmd//"$ph"/$bs$bs}"
+
+# Fast path, on the decoded command: anything that cannot be a git push is allowed.
 # Quotes and backslashes are removed first, so g'it' p"ush" is not missed.
-flat="$(printf '%s' "$input" | tr -d "'\"\\")"
+flat="$(printf '%s' "$cmd" | tr -d "'\"\\")"
 case "$flat" in
   *git*) ;;
   *) exit 0 ;;
@@ -25,15 +49,6 @@ case "$flat" in
   *) exit 0 ;;
 esac
 
-command -v jq >/dev/null 2>&1 || block "jq is not installed, so the push could not be checked"
-cmd="$(printf '%s' "$input" | jq -er '.tool_input.command' 2>/dev/null)" ||
-  block "could not read the command from the hook input"
-cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)"
-
-# Remove "\<newline>" continuations as the shell does (not replace them with a space),
-# so a destination on the next line is not lost and ma\<newline>in stays main.
-nl=$'\n'
-cmd="${cmd//\\$nl/}"
 # >&, <& and &> are redirections, not the & separator (git push 2>&1 origin main).
 cmd="${cmd//>&/>}"
 cmd="${cmd//<&/<}"
