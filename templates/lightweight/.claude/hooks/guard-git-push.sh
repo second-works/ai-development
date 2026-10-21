@@ -33,6 +33,10 @@ cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)"
 # Join "\<newline>" continuations so a destination on the next line is not lost.
 nl=$'\n'
 cmd="${cmd//\\$nl/ }"
+# >&, <& and &> are redirections, not the & separator (git push 2>&1 origin main).
+cmd="${cmd//>&/>}"
+cmd="${cmd//<&/<}"
+cmd="${cmd//&>/>}"
 
 # A segment is a git command when git starts it. Allowed before git: "(", "{", "!",
 # shell keywords and wrappers with their options (then, do, time, command,
@@ -55,6 +59,10 @@ found_push=0
 scan() { # check every segment of the command text on stdin
   local raw plain
   while IFS= read -r raw; do
+    # A redirection ends a word even without spaces (git push>log origin main), so put
+    # spaces around < and > first; every word then ends where the shell ends it.
+    raw="${raw//</ < }"
+    raw="${raw//>/ > }"
     # Push options carry free text (for example -o "ci +1"); drop them before checking.
     plain="$(printf '%s' "$raw" | sed -E "s/(^|[[:space:]])(-o|--push-option)(=|[[:space:]]+)(\"[^\"]*\"|'[^']*'|[^[:space:]]+)/\\1/g" | tr -d "'\"\\")"
     if [[ ! $raw =~ $push_re && ! $plain =~ $push_re ]]; then
