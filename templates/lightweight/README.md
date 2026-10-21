@@ -21,14 +21,41 @@ CIのworkflowは技術構成ごとに `templates/github-actions/` から選ぶ�
 
 ## 配置
 
+既存の設定と未コミットの変更を残したまま置き、今回の差分だけを戻せる（#195）。配置先はgitのrepositoryのrootに限る（戻すための控えを `.git/` の下に置くため、1つのrepositoryに配置先は1つ）。
+
 ```bash
-templates/lightweight/place.sh --dry-run <project-root>
-templates/lightweight/place.sh <project-root>
+templates/lightweight/place.sh --dry-run <project-root>   # 置く内容と差分を表示する。何も書かない
+templates/lightweight/place.sh <project-root>             # 置く
+templates/lightweight/place.sh --check <project-root>     # 不足・衝突・古いファイルを表示する。何も書かない
+templates/lightweight/place.sh --restore <project-root>   # 最後の配置で変えたものだけを戻す
 ```
 
-- 置く前に全部の配置先を調べる。1つでも既にあるか、親ディレクトリがsymlink（例: `.claude` → `~/.claude`）なら、何も書かずに衝突を表示して止まる（既存の `AGENTS.md`、`CLAUDE.md`、`.claude/settings.json` などは手で統合する）。
-- 途中でコピーに失敗したり、中断（HUP、INT、TERM）されたりしたら、その回に作ったファイルと空のディレクトリだけを消す。
-- 既存projectへの配置と復旧の手順は、bootstrap（#195）で扱う。
+**出典の固定。** 候補はこのrepoの1つのcommitから読む。既定はHEADで、候補のファイルに未コミットの変更があれば止める（どのcommitにも対応しないため）。`--ref <commit>` で別のcommitを指定できる。読んだcommitのfull SHAは、dry-runの先頭と、配置先の `.ai/lightweight-placement.tsv` に記録する。
+
+**既存のファイルの扱い。** 全部の配置先を一時ディレクトリで組み立ててから書く。1つでも衝突があれば何も書かずに止まる（終了コード1）。
+
+| 配置先 | 既にあるとき |
+| --- | --- |
+| `AGENTS.md`、`CLAUDE.md` | 末尾に管理ブロック（`<!-- lightweight:begin ... -->` 〜 `<!-- lightweight:end -->`）を足す。ブロックの外は変えない。CLAUDE.mdが既に `@AGENTS.md` を読み込んでいれば、二重に読み込まない。ブロックの中が手で変えられていたり、印が壊れていたりすれば衝突 |
+| `.claude/settings.json` | 足りないdenyと、pushを止めるフックだけを足す（フックは、Bashに当たるmatcher（`Bash`、`*`、空）の下にあるときだけ、既にあるとみなす）。既存の設定、deny、フックは残す。JSONでない、`permissions.deny` や `hooks.PreToolUse` が配列でない、jqがない場合は衝突 |
+| その他のファイル | 同じ内容なら何もしない。前回この配置で置いたままなら更新する。違う内容なら衝突。プロジェクトのファイルを残すには `--keep <path>`（記録され、次回以降も残す） |
+| 配置先か親ディレクトリがsymlink（例: `.claude` → `~/.claude`） | 衝突（project外に書くため） |
+
+**再実行と復旧。** 同じcommitでの再実行は何も変えない（控えも作らない）。新しいcommitからの再実行は、変わったファイルだけを更新する。書く前に、変える前の内容を `.git/lightweight-placement/` に控え、変更の記録を書いてからファイルを書く。
+
+- 途中で失敗したり、中断（HUP、INT、TERM）されたりしたら、その回に変えたファイルを元に戻し、作ったファイルとディレクトリを消す。
+- 強制終了などで戻せなかった回が残っていれば、次の配置は止まる。`--restore` で戻してから再実行する。
+- `--restore` は最後の配置だけを戻す。未コミットの変更も含めて、配置前の内容に戻る。配置の後に手で変えたファイルがあれば、何も戻さずに止まる（控えの場所を表示する）。もう一度実行すると、その前の配置を戻す。
+- `.ai/lightweight-placement.tsv` は、配置したファイルの内容の記録。commitしておくと、別のcloneでも更新と `--check` が同じように働く。控え（`.git/lightweight-placement/`）はそのcloneだけにある。
+
+**配置は有効化や検証の成功ではない。** Claude Codeがフックを読み込むのは新しいセッションから。`./scripts/verify.sh`、CI、Security、レビューは別に行う。`--check` もファイルの照合だけで、これらは確かめない（出力の最後にそう表示する）。
+
+**このスクリプトが触らないガード。** `git add` の一括追加の禁止と、秘密情報や生成物のcommit拒否は、ai-project-bootstrapが配る `.ai/GIT_RULES.md` と `.git/hooks/pre-commit` が担う。配置はこの2つを変えない（`--check` は「left as it was」と表示する）。Secretsは、置く `scripts/security-preflight.sh`、`.env` を読ませないdeny、AGENTS.mdのルールでも扱う。
+
+**ai-project-bootstrapとの併用の限界。**
+
+- 古い `.ai/GIT_RULES.md` は「文書だけの変更はmainへ直接コミットしてよい」としていて、置くAGENTS.md（mainへ直接pushしない）と矛盾する。配置時に見つけたら警告し、AGENTS.mdに従う。`.ai/GIT_RULES.md` 自体はbootstrap側で直す。
+- bootstrapの `enable-claude` は、`@AGENTS.md` を含むCLAUDE.mdを固定の内容で書き直す。配置の後にbootstrapを動かすと、CLAUDE.mdの管理ブロックが消える。`--check` は「outdated: CLAUDE.md」として示すので、`place.sh` を再実行する。
 
 ## ガードの範囲と限界
 
