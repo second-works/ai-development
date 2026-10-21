@@ -16,7 +16,8 @@
 
 ## 安全境界
 
-- PRのコードは所有者のMacで任意のshellとして動く。両jobはPRのhead repoがこのrepoと一致するときだけ実行し、forkのPRはjobをskipする。skipは成功ではないため、fork PRはhosted runnerの回復か人間の判断を待つ。
+- PRのコードは所有者のMacで任意のshellとして動く。両jobは、PRのhead repoがこのrepoと一致するとき（とCIのpush）だけMacで動く。
+- forkのPRはjobをskipせず、`runs-on` の式で `ubuntu-latest` へ回す。GitHubは条件でskipしたjobを成功として報告し、必須チェックでもMergeを止めないため。hosted runnerが止まっている間、fork PRのCI・Securityは開始前に失敗し、成功にはならない。hosted runnerの回復か人間の判断を待つ。
 - runnerは所有者のOSユーザーで動く。専用ユーザー化は未実施の残存リスクとして扱う。
 - ランナーの `.env` は読み書きしない。必要な環境変数はworkflowの `env:` に書く。
 

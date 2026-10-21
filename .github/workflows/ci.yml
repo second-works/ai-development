@@ -11,9 +11,9 @@ permissions:
 
 jobs:
   verification:
-    # Runs on the owner's Mac (#191). Fork pull requests are not run there.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, macOS, ai-development]
+    # Runs on the owner's Mac (#191). Fork pull requests go to a hosted runner
+    # instead of being skipped, because a skipped job reports success.
+    runs-on: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && 'ubuntu-latest' || fromJSON('["self-hosted", "macOS", "ai-development"]') }}
     timeout-minutes: 10
 
     steps:
