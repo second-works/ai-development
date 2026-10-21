@@ -102,9 +102,11 @@ restore_backup() { # <backup dir> <status to record>
     echo "stopped: $problems file(s) changed since the placement. Nothing was restored." >&2
     return 1
   fi
-  local count=0
+  local count=0 interrupted=0
+  [[ $(<"$bk/status") == applying ]] && interrupted=1
   while IFS=$'\t' read -r kind rel before after; do
-    rm -f -- "$target/$rel.lightweight-tmp"
+    # Only an unfinished run can have left its own temporary file behind.
+    [[ $interrupted -eq 1 ]] && rm -f -- "$target/$rel.lightweight-tmp"
     case "$kind" in
       created)
         if [[ $(sha_of "$target/$rel") == "$after" ]]; then rm -f -- "$target/$rel" || return 1; count=$((count + 1)); fi ;;
@@ -249,7 +251,9 @@ stage_settings() { # <rel> <candidate file>
       | (.permissions.deny // []) as $deny
       | .permissions.deny = $deny + [$c.permissions.deny[] | select(. as $x | any($deny[]; . == $x) | not)]
       | (.hooks.PreToolUse // []) as $pre
-      | .hooks.PreToolUse = (if any($pre[] | (.hooks // [])[]?; .command? == $guard) then $pre
+      # The guard counts as present only under a matcher that covers Bash.
+      | .hooks.PreToolUse = (if any($pre[] | select((.matcher // "") | . == "Bash" or . == "*" or . == "")
+          | (.hooks // [])[]?; .command? == $guard) then $pre
           else $pre + $c.hooks.PreToolUse end)
     ' "$dst" >"$new" 2>"$stage/jq-error"; then
     conflict "$rel: cannot be merged safely ($(tr '\n' ' ' <"$stage/jq-error"))"
@@ -269,10 +273,15 @@ has_symlink_on_path() { # <rel>: true when the destination or a parent directory
 }
 
 # --- Plan ----------------------------------------------------------------------------
-plan_rel=() plan_action=()
-add_plan() { plan_rel+=("$1"); plan_action+=("$2"); }
+# plan_sha is the destination's sha when it was planned; apply stops if it changed since.
+plan_rel=() plan_action=() plan_sha=()
+add_plan() { plan_rel+=("$1"); plan_action+=("$2"); plan_sha+=("$(sha_of "$target/$1")"); }
 decide() { # <rel>: create, unchanged or update for a staged file
   local rel="$1" dst="$target/$1" new="$stage/new/$1"
+  if [[ -e $dst.lightweight-tmp || -L $dst.lightweight-tmp ]]; then
+    conflict "$rel: $rel.lightweight-tmp already exists, and this script writes through that name"
+    return
+  fi
   if [[ ! -e $dst ]]; then add_plan "$rel" create; return; fi
   if cmp -s "$new" "$dst" && { [[ $rel != *.sh ]] || [[ -x $dst ]]; }; then add_plan "$rel" unchanged; return; fi
   add_plan "$rel" update
@@ -399,10 +408,15 @@ if [[ $changes -eq 0 ]]; then
 fi
 
 mkdir -p "$backup_root" || die 1 "cannot create $backup_root"
-n=1
-while [[ -e $backup_root/$(date +%Y%m%dT%H%M%S)-$(printf '%04d' "$n") ]]; do n=$((n + 1)); done
-bk="$backup_root/$(date +%Y%m%dT%H%M%S)-$(printf '%04d' "$n")"
-mkdir -p "$bk/before" || die 1 "cannot create $bk"
+# Name backups by a sequence number, so that --restore finds the latest one even if
+# the clock moves backwards. The UTC time is only for people reading the name.
+n=0
+for d in "$backup_root"/*/; do
+  d="${d%/}" d="${d##*/}"
+  [[ $d =~ ^[0-9]{6}- ]] && ((10#${d:0:6} > n)) && n=$((10#${d:0:6}))
+done
+bk="$backup_root/$(printf '%06d' $((n + 1)))-$(date -u +%Y%m%dT%H%M%SZ)"
+mkdir "$bk" && mkdir "$bk/before" || die 1 "cannot create $bk"
 echo applying >"$bk/status"
 : >"$bk/journal"
 echo "$commit" >"$bk/source"
@@ -432,6 +446,10 @@ for i in "${!plan_rel[@]}"; do
   [[ $action == create || $action == update ]] || continue
   dst="$target/$rel" new="$stage/new/$rel" tmp="$target/$rel.lightweight-tmp"
   after="$(sha_of "$new")"
+  if [[ $(sha_of "$dst") != "${plan_sha[i]}" ]]; then
+    echo "conflict: $rel changed while placing; nothing of it was written" >&2
+    rollback
+  fi
   if [[ $action == update ]]; then
     mkdir -p "$(dirname "$bk/before/$rel")" && cp -p -- "$dst" "$bk/before/$rel" || rollback
     printf 'modified\t%s\t%s\t%s\n' "$rel" "$(sha_of "$dst")" "$after" >>"$bk/journal" || rollback

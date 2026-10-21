@@ -342,6 +342,51 @@ run_place "$dironly"
 expect_status 1 "$status" "placement over a directory named AGENTS.md"
 grep -q '^conflict: AGENTS.md: exists but is not a regular file' "$WORK/err" || fail "a directory in place of a file was not reported"
 
+# A file named like the temporary file is the project's, so it is a conflict.
+tmpname="$WORK/tmpname"
+new_repo "$tmpname"
+printf 'own\n' >"$tmpname/AGENTS.md"
+printf 'precious\n' >"$tmpname/AGENTS.md.lightweight-tmp"
+tmpname_before="$(snapshot "$tmpname")"
+run_place "$tmpname"
+expect_status 1 "$status" "placement next to an existing .lightweight-tmp"
+grep -q '^conflict: AGENTS.md: AGENTS.md.lightweight-tmp already exists' "$WORK/err" || fail "an existing temporary name was not reported"
+[[ $tmpname_before == "$(snapshot "$tmpname")" ]] || fail "placement overwrote an existing .lightweight-tmp"
+
+# The guard under a matcher that does not cover Bash does not count as placed.
+matcher="$WORK/matcher"
+new_repo "$matcher"
+mkdir -p "$matcher/.claude"
+jq -n --arg c '"$CLAUDE_PROJECT_DIR"/.claude/hooks/guard-git-push.sh' \
+  '{hooks: {PreToolUse: [{matcher: "Edit", hooks: [{type: "command", command: $c}]}]}}' >"$matcher/.claude/settings.json"
+run_place "$matcher"
+expect_status 0 "$status" "placement with the guard under another matcher"
+jq -e '[.hooks.PreToolUse[] | select(.matcher == "Bash") | .hooks[].command | select(test("guard-git-push"))] | length == 1' \
+  "$matcher/.claude/settings.json" >/dev/null || fail "the guard was not added under the Bash matcher"
+
+# A file changed between planning and writing is not overwritten.
+raced="$WORK/raced"
+new_repo "$raced"
+printf 'own\n' >"$raced/AGENTS.md"
+race="$WORK/race-mkdir"
+mkdir -p "$race"
+cat >"$race/mkdir" <<EOF
+#!/usr/bin/env bash
+for last; do :; done
+[[ \$last == */before ]] && printf 'added while placing\n' >>"$raced/AGENTS.md"
+exec "$(command -v mkdir)" "\$@"
+EOF
+chmod +x "$race/mkdir"
+set +e; PATH="$race:$PATH" "$PLACE" "$raced" >/dev/null 2>"$WORK/err"; status=$?; set -e
+expect_status 1 "$status" "placement over a file changed while placing"
+grep -q '^conflict: AGENTS.md changed while placing' "$WORK/err" || fail "a change while placing was not reported"
+[[ $(<"$raced/AGENTS.md") == $'own\nadded while placing' && ! -e $raced/CLAUDE.md && ! -e $raced/.claude ]] ||
+  fail "placement overwrote a file changed while placing, or left files"
+
+# Backups are numbered, so the latest one does not depend on the clock.
+names="$(find "$upd/.git/lightweight-placement" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | LC_ALL=C sort | cut -c1-7 | tr '\n' ' ')"
+[[ $names == '000001- 000002- ' ]] || fail "backups are not numbered in order: $names"
+
 # Generated projects may run these scripts with macOS Bash 3.2.
 if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   old="$WORK/bash32"

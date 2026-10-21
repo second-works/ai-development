@@ -37,7 +37,7 @@ templates/lightweight/place.sh --restore <project-root>   # 最後の配置で�
 | 配置先 | 既にあるとき |
 | --- | --- |
 | `AGENTS.md`、`CLAUDE.md` | 末尾に管理ブロック（`<!-- lightweight:begin ... -->` 〜 `<!-- lightweight:end -->`）を足す。ブロックの外は変えない。CLAUDE.mdが既に `@AGENTS.md` を読み込んでいれば、二重に読み込まない。ブロックの中が手で変えられていたり、印が壊れていたりすれば衝突 |
-| `.claude/settings.json` | 足りないdenyと、pushを止めるフックだけを足す。既存の設定、deny、フックは残す。JSONでない、`permissions.deny` や `hooks.PreToolUse` が配列でない、jqがない場合は衝突 |
+| `.claude/settings.json` | 足りないdenyと、pushを止めるフックだけを足す（フックは、Bashに当たるmatcher（`Bash`、`*`、空）の下にあるときだけ、既にあるとみなす）。既存の設定、deny、フックは残す。JSONでない、`permissions.deny` や `hooks.PreToolUse` が配列でない、jqがない場合は衝突 |
 | その他のファイル | 同じ内容なら何もしない。前回この配置で置いたままなら更新する。違う内容なら衝突。プロジェクトのファイルを残すには `--keep <path>`（記録され、次回以降も残す） |
 | 配置先か親ディレクトリがsymlink（例: `.claude` → `~/.claude`） | 衝突（project外に書くため） |
 
