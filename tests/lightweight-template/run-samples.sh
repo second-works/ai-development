@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks the lightweight candidate (#194) in temporary repositories only.
+# Checks the lightweight candidate (#194) and its placement (#195) in temporary repositories only.
 # Nothing here talks to GitHub or pushes anywhere.
 
 set -Eeuo pipefail
@@ -39,86 +39,318 @@ done
 jq -e . "$CAND/.claude/settings.json" >/dev/null || fail "settings.json is not valid JSON"
 
 # --- 2. Placement -------------------------------------------------------------
+# place.sh reads the candidate from a commit. Copy the working tree into a temporary
+# source repository, so that this test checks the candidate files as they are now.
+SRC="$WORK/source"
+mkdir -p "$SRC/templates/verification" "$SRC/templates/security"
+cp -R "$CAND" "$SRC/templates/lightweight"
+cp -p "$ROOT/templates/verification/verify.sh" "$SRC/templates/verification/"
+cp -p "$ROOT/templates/security/security-preflight.sh" "$SRC/templates/security/"
+git -C "$SRC" init -q -b main
+git -C "$SRC" add -A
+git -C "$SRC" -c user.name=t -c user.email=t@example.invalid commit -q -m candidate
+SRC_SHA="$(git -C "$SRC" rev-parse HEAD)"
+PLACE="$SRC/templates/lightweight/place.sh"
+STEWARD=templates/lightweight/.claude/skills/steward/SKILL.md
+
+run_place() { # <args...>: sets status, out and err
+  set +e
+  "$PLACE" "$@" >"$WORK/out" 2>"$WORK/err"
+  status=$?
+  set -e
+}
+snapshot() { # <dir>: path, executable bit and checksum of every file outside .git
+  (cd "$1" && find . -path ./.git -prune -o -type f -print | LC_ALL=C sort | while IFS= read -r f; do
+    if [[ -x $f ]]; then x=x; else x=-; fi
+    printf '%s %s %s\n' "$f" "$x" "$(cksum <"$f")"
+  done)
+}
+backups() { find "$1/.git/lightweight-placement" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' '; }
+last_backup_status() { cat "$(find "$1/.git/lightweight-placement" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort | tail -1)/status"; }
+
+# Fresh project: dry-run shows the source and the diff and writes nothing.
 proj="$WORK/project"
 new_repo "$proj"
-out="$("$CAND/place.sh" --dry-run "$proj")"
-[[ $(grep -c '^would create: ' <<<"$out") -eq 12 ]] || fail "dry-run did not list 12 files"
-[[ -z $(find "$proj" -path "$proj/.git" -prune -o -type f -print) ]] || fail "dry-run wrote files"
+run_place --dry-run "$proj"
+expect_status 0 "$status" "dry-run"
+[[ $(grep -c '^would create: ' "$WORK/out") -eq 13 ]] || fail "dry-run did not list 13 files"
+grep -qx "source: $SRC_SHA" "$WORK/out" || fail "dry-run did not show the full source SHA"
+grep -q '^+++ b/AGENTS.md' "$WORK/out" || fail "dry-run did not show the diff"
+[[ -z $(find "$proj" -path "$proj/.git" -prune -o -type f -print) && $(backups "$proj") -eq 0 ]] || fail "dry-run wrote files"
 
-"$CAND/place.sh" "$proj" >/dev/null
+run_place "$proj"
+expect_status 0 "$status" "placement"
 for f in AGENTS.md CLAUDE.md .agents/skills/plan-to-issues/SKILL.md .claude/skills/steward/SKILL.md \
   .claude/settings.json .claude/hooks/guard-git-push.sh .github/ISSUE_TEMPLATE/child-issue.md \
   .github/ISSUE_TEMPLATE/parent-issue.md .github/pull_request_template.md \
-  scripts/verify.sh scripts/security-preflight.sh scripts/check-pr-head.sh; do
+  scripts/verify.sh scripts/security-preflight.sh scripts/check-pr-head.sh .ai/lightweight-placement.tsv; do
   [[ -f $proj/$f ]] || fail "placement did not create $f"
 done
 for f in .claude/hooks/guard-git-push.sh scripts/verify.sh scripts/security-preflight.sh scripts/check-pr-head.sh; do
   [[ -x $proj/$f ]] || fail "$f is not executable after placement"
 done
 cmp -s "$ROOT/templates/verification/verify.sh" "$proj/scripts/verify.sh" || fail "verify.sh is not the existing original"
+grep -qxF "$(printf 'source\t%s' "$SRC_SHA")" "$proj/.ai/lightweight-placement.tsv" || fail "the full source SHA was not recorded"
+grep -q 'not verified yet' "$WORK/out" || fail "placement did not say that it is not verified yet"
 
-before="$(cd "$proj" && find . -path ./.git -prune -o -type f -print | sort | xargs shasum)"
-set +e; "$CAND/place.sh" "$proj" >/dev/null 2>"$WORK/err"; status=$?; set -e
-expect_status 1 "$status" "re-running placement"
-grep -q 'Nothing was written' "$WORK/err" || fail "re-run did not explain that nothing was written"
-[[ $before == "$(cd "$proj" && find . -path ./.git -prune -o -type f -print | sort | xargs shasum)" ]] ||
-  fail "re-run changed existing files"
+# Re-running changes nothing and makes no new backup.
+before="$(snapshot "$proj")"
+run_place "$proj"
+expect_status 0 "$status" "re-running placement"
+grep -q 'nothing to change' "$WORK/out" || fail "re-run did not say that nothing changed"
+[[ $before == "$(snapshot "$proj")" && $(backups "$proj") -eq 1 ]] || fail "re-run changed files or made a backup"
 
-conflict="$WORK/conflict"
-new_repo "$conflict"
-printf 'own rules\n' >"$conflict/CLAUDE.md"
-set +e; "$CAND/place.sh" "$conflict" >/dev/null 2>"$WORK/err"; status=$?; set -e
-expect_status 1 "$status" "placement over an existing CLAUDE.md"
-grep -q 'conflict: CLAUDE.md' "$WORK/err" || fail "conflict was not reported"
-[[ ! -e $conflict/AGENTS.md && $(<"$conflict/CLAUDE.md") == 'own rules' ]] || fail "placement wrote despite a conflict"
+run_place --check "$proj"
+expect_status 0 "$status" "check of a placed project"
+grep -qx "check: placed from $SRC_SHA" "$WORK/out" || fail "check did not confirm the placement"
+grep -q '^not checked here: whether Claude Code has loaded the hook' "$WORK/out" || fail "check did not separate placement from activation and verification"
+[[ $before == "$(snapshot "$proj")" ]] || fail "check wrote files"
 
+unplaced="$WORK/unplaced"
+new_repo "$unplaced"
+run_place --check "$unplaced"
+expect_status 1 "$status" "check of an unplaced project"
+grep -qx 'missing: AGENTS.md' "$WORK/out" || fail "check did not report missing files"
+
+# Existing settings, rules, hooks and uncommitted edits are kept, and --restore puts them back.
+own="$WORK/own"
+new_repo "$own"
+printf '# Own rules\n\n- keep me\n' >"$own/AGENTS.md"
+git -C "$own" add AGENTS.md
+git -C "$own" -c user.name=t -c user.email=t@example.invalid commit -q -m rules
+printf -- '- uncommitted edit\n' >>"$own/AGENTS.md"
+printf '@AGENTS.md\n\nown claude notes\n' >"$own/CLAUDE.md"
+mkdir -p "$own/.claude" "$own/.ai"
+cat >"$own/.claude/settings.json" <<'EOF'
+{"model": "own", "permissions": {"allow": ["Read"], "deny": ["Read(./secrets/**)", "Bash(git push -f:*)"]},
+ "hooks": {"PreToolUse": [{"matcher": "Edit", "hooks": [{"type": "command", "command": "own-hook.sh"}]}],
+           "Stop": [{"hooks": [{"type": "command", "command": "stop.sh"}]}]}}
+EOF
+printf '# rules\n- 文書だけの変更は main へ直接コミットしてよい\n' >"$own/.ai/GIT_RULES.md"
+printf '#!/bin/sh\nexit 0\n' >"$own/.git/hooks/pre-commit"
+chmod +x "$own/.git/hooks/pre-commit"
+own_before="$(snapshot "$own")"
+hook_before="$(cksum <"$own/.git/hooks/pre-commit")"
+run_place "$own"
+expect_status 0 "$status" "placement over existing settings"
+grep -q '^warning: .ai/GIT_RULES.md allows committing documents directly' "$WORK/err" || fail "the GIT_RULES contradiction was not reported"
+grep -qx -- '- keep me' "$own/AGENTS.md" && grep -qx -- '- uncommitted edit' "$own/AGENTS.md" || fail "AGENTS.md lost the project's own text"
+grep -q 'mainへ直接pushしない' "$own/AGENTS.md" || fail "AGENTS.md did not get the lightweight block"
+[[ $(grep -cx '@AGENTS.md' "$own/CLAUDE.md") -eq 1 ]] && grep -qx 'own claude notes' "$own/CLAUDE.md" || fail "CLAUDE.md was not merged once"
+jq -e '.model == "own" and .permissions.allow == ["Read"]
+  and (.permissions.deny | index("Read(./secrets/**)") != null and index("Read(./.env)") != null and index("Bash(git push --force:*)") != null)
+  and (.permissions.deny | map(select(. == "Bash(git push -f:*)")) | length == 1)
+  and ([.hooks.PreToolUse[].hooks[].command] | index("own-hook.sh") != null and (map(select(test("guard-git-push"))) | length == 1))
+  and .hooks.Stop[0].hooks[0].command == "stop.sh"' "$own/.claude/settings.json" >/dev/null ||
+  fail "settings.json lost existing values or did not get the guard"
+[[ $(<"$own/.ai/GIT_RULES.md") == *直接コミットしてよい* && $hook_before == "$(cksum <"$own/.git/hooks/pre-commit")" ]] ||
+  fail "placement touched .ai/GIT_RULES.md or the pre-commit hook"
+run_place "$own"
+expect_status 0 "$status" "re-running placement over merged files"
+grep -q 'nothing to change' "$WORK/out" || fail "merged files changed on re-run"
+run_place --restore "$own"
+expect_status 0 "$status" "restore"
+[[ $own_before == "$(snapshot "$own")" && $hook_before == "$(cksum <"$own/.git/hooks/pre-commit")" ]] || fail "restore did not put the project back exactly"
+[[ $(last_backup_status "$own") == restored ]] || fail "restore did not record its result"
+
+# A file that cannot be merged stops everything; --keep keeps the project's own file.
+conf="$WORK/conflict"
+new_repo "$conf"
+mkdir -p "$conf/scripts"
+printf 'own verify\n' >"$conf/scripts/verify.sh"
+conf_before="$(snapshot "$conf")"
+run_place "$conf"
+expect_status 1 "$status" "placement over an existing verify.sh"
+grep -q '^conflict: scripts/verify.sh' "$WORK/err" && grep -q 'Nothing was written' "$WORK/err" || fail "conflict was not reported"
+[[ $conf_before == "$(snapshot "$conf")" && $(backups "$conf") -eq 0 ]] || fail "placement wrote despite a conflict"
+run_place --check "$conf"
+expect_status 1 "$status" "check with a conflict"
+grep -q '^conflict: scripts/verify.sh' "$WORK/err" || fail "check did not report the conflict"
+run_place --keep scripts/verify.sh "$conf"
+expect_status 0 "$status" "placement with --keep"
+[[ $(<"$conf/scripts/verify.sh") == 'own verify' ]] || fail "--keep did not keep the project's file"
+run_place --check "$conf"
+expect_status 0 "$status" "check with a kept file"
+grep -q '^kept: scripts/verify.sh' "$WORK/out" || fail "check did not report the kept file"
+run_place "$conf"
+expect_status 0 "$status" "re-running without --keep"
+
+n_bad=0
+for bad in '{"permissions": {"deny": "Read(./.env)"}}' 'not json'; do
+  badset="$WORK/badset-$((++n_bad))"
+  new_repo "$badset"
+  mkdir -p "$badset/.claude"
+  printf '%s\n' "$bad" >"$badset/.claude/settings.json"
+  bad_before="$(snapshot "$badset")"
+  run_place "$badset"
+  expect_status 1 "$status" "placement over settings: $bad"
+  grep -q '^conflict: .claude/settings.json: cannot be merged safely' "$WORK/err" || fail "unmergeable settings were not reported: $bad"
+  [[ $bad_before == "$(snapshot "$badset")" ]] || fail "placement wrote over unmergeable settings"
+done
+
+broken="$WORK/broken"
+new_repo "$broken"
+printf '%s\nhalf a block\n' '<!-- lightweight:begin (managed by templates/lightweight/place.sh; edit outside this block) -->' >"$broken/AGENTS.md"
+run_place "$broken"
+expect_status 1 "$status" "placement with a broken block"
+grep -q '^conflict: AGENTS.md: the lightweight block markers are broken' "$WORK/err" || fail "broken markers were not reported"
+
+# Update to a newer candidate, pinning with --ref, and edits that block an update.
+upd="$WORK/update"
+new_repo "$upd"
+run_place "$upd"
+expect_status 0 "$status" "placement before an update"
+edited="$WORK/edited"
+new_repo "$edited"
+run_place "$edited"
+printf -- '- edited by hand\n' >>"$edited/.claude/skills/steward/SKILL.md"
+inblock="$WORK/inblock"
+new_repo "$inblock"
+run_place "$inblock"
+sed 's/^## 作業境界$/## 作業境界（手で変更）/' "$inblock/AGENTS.md" >"$WORK/agents" && cat "$WORK/agents" >"$inblock/AGENTS.md"
+printf -- '- new step\n' >>"$SRC/$STEWARD"
+git -C "$SRC" -c user.name=t -c user.email=t@example.invalid commit -q -am "newer candidate"
+NEW_SHA="$(git -C "$SRC" rev-parse HEAD)"
+run_place --check "$upd"
+expect_status 1 "$status" "check against a newer candidate"
+grep -qx 'outdated: .claude/skills/steward/SKILL.md (differs from the candidate at '"$NEW_SHA"')' "$WORK/out" || fail "check did not report the outdated file"
+run_place --ref "$SRC_SHA" --check "$upd"
+expect_status 0 "$status" "check pinned to the placed commit"
+run_place "$upd"
+expect_status 0 "$status" "update"
+grep -qx 'updated: .claude/skills/steward/SKILL.md' "$WORK/out" || fail "update did not update the changed file"
+grep -qx -- '- new step' "$upd/.claude/skills/steward/SKILL.md" || fail "update did not write the newer candidate"
+grep -qxF "$(printf 'source\t%s' "$NEW_SHA")" "$upd/.ai/lightweight-placement.tsv" || fail "update did not record the new source"
+run_place --restore "$upd"
+expect_status 0 "$status" "restore after an update"
+! grep -qx -- '- new step' "$upd/.claude/skills/steward/SKILL.md" || fail "restore did not undo only the update"
+grep -qxF "$(printf 'source\t%s' "$SRC_SHA")" "$upd/.ai/lightweight-placement.tsv" || fail "restore did not put back the earlier record"
+run_place "$edited"
+expect_status 1 "$status" "update over a hand-edited file"
+grep -q '^conflict: .claude/skills/steward/SKILL.md' "$WORK/err" || fail "hand-edited file was not protected"
+run_place "$inblock"
+expect_status 1 "$status" "update over a hand-edited block"
+grep -q '^conflict: AGENTS.md: the managed block was edited by hand' "$WORK/err" || fail "hand-edited block was not protected"
+
+# Uncommitted candidate changes: no commit describes them, so stop unless --ref is given.
+printf -- '- uncommitted\n' >>"$SRC/$STEWARD"
+dirty="$WORK/dirty"
+new_repo "$dirty"
+run_place "$dirty"
+expect_status 1 "$status" "placement from an uncommitted candidate"
+grep -q 'uncommitted changes' "$WORK/err" || fail "uncommitted candidate was not reported"
+[[ -z $(find "$dirty" -path "$dirty/.git" -prune -o -type f -print) ]] || fail "placement wrote from an uncommitted candidate"
+run_place --ref HEAD "$dirty"
+expect_status 0 "$status" "placement pinned with --ref"
+! grep -qx -- '- uncommitted' "$dirty/.claude/skills/steward/SKILL.md" || fail "--ref placed uncommitted content"
+git -C "$SRC" checkout -q -- "$STEWARD"
+
+# A failure part way puts back what the run changed and leaves the rest alone.
 partial="$WORK/partial"
 new_repo "$partial"
+printf '# Own rules\n' >"$partial/AGENTS.md"
 printf 'not a directory\n' >"$partial/.github"
-set +e; "$CAND/place.sh" "$partial" >/dev/null 2>"$WORK/err"; status=$?; set -e
+partial_before="$(snapshot "$partial")"
+run_place "$partial"
 expect_status 1 "$status" "placement that fails part way"
-grep -q 'removed the' "$WORK/err" || fail "partial failure did not roll back"
-[[ ! -e $partial/AGENTS.md && ! -e $partial/.claude && ! -e $partial/.agents ]] || fail "rollback left files or directories from this run"
-[[ $(<"$partial/.github") == 'not a directory' ]] || fail "rollback touched a file it did not create"
+grep -q 'put back the files changed by this run' "$WORK/err" || fail "partial failure did not roll back"
+[[ $partial_before == "$(snapshot "$partial")" && ! -e $partial/.claude && ! -e $partial/.agents ]] || fail "rollback left changes from this run"
+[[ $(last_backup_status "$partial") == rolled-back ]] || fail "rollback did not record its result"
 
-interrupted="$WORK/interrupted"
-new_repo "$interrupted"
+# Interruptions. The cp shim waits on the third copy into the project until told to go.
 shim="$WORK/slow-cp"
 mkdir -p "$shim"
 cat >"$shim/cp" <<EOF
 #!/usr/bin/env bash
-n=\$(( \$(cat "$shim/count" 2>/dev/null || echo 0) + 1 )); echo "\$n" >"$shim/count"
-[[ \$n -eq 3 ]] && { touch "$shim/paused"; sleep 2; }
+for last; do :; done
+if [[ \$last == *.lightweight-tmp ]]; then
+  n=\$(( \$(cat "$shim/count" 2>/dev/null || echo 0) + 1 )); echo "\$n" >"$shim/count"
+  if [[ \$n -eq 3 ]]; then
+    echo \$\$ >"$shim/pid"; touch "$shim/paused"
+    while [[ ! -e "$shim/go" ]]; do sleep 0.1; done
+  fi
+fi
 exec "$(command -v cp)" "\$@"
 EOF
 chmod +x "$shim/cp"
-PATH="$shim:$PATH" "$CAND/place.sh" "$interrupted" >/dev/null 2>"$WORK/err" &
-place_pid=$!
-for _ in $(seq 50); do [[ -e $shim/paused ]] && break; sleep 0.1; done
-[[ -e $shim/paused ]] || fail "interrupt test did not reach the third copy"
+start_paused() { # <project>: start placement in the background and wait for the pause
+  rm -f "$shim/count" "$shim/paused" "$shim/go" "$shim/pid"
+  PATH="$shim:$PATH" "$PLACE" "$1" >/dev/null 2>"$WORK/err" &
+  place_pid=$!
+  for _ in $(seq 100); do [[ -e $shim/paused ]] && break; sleep 0.1; done
+  [[ -e $shim/paused ]] || fail "interrupt test did not reach the third copy"
+}
+
+interrupted="$WORK/interrupted"
+new_repo "$interrupted"
+start_paused "$interrupted"
 kill -TERM "$place_pid"
+touch "$shim/go"
 set +e; wait "$place_pid"; status=$?; set -e
 expect_status 1 "$status" "interrupted placement"
-grep -q 'removed the' "$WORK/err" || fail "interrupted placement did not roll back"
+grep -q 'put back the files changed by this run' "$WORK/err" || fail "interrupted placement did not roll back"
 [[ -z $(find "$interrupted" -path "$interrupted/.git" -prune -o -mindepth 1 -print) ]] ||
   fail "interrupted placement left files or directories"
+
+killed="$WORK/killed"
+new_repo "$killed"
+start_paused "$killed"
+# The braces keep the shell's "Killed" job message out of the log.
+{ kill -KILL "$place_pid"; wait "$place_pid"; } 2>/dev/null || true
+touch "$shim/go"
+for _ in $(seq 100); do kill -0 "$(cat "$shim/pid")" 2>/dev/null || break; sleep 0.1; done
+run_place "$killed"
+expect_status 1 "$status" "placement after a killed run"
+grep -q 'did not finish' "$WORK/err" || fail "a killed run was not reported"
+run_place --restore "$killed"
+expect_status 0 "$status" "restore after a killed run"
+[[ -z $(find "$killed" -path "$killed/.git" -prune -o -mindepth 1 -print) ]] || fail "restore after a killed run left files"
+run_place "$killed"
+expect_status 0 "$status" "placement after restoring a killed run"
+
+# --restore does not undo a run whose files were edited afterwards.
+later="$WORK/later"
+new_repo "$later"
+run_place "$later"
+printf '# edited after placement\n' >>"$later/scripts/check-pr-head.sh"
+later_before="$(snapshot "$later")"
+run_place --restore "$later"
+expect_status 1 "$status" "restore after a later edit"
+grep -q '^conflict: scripts/check-pr-head.sh was changed after the placement' "$WORK/err" && grep -q 'Nothing was restored' "$WORK/err" ||
+  fail "restore did not stop on a later edit"
+[[ $later_before == "$(snapshot "$later")" ]] || fail "restore changed files despite a later edit"
 
 linked="$WORK/linked"
 new_repo "$linked"
 mkdir -p "$WORK/outside"
 ln -s "$WORK/outside" "$linked/.claude"
-set +e; "$CAND/place.sh" "$linked" >/dev/null 2>"$WORK/err"; status=$?; set -e
+run_place "$linked"
 expect_status 1 "$status" "placement through a symlinked .claude"
-grep -q 'conflict: .claude is a symlink' "$WORK/err" || fail "symlinked parent was not reported"
+grep -q 'conflict: .claude/.*: .claude is a symlink' "$WORK/err" || fail "symlinked parent was not reported"
 [[ -z $(ls -A "$WORK/outside") && ! -e $linked/AGENTS.md ]] || fail "placement wrote through a symlinked parent"
+
+mkdir -p "$WORK/not-git"
+run_place "$WORK/not-git"
+expect_status 2 "$status" "placement outside a git repository"
+run_place --keep README.md "$proj"
+expect_status 2 "$status" "--keep with a path that is not placed"
+
+dironly="$WORK/dironly"
+new_repo "$dironly"
+mkdir -p "$dironly/AGENTS.md"
+run_place "$dironly"
+expect_status 1 "$status" "placement over a directory named AGENTS.md"
+grep -q '^conflict: AGENTS.md: exists but is not a regular file' "$WORK/err" || fail "a directory in place of a file was not reported"
 
 # Generated projects may run these scripts with macOS Bash 3.2.
 if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   old="$WORK/bash32"
   new_repo "$old"
-  /bin/bash "$CAND/place.sh" "$old" >/dev/null || fail "placement failed under Bash 3.2"
-  set +e; /bin/bash "$CAND/place.sh" "$old" >/dev/null 2>&1; status=$?; set -e
-  expect_status 1 "$status" "re-running placement under Bash 3.2"
+  printf '{"permissions": {"deny": ["Read(./secrets/**)"]}}\n' >"$WORK/bash32-settings"
+  mkdir -p "$old/.claude" && cp "$WORK/bash32-settings" "$old/.claude/settings.json"
+  /bin/bash "$PLACE" "$old" >/dev/null 2>&1 || fail "placement failed under Bash 3.2"
+  /bin/bash "$PLACE" "$old" >/dev/null 2>&1 || fail "re-running placement failed under Bash 3.2"
+  /bin/bash "$PLACE" --check "$old" >/dev/null 2>&1 || fail "check failed under Bash 3.2"
   for c in 'git push origin main' 'git push -f'; do
     set +e
     /bin/bash "$old/.claude/hooks/guard-git-push.sh" <<<"$(jq -n --arg c "$c" --arg d "$old" '{tool_input: {command: $c}, cwd: $d}')" >/dev/null 2>&1
@@ -126,6 +358,8 @@ if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
     set -e
     expect_status 2 "$status" "hook under Bash 3.2 for '$c'"
   done
+  /bin/bash "$PLACE" --restore "$old" >/dev/null 2>&1 || fail "restore failed under Bash 3.2"
+  cmp -s "$WORK/bash32-settings" "$old/.claude/settings.json" || fail "restore under Bash 3.2 did not put back settings.json"
 fi
 
 # --- 3. Standard verification and Security in the placed project ---------------
