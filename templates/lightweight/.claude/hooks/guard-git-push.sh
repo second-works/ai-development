@@ -51,7 +51,7 @@ main_re='([[:space:]:]|refs/heads/)(main|master)([)}[:space:]]|$)'
 many_re='[[:space:]](--all|--branches)([=)}[:space:]]|$)|[[:space:]]:([)}[:space:]]|$)|\*'
 
 found_push=0
-scan() { # <outer|inner>: check every segment of the command text on stdin
+scan() { # check every segment of the command text on stdin
   local raw plain
   while IFS= read -r raw; do
     # Push options carry free text (for example -o "ci +1"); drop them before checking.
@@ -61,20 +61,28 @@ scan() { # <outer|inner>: check every segment of the command text on stdin
       continue
     fi
     found_push=1
-    if [[ $1 == outer ]]; then
-      case "$raw" in
-        *'$'* | *'`'*) block "a push built from variables or command substitution cannot be checked; write the branch name literally: $raw" ;;
-      esac
-    fi
+    case "$raw" in
+      *'$'* | *'`'*) block "a push built from variables or command substitution cannot be checked; write the branch name literally: $raw" ;;
+    esac
     [[ $plain =~ $force_re || $plain =~ $plus_re ]] && block "force push is not allowed: $raw"
     [[ $plain =~ $main_re ]] && block "push to main/master is not allowed: $raw"
     [[ $plain =~ $many_re ]] && block "a push of several branches (--all, :, *) can include main/master: $raw"
   done
 }
-# Pass 1 splits on ; & | and newlines. Pass 2 also splits on $( and backticks, so a
+# Pass 1 splits on ; & | and newlines. Pass 2 also splits at $( and backticks, so a
 # push inside a command substitution such as out=$(git push origin main) is found.
-scan outer < <(printf '%s\n' "$cmd" | tr ';&|' '\n\n\n')
-scan inner < <(printf '%s\n' "$cmd" | awk '{ gsub(/\$\(/, "\n"); print }' | tr ';&|`' '\n\n\n\n')
+# Where a substitution opens, the text before it keeps a "$" mark: its value is not
+# known yet, so git push origin $(echo main) still counts as built from a variable.
+split_substitutions() {
+  awk '{
+    gsub(/\$\(/, " $\n")
+    n = split($0, part, "`"); out = part[1]
+    for (i = 2; i <= n; i++) out = out ((i % 2 == 0) ? " $\n" : "\n") part[i]
+    print out
+  }'
+}
+scan < <(printf '%s\n' "$cmd" | tr ';&|' '\n\n\n')
+scan < <(printf '%s\n' "$cmd" | split_substitutions | tr ';&|' '\n\n\n')
 
 if [[ $found_push -eq 1 ]]; then
   dir="${cwd:-.}"

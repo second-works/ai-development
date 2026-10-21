@@ -44,7 +44,7 @@ templates/lightweight/place.sh <project-root>
 | main / master上での `git push`、jqがない・入力が読めないときのpush | |
 | 宛先を書かないpushで、`remote.<name>.push`（main / master、`*`、`:`）、`push.default=matching`、`push.default=upstream` によってmain / masterへ送られるもの | 上記以外のgitの設定（`url.<base>.pushInsteadOf` など） |
 
-**止めすぎることがある。** 引用符の中の `;` や `|` も区切りとして扱う。そのため、`git commit -m "note; git push origin main"` のように、メッセージの中に「git push … main」が区切りの後ろに来る形は止まる。安全側の誤検知なので、メッセージを書き換えて再実行する。
+**止めすぎることがある。** 引用符の中の `;`、`|`、`$(`、バッククォートも区切りとして扱う。そのため、`git commit -m "note; git push origin main"` や、PR本文のインラインコード（`` --body "use `git push origin main`" ``）のように、メッセージの中で区切りの後ろに「git push … main」が来る形は止まる。安全側の誤検知なので、本文は `--body-file` でファイルから渡すか、メッセージを書き換えて再実行する。
 
 **フック自体が実行できないときは止まらない。** Claude Codeはexit 2以外のフックの失敗を警告として扱い、コマンドをそのまま実行する。実行権限が外れた、`bash` が見つからない、`$CLAUDE_PROJECT_DIR` が空、といった場合はpushが通る。`settings.json` のdeny（`git push --force` / `-f` で始まるコマンド）はこのときも働くが、main宛ては防げない。
 

@@ -225,6 +225,10 @@ check_hook 2 'timeout 60 git push origin main'
 check_hook 2 'nice git push origin main'
 check_hook 2 'sudo -u me git push origin main'
 check_hook 0 'out=$(git push origin feature/issue-1-sample 2>&1)'
+check_hook 0 'out=`git push origin feature/issue-1-sample`'
+check_hook 2 'out=$(git push origin "$BRANCH" 2>&1)'
+check_hook 2 'out=$(git push origin $(echo main))'
+check_hook 2 'out=`git push origin $B`'
 git -C "$proj" config push.default matching
 check_hook 2 'git push origin'
 git -C "$proj" config --unset push.default
