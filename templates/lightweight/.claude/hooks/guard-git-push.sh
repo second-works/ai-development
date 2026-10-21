@@ -60,8 +60,12 @@ scan() { # check every segment of the command text on stdin
   local raw plain
   while IFS= read -r raw; do
     # Push options carry free text (for example -o "ci +1" or -o "note >"); drop them
-    # first, so a < or > inside the text is not taken for a redirection below.
-    raw="$(printf '%s' "$raw" | sed -E "s/(^|[[:space:]])(-o|--push-option)(=|[[:space:]]+)(\"[^\"]*\"|'[^']*'|[^[:space:]]+)/\\1/g")"
+    # first, so a < or > inside the text is not taken for a redirection below. Only
+    # after the first " push": before it, -o belongs to a wrapper such as xargs -o.
+    head_part="${raw%%[[:space:]]push*}"
+    tail_part="${raw#"$head_part"}"
+    tail_part="$(printf '%s' "$tail_part" | sed -E "s/(^|[[:space:]])(-o|--push-option)(=|[[:space:]]+)(\"[^\"]*\"|'[^']*'|[^[:space:]]+)/\\1/g")"
+    raw="$head_part$tail_part"
     # The shell removes redirections and their targets before git sees its arguments
     # (git>log push origin main runs "git push origin main"), so remove them here too.
     # A quoted target may contain spaces (>"/tmp/push log"), so take the whole quote.
