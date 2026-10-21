@@ -44,11 +44,12 @@ opts="([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace|--config-env)[[:spac
 push_re="${lead}${opts}[[:space:]]+push([[:space:]]|\$)"
 # git followed by a subcommand built from a variable or substitution.
 dynamic_re="${lead}${opts}[[:space:]]+[^[:space:]-][^[:space:]]*[\$\`]"
-force_re='[[:space:]](--force|--force-with-lease|--force-if-includes|--mirror|-[a-zA-Z]*f[a-zA-Z]*)([=)}[:space:]]|$)'
+force_re='[[:space:]](--force|--force-with-lease|--force-if-includes|--mirror|-[a-zA-Z]*f[a-zA-Z]*)([=)}<>[:space:]]|$)'
 plus_re='[[:space:]:]\+[^[:space:]]'
-main_re='([[:space:]:]|refs/heads/)(main|master)([)}[:space:]]|$)'
+# A redirection right after a name (main>out.log) still passes the name to git.
+main_re='([[:space:]:]|refs/heads/)(main|master)([)}<>[:space:]]|$)'
 # Pushes that select many branches, which can include main/master.
-many_re='[[:space:]](--all|--branches)([=)}[:space:]]|$)|[[:space:]]:([)}[:space:]]|$)|\*'
+many_re='[[:space:]](--all|--branches)([=)}<>[:space:]]|$)|[[:space:]]:([)}<>[:space:]]|$)|\*'
 
 found_push=0
 scan() { # check every segment of the command text on stdin
