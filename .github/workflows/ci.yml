@@ -11,10 +11,15 @@ permissions:
 
 jobs:
   verification:
-    runs-on: ubuntu-latest
+    # Runs on the owner's Mac (#191). Fork pull requests are not run there.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ai-development]
     timeout-minutes: 10
 
     steps:
+      - name: Require Bash 5
+        run: bash -c '((BASH_VERSINFO[0] >= 5))' || { echo "Bash 5 is required on the runner PATH"; exit 1; }
+
       - name: Checkout
         uses: actions/checkout@v4
 

@@ -12,7 +12,9 @@ permissions:
 jobs:
   security-preflight:
     name: Security Preflight
-    runs-on: ubuntu-latest
+    # Runs on the owner's Mac (#191). Fork pull requests are not run there.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ai-development]
     timeout-minutes: 10
 
     steps:
