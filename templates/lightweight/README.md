@@ -21,7 +21,7 @@ CIのworkflowは技術構成ごとに `templates/github-actions/` から選ぶ�
 
 ## 配置
 
-既存の設定と未コミットの変更を残したまま置き、今回の差分だけを戻せる（#195）。配置先はgitのrepositoryに限る（戻すための控えを `.git/` の下に置くため）。
+既存の設定と未コミットの変更を残したまま置き、今回の差分だけを戻せる（#195）。配置先はgitのrepositoryのrootに限る（戻すための控えを `.git/` の下に置くため、1つのrepositoryに配置先は1つ）。
 
 ```bash
 templates/lightweight/place.sh --dry-run <project-root>   # 置く内容と差分を表示する。何も書かない

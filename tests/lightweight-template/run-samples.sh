@@ -257,6 +257,22 @@ grep -q 'put back the files changed by this run' "$WORK/err" || fail "partial fa
 [[ $partial_before == "$(snapshot "$partial")" && ! -e $partial/.claude && ! -e $partial/.agents ]] || fail "rollback left changes from this run"
 [[ $(last_backup_status "$partial") == rolled-back ]] || fail "rollback did not record its result"
 
+# Rollback removes only its own temporary files, not a file named like one next to a directory it made.
+nexttodir="$WORK/nexttodir"
+new_repo "$nexttodir"
+printf 'precious\n' >"$nexttodir/.claude.lightweight-tmp"
+printf 'not a directory\n' >"$nexttodir/.github"
+nexttodir_before="$(snapshot "$nexttodir")"
+run_place "$nexttodir"
+expect_status 1 "$status" "placement that fails next to .claude.lightweight-tmp"
+[[ $nexttodir_before == "$(snapshot "$nexttodir")" ]] || fail "rollback removed a file it did not create"
+
+# One repository has one placement, at its root.
+mkdir -p "$proj/sub"
+run_place "$proj/sub"
+expect_status 2 "$status" "placement into a subdirectory of a repository"
+grep -q 'is not the root of its git repository' "$WORK/err" || fail "a subdirectory target was not refused"
+
 # Interruptions. The cp shim waits on the third copy into the project until told to go.
 shim="$WORK/slow-cp"
 mkdir -p "$shim"

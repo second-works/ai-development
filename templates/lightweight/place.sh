@@ -65,6 +65,10 @@ target="$1"
 target="$(cd "$target" && pwd -P)"
 git_dir="$(git -C "$target" rev-parse --absolute-git-dir 2>/dev/null)" ||
   die 2 "$target is not a git repository (the backup for --restore is kept in .git)"
+# The backup lives in the repository's git directory, so one repository has one
+# placement: its root. A subdirectory would share the backup with other targets.
+toplevel="$(git -C "$target" rev-parse --show-toplevel 2>/dev/null)" && toplevel="$(cd "$toplevel" && pwd -P)"
+[[ $toplevel == "$target" ]] || die 2 "$target is not the root of its git repository ($toplevel); place into the root"
 backup_root="$git_dir/lightweight-placement"
 
 sha_of() { # <file>: sha256 of the file, or - when it does not exist
@@ -120,7 +124,8 @@ restore_backup() { # <backup dir> <status to record>
   [[ $(<"$bk/status") == applying ]] && interrupted=1
   while IFS=$'\t' read -r kind rel before after; do
     # Only an unfinished run can have left its own temporary file behind.
-    [[ $interrupted -eq 1 ]] && rm -f -- "$target/$rel.lightweight-tmp"
+    # Directories never get one, so a file named like that next to them is not ours.
+    [[ $interrupted -eq 1 && $kind != dir ]] && rm -f -- "$target/$rel.lightweight-tmp"
     case "$kind" in
       created)
         if [[ $(sha_of "$target/$rel") == "$after" ]]; then rm -f -- "$target/$rel" || return 1; count=$((count + 1)); fi ;;
