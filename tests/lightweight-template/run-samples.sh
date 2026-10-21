@@ -176,7 +176,7 @@ run_place "$conf"
 expect_status 0 "$status" "re-running without --keep"
 
 n_bad=0
-for bad in '{"permissions": {"deny": "Read(./.env)"}}' 'not json'; do
+for bad in '{"permissions": {"deny": "Read(./.env)"}}' 'not json' '' '{} {}' '[]'; do
   badset="$WORK/badset-$((++n_bad))"
   new_repo "$badset"
   mkdir -p "$badset/.claude"
@@ -319,6 +319,20 @@ expect_status 1 "$status" "restore after a later edit"
 grep -q '^conflict: scripts/check-pr-head.sh was changed after the placement' "$WORK/err" && grep -q 'Nothing was restored' "$WORK/err" ||
   fail "restore did not stop on a later edit"
 [[ $later_before == "$(snapshot "$later")" ]] || fail "restore changed files despite a later edit"
+
+# --restore does not follow a parent directory that became a symlink after the placement.
+swapped="$WORK/swapped"
+new_repo "$swapped"
+run_place "$swapped"
+mkdir -p "$WORK/elsewhere"
+mv "$swapped/.claude" "$WORK/elsewhere/claude"
+ln -s "$WORK/elsewhere/claude" "$swapped/.claude"
+elsewhere_before="$(snapshot "$WORK/elsewhere")"
+run_place --restore "$swapped"
+expect_status 1 "$status" "restore through a symlinked .claude"
+grep -q '^conflict: .claude is now a symlink' "$WORK/err" && grep -q 'Nothing was restored' "$WORK/err" ||
+  fail "restore did not stop at a symlinked parent"
+[[ $elsewhere_before == "$(snapshot "$WORK/elsewhere")" ]] || fail "restore changed files outside the project"
 
 linked="$WORK/linked"
 new_repo "$linked"

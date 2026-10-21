@@ -72,6 +72,14 @@ sha_of() { # <file>: sha256 of the file, or - when it does not exist
   if command -v sha256sum >/dev/null 2>&1; then sha256sum <"$1" | cut -d' ' -f1; else shasum -a 256 <"$1" | cut -d' ' -f1; fi
 }
 reverse_lines() { awk '{ line[NR] = $0 } END { for (i = NR; i > 0; i--) print line[i] }' "$1"; }
+has_symlink_on_path() { # <rel>: true when the destination or a parent directory is a symlink
+  local p="$1"
+  while [[ $p != . ]]; do
+    [[ -L $target/$p ]] && { echo "$p"; return 0; }
+    p="$(dirname "$p")"
+  done
+  return 1
+}
 
 # A run that was killed before it finished leaves its backup in the "applying" state.
 unfinished_backup() {
@@ -88,11 +96,17 @@ unfinished_backup() {
 # Each line is written before the change it describes, so an interrupted run can
 # also be put back.
 restore_backup() { # <backup dir> <status to record>
-  local bk="$1" final="$2" kind rel before after now problems=0
+  local bk="$1" final="$2" kind rel before after now link problems=0
   while IFS=$'\t' read -r kind rel before after; do
+    # A symlink swapped in after the placement would make restore delete or
+    # overwrite files outside the project.
+    if link="$(has_symlink_on_path "$rel")"; then
+      echo "conflict: $link is now a symlink, so restoring $rel would reach outside the project" >&2
+      problems=$((problems + 1))
+      continue
+    fi
     [[ $kind == dir ]] && continue
     now="$(sha_of "$target/$rel")"
-    if [[ -L $target/$rel ]]; then now=symlink; fi
     # Already as it was before the run, or exactly as the run left it: safe either way.
     [[ $now == "$after" || $now == "$before" ]] && continue
     echo "conflict: $rel was changed after the placement; restore it by hand from $bk/before/$rel" >&2
@@ -242,6 +256,11 @@ stage_settings() { # <rel> <candidate file>
     jq . "$cand" >"$new" || { conflict "$rel: the candidate settings are not valid JSON"; return 1; }
     return 0
   fi
+  # An empty file or several JSON documents give jq nothing or too much to merge.
+  if ! jq -e -s 'length == 1 and (.[0] | type == "object")' "$dst" >/dev/null 2>&1; then
+    conflict "$rel: cannot be merged safely (it is not a single JSON object)"
+    return 1
+  fi
   if ! jq --slurpfile cand "$cand" --arg guard "$GUARD_COMMAND" '
       def need($t; $p): if (getpath($p) == null) or ((getpath($p) | type) == $t) then . else error("\($p | join(".")) is not an \($t)") end;
       $cand[0] as $c
@@ -261,15 +280,6 @@ stage_settings() { # <rel> <candidate file>
   fi
   # Keep the project's own formatting when nothing needs to be added.
   if [[ $(jq -S . "$dst") == "$(jq -S . "$new")" ]]; then cp -p -- "$dst" "$new"; fi
-}
-
-has_symlink_on_path() { # <rel>: true when the destination or a parent directory is a symlink
-  local p="$1"
-  while [[ $p != . ]]; do
-    [[ -L $target/$p ]] && { echo "$p"; return 0; }
-    p="$(dirname "$p")"
-  done
-  return 1
 }
 
 # --- Plan ----------------------------------------------------------------------------
