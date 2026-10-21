@@ -196,6 +196,9 @@ git -C "$proj" config --unset push.default
 # Line continuations, shell keywords and wrappers before git.
 check_hook 2 $'git push origin \\\n  main'
 check_hook 2 $'git push \\\n  --force origin feature/issue-1-sample'
+check_hook 2 $'git push origin ma\\\nin'
+check_hook 2 $'git push --for\\\nce origin feature/x'
+check_hook 0 $'git push origin \\\n  feature/issue-1-sample'
 check_hook 2 'if true; then git push origin main; fi'
 check_hook 2 'for i in 1; do git push --force origin feature/x; done'
 check_hook 2 'time git push origin main'

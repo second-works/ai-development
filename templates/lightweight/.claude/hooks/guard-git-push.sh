@@ -30,9 +30,10 @@ cmd="$(printf '%s' "$input" | jq -er '.tool_input.command' 2>/dev/null)" ||
   block "could not read the command from the hook input"
 cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)"
 
-# Join "\<newline>" continuations so a destination on the next line is not lost.
+# Remove "\<newline>" continuations as the shell does (not replace them with a space),
+# so a destination on the next line is not lost and ma\<newline>in stays main.
 nl=$'\n'
-cmd="${cmd//\\$nl/ }"
+cmd="${cmd//\\$nl/}"
 # >&, <& and &> are redirections, not the & separator (git push 2>&1 origin main).
 cmd="${cmd//>&/>}"
 cmd="${cmd//<&/<}"
