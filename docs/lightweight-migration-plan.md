@@ -22,7 +22,7 @@
 | 計画時の必読 | 8 files / 88,486 B | AGENTS、plan-to-issues 8,805、最小契約 40,232、Plan Review 14,899、Issue品質 5,787、Tier、親子template |
 | workflow | 6本 / 27,664 B | 標準: `ci.yml`、`security.yml`。手動・通知: `jev-triage`、`decision-shadow`、`local-judge-smoke`、`slack-failure-alert` |
 | 検査入口 | 28 suites、CI 29 step | step 1はshell構文、28は各 `tests/*/run-samples.sh` |
-| 外す候補A: レビュー補助一式 | 32 files / 271,020 B | pr-review-fix 7 files 86,453、auto-triage 13 files 73,364、workflow 4本（手動3本とSlack通知）、専用test 4 suites。Slack通知は現役のため移行対象（4・5章） |
+| 外す候補A: レビュー補助一式 | 31 files / 269,034 B | pr-review-fix 7 files 86,453、auto-triage 13 files 73,364、手動workflow 3本、専用test 4 suites。Slack通知（1 file / 1,986 B）は現役のため集計に含めない（4・5章） |
 | 外す候補B: 自己管理docs | 6 files / 140,568 B | harness台帳 63,844、instruction台帳 29,249、棚卸し 31,962、受入記録 8,392、review-followups 4,951、field lessons 2,170。review-followupsは現役の記録先のため移行対象（5章） |
 
 ## 3. 参照関係と配布経路
