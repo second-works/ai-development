@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# Read-only check that a PR is ready for a merge request on its final head.
+#
+#   check-pr-head.sh <pr-number>
+#
+# Checks, all on the PR's current head SHA:
+#   1. the local HEAD is the same commit as the PR head
+#   2. every required check exists and succeeded (PR_GATE_CHECKS, comma separated)
+#   3. the formal review finished on this head with no unresolved findings
+#   4. no review thread is unresolved
+# Prints PR_GATE_STATUS=<status> and PR_GATE_REASON=<text>. Exit 0 only for READY.
+# Needs gh (logged in) and jq. Anything it cannot read is reported, never passed.
+
+set -u
+
+checks_csv="${PR_GATE_CHECKS:-verification,Security Preflight}"
+reviewer="${PR_GATE_REVIEWER:-chatgpt-codex-connector}"
+
+report() {
+  printf 'PR_GATE_STATUS=%s\nPR_GATE_REASON=%s\n' "$1" "$2"
+  [[ $1 == READY ]] && exit 0
+  exit 1
+}
+
+[[ $# -eq 1 && $1 =~ ^[0-9]+$ ]] || { echo "usage: check-pr-head.sh <pr-number>" >&2; exit 2; }
+pr="$1"
+for tool in gh jq git; do
+  command -v "$tool" >/dev/null 2>&1 || report UNAVAILABLE "$tool is not installed"
+done
+
+pr_json="$(gh pr view "$pr" --json headRefOid,url,state 2>/dev/null)" || report UNAVAILABLE "could not read PR #$pr"
+head="$(jq -er '.headRefOid' <<<"$pr_json" 2>/dev/null)" || report UNAVAILABLE "PR head is missing"
+url="$(jq -er '.url' <<<"$pr_json" 2>/dev/null)" || report UNAVAILABLE "PR url is missing"
+state="$(jq -r '.state' <<<"$pr_json")"
+repo="$(sed -E 's#^https://[^/]+/([^/]+/[^/]+)/pull/[0-9]+$#\1#' <<<"$url")"
+[[ $repo == */* && $repo != "$url" ]] || report UNAVAILABLE "could not parse the repository from $url"
+printf 'PR_GATE_HEAD=%s\n' "$head"
+
+[[ $state == OPEN ]] || report NOT_OPEN "PR #$pr is $state"
+
+local_head="$(git rev-parse HEAD 2>/dev/null)" || report UNAVAILABLE "could not read the local HEAD"
+[[ $local_head == "$head" ]] || report STALE_HEAD "local HEAD $local_head differs from PR head $head"
+
+# filter=latest keeps only the newest run of each check, so a re-run replaces an old failure.
+runs="$(gh api "repos/$repo/commits/$head/check-runs?filter=latest&per_page=100" 2>/dev/null)" ||
+  report CHECK_UNAVAILABLE "could not read checks for $head"
+IFS=',' read -r -a required <<<"$checks_csv"
+for name in "${required[@]}"; do
+  summary="$(jq -r --arg n "$name" '
+    [.check_runs[] | select(.name == $n)] as $r
+    | if ($r | length) == 0 then "missing"
+      elif any($r[]; .status != "completed") then "pending"
+      elif any($r[]; .conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral") then "failed"
+      elif any($r[]; .conclusion == "success") then "success"
+      else "skipped" end' <<<"$runs" 2>/dev/null)" || report CHECK_UNAVAILABLE "could not parse checks"
+  case "$summary" in
+    success) ;;
+    missing) report CHECK_UNAVAILABLE "check '$name' was not found on $head" ;;
+    pending) report CHECK_PENDING "check '$name' has not finished on $head" ;;
+    skipped) report CHECK_UNAVAILABLE "check '$name' was skipped on $head, which is not success" ;;
+    *) report CHECK_FAILED "check '$name' did not succeed on $head" ;;
+  esac
+done
+
+comments="$(gh pr view "$pr" --json comments 2>/dev/null)" || report REVIEW_UNAVAILABLE "could not read PR comments"
+review="$(jq -r --arg who "$reviewer" '
+  [.comments[] | select(.author.login == $who) | .body
+   | (capture("codex-review-state:v1 (?<s>\\{.*\\}) -->") | .s)?] | last // empty' <<<"$comments" 2>/dev/null)"
+[[ -n $review ]] || report REVIEW_UNAVAILABLE "no review state from $reviewer"
+r_sha="$(jq -r '.code_review.commit_sha // empty' <<<"$review" 2>/dev/null)"
+r_status="$(jq -r '.code_review.status // empty' <<<"$review" 2>/dev/null)"
+r_open="$(jq -r '.code_review.has_unresolved_findings' <<<"$review" 2>/dev/null)"
+[[ $r_sha == "$head" ]] || report REVIEW_PENDING "latest review is for ${r_sha:-unknown}, not $head"
+[[ $r_status == completed ]] || report REVIEW_PENDING "review on $head is ${r_status:-unknown}"
+[[ $r_open == false ]] || report REVIEW_FINDINGS "review on $head has unresolved findings"
+
+owner="${repo%%/*}" name="${repo#*/}"
+threads="$(gh api graphql -F owner="$owner" -F name="$name" -F pr="$pr" -f query='
+  query($owner: String!, $name: String!, $pr: Int!) {
+    repository(owner: $owner, name: $name) { pullRequest(number: $pr) {
+      reviewThreads(first: 100) { nodes { isResolved } } } } }' 2>/dev/null)" ||
+  report REVIEW_UNAVAILABLE "could not read review threads"
+open_threads="$(jq -er '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' <<<"$threads" 2>/dev/null)" ||
+  report REVIEW_UNAVAILABLE "could not parse review threads"
+[[ $open_threads -eq 0 ]] || report UNRESOLVED_THREADS "$open_threads review thread(s) are unresolved"
+
+report READY "checks, review and threads are clear on $head"
