@@ -66,7 +66,7 @@
 | `.agents/skills/pr-review-fix/`（SKILL + scripts 6） | 未使用 | template-guide配布、`ci.yml`構文行、tests 8 suites、workflow 2本 | 6章の保証先を先に成立 |
 | `templates/review-comment-auto-triage/`（13 files） | 未使用 | `triage-with-providers.py`、`tests/local-judge`、`tests/review-comment-auto-triage` | hermes・FitnessAIは配置済み。既配布分の扱いは未確認 |
 | `.github/workflows/jev-triage.yml`、`decision-shadow.yml`、`local-judge-smoke.yml` | 未使用（`workflow_dispatch`のみ） | `tests/jev-triage-workflow`、`tests/local-judge` | Secret登録の削除は人間判断で別操作 |
-| `.github/workflows/slack-failure-alert.yml` | 使用中（標準gate失敗時に自動起動） | `workflow_run`でTemplate CI / Security / JEV Triageの失敗を通知 | 削除候補にしない。外すなら代替の失敗通知か人間の明示承認を先に得る。PR #199はこのjobをhosted runnerに残したため、hosted runnerが止まっている間は通知も届かない |
+| `.github/workflows/slack-failure-alert.yml` | 使用中（標準gate失敗時に自動起動） | `workflow_run`でTemplate CI / Security / JEV Triageの失敗を通知 | 削除候補にしない。外すなら代替の失敗通知か人間の明示承認を先に得る。merge済みのPR #199はこのjobをhosted runnerに残したため、hosted runnerが止まっている間は通知も届かない |
 | `tests/pr-review-fix-jev/`、`tests/jev-triage-workflow/`、`tests/local-judge/`、`tests/review-comment-auto-triage/` | 対象資産の専用検査 | `ci.yml`の4 step | 対象資産と同じPRで外す。`test-wait-codex-review.py`の判定は6章 |
 | `docs/ai-development-harness-inventory.md` | 条件付き（検証変更時） | child/PR template、最小契約、tests 9 suites | 安全項目の所在をtest-design等へ移してから |
 | `docs/instruction-architecture-inventory.md`、`docs/simplification-inventory.md`、`docs/simplification-acceptance.md` | 履歴 | AGENTS末尾の配置履歴参照、README | 復元元SHAを記録 |
@@ -99,7 +99,7 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 | [#163](https://github.com/second-works/ai-development/issues/163) | open。main未保護、Ruleset/保護APIは403 | 保護がないため、push禁止等の文章ルールとガードを削らない。本計画で設定しない |
 | [#188](https://github.com/second-works/ai-development/issues/188) | open。検討Issue | 候補pathに `pr-review-fix/` を含む。pr-review-fixを外すと、その観点はSecurity templates側だけに絞られる。#188を勝手にcloseしない |
 | [#189](https://github.com/second-works/ai-development/issues/189) / [PR #190](https://github.com/second-works/ai-development/pull/190) | open。AGENTSへCursor Cloud節を追加 | #194/#197のAGENTS短縮と同じファイルを変える。#194開始前にmergeか保留かの人間判断が必要 |
-| [#191](https://github.com/second-works/ai-development/issues/191) | open。所有者の指示でCI・Securityの移行を開始（2026-10-21） | hosted runnerが課金上限で停止中。CIとSecurityのMac移行は[PR #199](https://github.com/second-works/ai-development/pull/199)で実施中で、Slack通知は移行対象外。未実行を成功扱いしない |
+| [#191](https://github.com/second-works/ai-development/issues/191) | closed。[PR #199](https://github.com/second-works/ai-development/pull/199)をmerge済み（`75c40cb`、2026-10-21） | CIとSecurityは所有者のMacのself-hosted runnerで実行する（[運用](ci-self-hosted-runner.md)）。後続は移行を前提にしてよい。残る未決: Slack通知はhosted runnerのままで届かない、hosted runnerへ戻す条件、runnerの専用ユーザー化、fork PRの振り分けの実地確認 |
 | [#168](https://github.com/second-works/ai-development/issues/168) | closed | pr-review-fixの任意化は完了済み。重複実装しない |
 
 ## 8. 改訂計画の要点
