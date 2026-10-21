@@ -23,7 +23,7 @@
 | workflow | 6本 / 27,664 B | 標準: `ci.yml`、`security.yml`。手動・通知: `jev-triage`、`decision-shadow`、`local-judge-smoke`、`slack-failure-alert` |
 | 検査入口 | 28 suites、CI 29 step | step 1はshell構文、28は各 `tests/*/run-samples.sh` |
 | 外す候補A: レビュー補助一式 | 31 files / 269,034 B | pr-review-fix 7 files 86,453、auto-triage 13 files 73,364、手動workflow 3本、専用test 4 suites。Slack通知（1 file / 1,986 B）は現役のため集計に含めない（4・5章） |
-| 外す候補B: 自己管理docs | 6 files / 140,568 B | harness台帳 63,844、instruction台帳 29,249、棚卸し 31,962、受入記録 8,392、review-followups 4,951、field lessons 2,170。review-followupsは現役の記録先のため移行対象（5章） |
+| 外す候補B: 自己管理docs | 5 files / 135,617 B | harness台帳 63,844、instruction台帳 29,249、棚卸し 31,962、受入記録 8,392、field lessons 2,170。harness台帳は検証変更時に参照されるため、5章の前提を満たしてから外す。review-followups（4,951 B）は現役の記録先のため集計に含めない（5章） |
 
 ## 3. 参照関係と配布経路
 
@@ -54,7 +54,7 @@
 | JEV・Decision Shadow・Local Judge | 理由を示して廃止 | 標準配布・標準CIから外す。通常フローで未使用、Secret・外部送信面を持ち、保守費が大きい |
 | CI・Security失敗時のSlack通知 | 残す（移行は要確認） | Template CI / Securityの`failure`・`timed_out`で`workflow_run`が自動起動する現役の保証。外すなら代替の失敗通知か、通知がなくなる影響の人間承認を先に得る |
 | FOLLOW-UP中央台帳への登録 | 短い手順へ統合（移行は要確認） | [レビュー正本](code-review-contract.md)が更新headの`FOLLOW-UP`かつ`ISSUE`に台帳登録commitを求め、PR templateも参照する現役手順。新しい記録先と契約・templateの切替を先に成立させる |
-| 台帳・棚卸し・受入記録の更新義務、文言一致だけの検査 | 理由を示して廃止 | 自己管理のための資産。履歴は復元元SHAを記録してmainから外す |
+| 台帳・棚卸し・受入記録の更新義務（FOLLOW-UP台帳を除く）、文言一致だけの検査 | 理由を示して廃止 | 自己管理のための資産。履歴は復元元SHAを記録してmainから外す |
 | template-change-evaluatorの常時routing | 理由を示して廃止 | 必読から外す。必要時の任意Skillとして残すかは#197で判断 |
 
 ## 5. 削減path一覧（候補）
