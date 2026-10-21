@@ -32,14 +32,14 @@ templates/lightweight/place.sh <project-root>
 
 ## ガードの範囲と限界
 
-フックは、Bashのコマンド文字列と、作業ディレクトリのgitの設定だけを見る。シェルの構文解析はしない（親 #192 の方針で、独自の解析器は作らない）。行継続をつなぎ、`;`、`&&`、`|`、改行で区切り、引用符とバックスラッシュを外した各部分のうち、gitで始まり、pushがgitのサブコマンドであるものをpushとみなす。commitメッセージやPR本文の中の「push」「main」は対象にしない。
+フックは、Bashのコマンド文字列と、作業ディレクトリのgitの設定だけを見る。シェルの構文解析はしない（親 #192 の方針で、独自の解析器は作らない）。行継続をつなぎ、`;`、`&&`、`|`、改行で区切り（2回目は `$(` と `` ` `` でも区切る）、引用符とバックスラッシュを外した各部分のうち、gitで始まり、pushがgitのサブコマンドであるものをpushとみなす。commitメッセージやPR本文の中の「push」「main」は対象にしない。
 
 | 止める | 止めない（限界） |
 | --- | --- |
 | `git push origin main`、`"main"`、`HEAD:'main'`、`refs/heads/main`、行継続で次の行にある宛先 | aliasやスクリプトの中のpush、`bash -c "..."` の中 |
 | `--force`、`-f`、`--force-with-lease`、`--mirror`、`+`付きrefspec | `gh` やGitHub APIからの操作、他のツール |
 | `--all`、`--branches`、`:`、`*` を含むrefspec | ブランチ削除（`--delete`）、push以外のgit操作 |
-| `/usr/bin/git`、`git -C <dir>`、`--git-dir <dir>`、`VAR=1 git`、`env -i`、`then` / `do` / `time` / `command` / `!` / `xargs` の後ろ、`( ... )` の中 | `git -C <別の場所>` で別repoを操作する場合のブランチと設定の判定 |
+| `/usr/bin/git`、`git -C <dir>`、`--git-dir <dir>`、`VAR=1 git`、`env -i`、`then` / `do` / `time` / `command` / `!` / `xargs` / `timeout 60` / `nice` / `sudo -u <user>` の後ろ、`( ... )`、`$( ... )`、`` ` ... ` `` の中 | `git -C <別の場所>` で別repoを操作する場合のブランチと設定の判定 |
 | `$` や `` ` `` で組み立てたpush、gitのサブコマンドを変数にしたもの（確かめられないため止める。そのまま書く） | 上記以外の凝った書き方（関数、eval、ヒアドキュメントで渡すスクリプトなど） |
 | main / master上での `git push`、jqがない・入力が読めないときのpush | |
 | 宛先を書かないpushで、`remote.<name>.push`（main / master、`*`、`:`）、`push.default=matching`、`push.default=upstream` によってmain / masterへ送られるもの | 上記以外のgitの設定（`url.<base>.pushInsteadOf` など） |
@@ -50,7 +50,7 @@ templates/lightweight/place.sh <project-root>
 
 文字列による検出なので、確実な保証にはならない。確実に守るのはGitHubのブランチ保護（このrepoでは未設定、#163）。
 
-`check-pr-head.sh` の正式レビューの判定は、Codex Reviewが書く要約コメント（`codex-review-state:v1`）と、GitHubの `reviewDecision`（Request changesがあれば止める）を読む。通常のPRコメントで届いた指摘は読まないので、steward 8のとおり自分で読む。別のレビューを使うprojectでは、`PR_GATE_REVIEWER` を変えるか、この照合を手で行う。必須checkの名前は `PR_GATE_CHECKS`（既定 `verification,Security Preflight`）で変える。
+`check-pr-head.sh` の正式レビューの判定は、Codex Reviewが書く要約コメント（`codex-review-state:v1`）と、レビュアーごとの最新の判定（APPROVED / CHANGES_REQUESTED / DISMISSED。後のCOMMENTEDでは消えない）を読み、Request changesが残っていれば止める。GitHubの `reviewDecision` はレビュー必須のブランチ保護があるときだけ値が入るので、補助として読む。通常のPRコメントで届いた指摘は読まないので、steward 8のとおり自分で読む。別のレビューを使うprojectでは、`PR_GATE_REVIEWER` を変えるか、この照合を手で行う。必須checkの名前は `PR_GATE_CHECKS`（既定 `verification,Security Preflight`）で変える。
 
 ## pr-review-fixから引き継がないもの
 

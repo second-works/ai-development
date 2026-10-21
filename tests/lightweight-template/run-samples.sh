@@ -216,6 +216,15 @@ check_hook 2 'SUB=push; git "$SUB" origin main'
 check_hook 0 'git push -o "ci +1" origin feature/issue-1-sample'
 check_hook 0 'git commit -m "$(printf "push to main")"'
 check_hook 0 'git status'
+# A push inside command substitution, and wrappers that take values.
+check_hook 2 'out=$(git push origin main)'
+check_hook 2 'out=$(git push origin main 2>&1)'
+check_hook 2 'echo "$(git push --force origin feature/x)"'
+check_hook 2 'echo `git push origin main`'
+check_hook 2 'timeout 60 git push origin main'
+check_hook 2 'nice git push origin main'
+check_hook 2 'sudo -u me git push origin main'
+check_hook 0 'out=$(git push origin feature/issue-1-sample 2>&1)'
 git -C "$proj" config push.default matching
 check_hook 2 'git push origin'
 git -C "$proj" config --unset push.default
@@ -245,7 +254,7 @@ mkdir -p "$fake/bin"
 cat >"$fake/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "pr view 7 --json headRefOid,url,state,mergeable,reviewDecision")
+  "pr view 7 --json headRefOid,url,state,mergeable,reviewDecision,reviews")
     n=$(( $(cat "$FAKE_GH/pr-calls" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$FAKE_GH/pr-calls"
     f=pr.json; [[ $n -gt 1 && -f "$FAKE_GH/pr-later.json" ]] && f=pr-later.json ;;
   "pr view 7 --json comments") f=comments.json ;;
@@ -319,6 +328,15 @@ check_gate CONFLICT "base branch moved during the check"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
 jq '.reviewDecision = "CHANGES_REQUESTED"' "$fake/data/pr.json" >"$fake/data/pr-later.json"
 check_gate CHANGES_REQUESTED "changes requested during the check"
+# Without required reviews GitHub leaves reviewDecision empty; the reviews themselves decide.
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq '.reviews = [{author: {login: "pat"}, state: "CHANGES_REQUESTED", submittedAt: "2026-01-01T00:00:00Z"},
+  {author: {login: "pat"}, state: "COMMENTED", submittedAt: "2026-01-02T00:00:00Z"}]' "$fake/data/pr.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/pr.json"
+check_gate CHANGES_REQUESTED "changes requested with an empty reviewDecision"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq '.reviews = [{author: {login: "pat"}, state: "CHANGES_REQUESTED", submittedAt: "2026-01-01T00:00:00Z"},
+  {author: {login: "pat"}, state: "APPROVED", submittedAt: "2026-01-02T00:00:00Z"}]' "$fake/data/pr.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/pr.json"
+check_gate READY "changes requested, then approved by the same reviewer"
 if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
   check_gate READY "all clear under Bash 3.2" /bin/bash

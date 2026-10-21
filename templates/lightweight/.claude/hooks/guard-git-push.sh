@@ -35,10 +35,11 @@ nl=$'\n'
 cmd="${cmd//\\$nl/ }"
 
 # A segment is a git command when git starts it. Allowed before git: "(", "{", "!",
-# shell keywords and wrappers (then, do, time, command, env -i, xargs ...),
+# shell keywords and wrappers with their options (then, do, time, command,
+# env -i, xargs, timeout 60, nice, sudo -u <user> ...),
 # VAR=value prefixes, and a path such as /usr/bin/git. git's own options may come
 # next; -C, -c, --git-dir, --work-tree and --namespace take a separate value.
-lead='^[[:space:]({!]*((if|then|do|else|elif|while|until|time|command|exec|nohup|xargs|sudo|env)([[:space:]]+-[^[:space:]]+)*[[:space:]]+|[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+|![[:space:]]+)*([^[:space:]]*/)?git'
+lead='^[[:space:]({!]*((if|then|do|else|elif|while|until|time|command|exec|nohup|xargs|sudo|env|timeout|nice|ionice|stdbuf)([[:space:]]+(-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*)?|[0-9][^[:space:]]*))*[[:space:]]+|[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+|![[:space:]]+)*([^[:space:]]*/)?git'
 opts="([[:space:]]+(-C|-c|--git-dir|--work-tree|--namespace|--config-env)[[:space:]]+(\"[^\"]*\"|'[^']*'|[^[:space:]]+)|[[:space:]]+-[^[:space:]]+)*"
 push_re="${lead}${opts}[[:space:]]+push([[:space:]]|\$)"
 # git followed by a subcommand built from a variable or substitution.
@@ -50,21 +51,30 @@ main_re='([[:space:]:]|refs/heads/)(main|master)([)}[:space:]]|$)'
 many_re='[[:space:]](--all|--branches)([=)}[:space:]]|$)|[[:space:]]:([)}[:space:]]|$)|\*'
 
 found_push=0
-while IFS= read -r raw; do
-  # Push options carry free text (for example -o "ci +1"); drop them before checking.
-  plain="$(printf '%s' "$raw" | sed -E "s/(^|[[:space:]])(-o|--push-option)(=|[[:space:]]+)(\"[^\"]*\"|'[^']*'|[^[:space:]]+)/\\1/g" | tr -d "'\"\\")"
-  if [[ ! $raw =~ $push_re && ! $plain =~ $push_re ]]; then
-    [[ $raw =~ $dynamic_re ]] && block "a git subcommand built from a variable cannot be checked; write it literally: $raw"
-    continue
-  fi
-  found_push=1
-  case "$raw" in
-    *'$'* | *'`'*) block "a push built from variables or command substitution cannot be checked; write the branch name literally: $raw" ;;
-  esac
-  [[ $plain =~ $force_re || $plain =~ $plus_re ]] && block "force push is not allowed: $raw"
-  [[ $plain =~ $main_re ]] && block "push to main/master is not allowed: $raw"
-  [[ $plain =~ $many_re ]] && block "a push of several branches (--all, :, *) can include main/master: $raw"
-done < <(printf '%s\n' "$cmd" | tr ';&|' '\n\n\n')
+scan() { # <outer|inner>: check every segment of the command text on stdin
+  local raw plain
+  while IFS= read -r raw; do
+    # Push options carry free text (for example -o "ci +1"); drop them before checking.
+    plain="$(printf '%s' "$raw" | sed -E "s/(^|[[:space:]])(-o|--push-option)(=|[[:space:]]+)(\"[^\"]*\"|'[^']*'|[^[:space:]]+)/\\1/g" | tr -d "'\"\\")"
+    if [[ ! $raw =~ $push_re && ! $plain =~ $push_re ]]; then
+      [[ $raw =~ $dynamic_re ]] && block "a git subcommand built from a variable cannot be checked; write it literally: $raw"
+      continue
+    fi
+    found_push=1
+    if [[ $1 == outer ]]; then
+      case "$raw" in
+        *'$'* | *'`'*) block "a push built from variables or command substitution cannot be checked; write the branch name literally: $raw" ;;
+      esac
+    fi
+    [[ $plain =~ $force_re || $plain =~ $plus_re ]] && block "force push is not allowed: $raw"
+    [[ $plain =~ $main_re ]] && block "push to main/master is not allowed: $raw"
+    [[ $plain =~ $many_re ]] && block "a push of several branches (--all, :, *) can include main/master: $raw"
+  done
+}
+# Pass 1 splits on ; & | and newlines. Pass 2 also splits on $( and backticks, so a
+# push inside a command substitution such as out=$(git push origin main) is found.
+scan outer < <(printf '%s\n' "$cmd" | tr ';&|' '\n\n\n')
+scan inner < <(printf '%s\n' "$cmd" | awk '{ gsub(/\$\(/, "\n"); print }' | tr ';&|`' '\n\n\n\n')
 
 if [[ $found_push -eq 1 ]]; then
   dir="${cwd:-.}"
