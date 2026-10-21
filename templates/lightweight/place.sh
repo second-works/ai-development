@@ -69,7 +69,7 @@ fi
 created=()
 made_dirs=()
 rollback() {
-  trap - INT TERM
+  trap - HUP INT TERM
   local f i
   for f in ${created[@]+"${created[@]}"}; do rm -f -- "$target/$f"; done
   # Remove only the directories this run made, deepest first, and only if empty.
@@ -77,7 +77,7 @@ rollback() {
   echo "failed: removed the ${#created[@]} file(s) created by this run" >&2
   exit 1
 }
-trap rollback INT TERM
+trap rollback HUP INT TERM
 
 make_parent() { # <dir>: mkdir -p that remembers which directories it created
   local d="$1" missing=()

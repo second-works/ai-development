@@ -31,7 +31,8 @@ for kept in 'mainへ直接pushしない' 'force pushしない' 'Secrets' '全件
   grep -q "$kept" "$agents" || fail "AGENTS.md lost the rule: $kept"
 done
 steward="$CAND/.claude/skills/steward/SKILL.md"
-for banned in pr-review-fix JEV 'IN-SCOPE FIX' 'Local Judge'; do
+# steward must not merge on its own: the parent #192 keeps the human merge.
+for banned in pr-review-fix JEV 'IN-SCOPE FIX' 'Local Judge' 'gh pr merge'; do
   ! grep -q "$banned" "$steward" || fail "steward copied $banned from pr-review-fix"
 done
 [[ $(head -1 "$CAND/CLAUDE.md") == '@AGENTS.md' ]] || fail "CLAUDE.md does not import AGENTS.md"
@@ -147,14 +148,15 @@ new_repo "$main_repo" main
 run_hook() { # <command> [cwd] -> exit status
   local payload
   payload="$(jq -n --arg c "$1" --arg d "${2:-$proj}" '{tool_name: "Bash", tool_input: {command: $c}, cwd: $d}')"
-  set +e; "$hook" <<<"$payload" >/dev/null 2>&1; local s=$?; set -e
+  set +e; ${HOOK_SH:-} "$hook" <<<"$payload" >/dev/null 2>&1; local s=$?; set -e
   return "$s"
 }
 check_hook() { # <expected> <command> [cwd]
   local s=0
   run_hook "$2" "${3:-$proj}" || s=$?
-  expect_status "$1" "$s" "hook for '$2'"
+  expect_status "$1" "$s" "hook${HOOK_SH:+ under $HOOK_SH} for '$2'"
 }
+hook_cases() {
 check_hook 0 'ls -la'
 check_hook 0 'git push -u origin feature/issue-1-sample'
 check_hook 0 'git push origin feature/main-fix'
@@ -191,6 +193,40 @@ check_hook 2 'git push'
 git -C "$proj" config branch.feature/issue-1-sample.merge refs/heads/feature/issue-1-sample
 check_hook 0 'git push'
 git -C "$proj" config --unset push.default
+# Line continuations, shell keywords and wrappers before git.
+check_hook 2 $'git push origin \\\n  main'
+check_hook 2 $'git push \\\n  --force origin feature/issue-1-sample'
+check_hook 2 'if true; then git push origin main; fi'
+check_hook 2 'for i in 1; do git push --force origin feature/x; done'
+check_hook 2 'time git push origin main'
+check_hook 2 'command git push origin main'
+check_hook 2 '! git push origin main'
+check_hook 2 'env -i git push origin main'
+check_hook 2 'xargs git push origin main'
+check_hook 2 'git -C "/path/with space" push origin main'
+check_hook 2 'git --git-dir .git push origin main'
+# Pushes that select several branches.
+check_hook 2 'git push --all origin'
+check_hook 2 'git push origin :'
+check_hook 2 "git push origin 'refs/heads/*:refs/heads/*'"
+# Quoting or a variable that builds git or push.
+check_hook 2 "g'it' p\"ush\" origin main"
+check_hook 2 'SUB=push; git "$SUB" origin main'
+# Free text in push options and other git commands are not pushes.
+check_hook 0 'git push -o "ci +1" origin feature/issue-1-sample'
+check_hook 0 'git commit -m "$(printf "push to main")"'
+check_hook 0 'git status'
+git -C "$proj" config push.default matching
+check_hook 2 'git push origin'
+git -C "$proj" config --unset push.default
+git -C "$proj" config remote.origin.push 'refs/heads/*:refs/heads/*'
+check_hook 2 'git push origin'
+git -C "$proj" config remote.origin.push HEAD:refs/heads/feature/issue-1-sample
+check_hook 0 'git push origin'
+git -C "$proj" config --unset remote.origin.push
+}
+hook_cases
+if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then HOOK_SH=/bin/bash hook_cases; fi
 set +e; "$hook" <<<'{"tool_input": git push origin main' >/dev/null 2>&1; status=$?; set -e
 expect_status 2 "$status" "hook with unreadable input"
 nojq="$WORK/nojq"
@@ -209,7 +245,7 @@ mkdir -p "$fake/bin"
 cat >"$fake/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "pr view 7 --json headRefOid,url,state,mergeable")
+  "pr view 7 --json headRefOid,url,state,mergeable,reviewDecision")
     n=$(( $(cat "$FAKE_GH/pr-calls" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$FAKE_GH/pr-calls"
     f=pr.json; [[ $n -gt 1 && -f "$FAKE_GH/pr-later.json" ]] && f=pr-later.json ;;
   "pr view 7 --json comments") f=comments.json ;;
@@ -223,10 +259,10 @@ EOF
 chmod +x "$fake/bin/gh"
 head_sha="$(git -C "$proj" rev-parse HEAD)"
 old_sha="$(printf 'old' | shasum | cut -c1-40)"
-set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <open-threads> [mergeable] [more-threads]
+set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <open-threads> [mergeable] [more-threads] [decision]
   local d="$fake/data"
   rm -rf "$d"; mkdir -p "$d"
-  jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" '{headRefOid: $h, url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m}' >"$d/pr.json"
+  jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" --arg r "${9:-}" '{headRefOid: $h, url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m, reviewDecision: $r}' >"$d/pr.json"
   printf '%s' "$2" >"$d/checks.json"
   if [[ -n $3 ]]; then
     jq -n --arg s "$3" --arg st "$4" --argjson u "$5" '{comments: [{author: {login: "chatgpt-codex-connector"},
@@ -275,6 +311,14 @@ set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 CONFLICTING
 check_gate CONFLICT "conflict with the base branch"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 UNKNOWN
 check_gate MERGE_STATE_PENDING "conflict check not finished"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 MERGEABLE false CHANGES_REQUESTED
+check_gate CHANGES_REQUESTED "a reviewer requested changes"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq '.mergeable = "CONFLICTING"' "$fake/data/pr.json" >"$fake/data/pr-later.json"
+check_gate CONFLICT "base branch moved during the check"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq '.reviewDecision = "CHANGES_REQUESTED"' "$fake/data/pr.json" >"$fake/data/pr-later.json"
+check_gate CHANGES_REQUESTED "changes requested during the check"
 if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
   check_gate READY "all clear under Bash 3.2" /bin/bash

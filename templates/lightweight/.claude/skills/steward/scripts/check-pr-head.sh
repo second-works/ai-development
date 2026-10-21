@@ -9,6 +9,8 @@
 #   3. the formal review finished on this head with no unresolved findings
 #   4. no review thread is unresolved
 #   5. GitHub reports no conflict with the base branch
+#   6. no reviewer has requested changes (reviewDecision)
+# Review comments posted as plain PR comments are not read; check those by hand.
 # Prints PR_GATE_STATUS=<status> and PR_GATE_REASON=<text>. Exit 0 only for READY.
 # Needs gh (logged in) and jq. Anything it cannot read is reported, never passed.
 
@@ -29,11 +31,10 @@ for tool in gh jq git; do
   command -v "$tool" >/dev/null 2>&1 || report UNAVAILABLE "$tool is not installed"
 done
 
-pr_json="$(gh pr view "$pr" --json headRefOid,url,state,mergeable 2>/dev/null)" || report UNAVAILABLE "could not read PR #$pr"
+pr_json="$(gh pr view "$pr" --json headRefOid,url,state,mergeable,reviewDecision 2>/dev/null)" || report UNAVAILABLE "could not read PR #$pr"
 head="$(jq -er '.headRefOid' <<<"$pr_json" 2>/dev/null)" || report UNAVAILABLE "PR head is missing"
 url="$(jq -er '.url' <<<"$pr_json" 2>/dev/null)" || report UNAVAILABLE "PR url is missing"
 state="$(jq -r '.state' <<<"$pr_json")"
-mergeable="$(jq -r '.mergeable // "UNKNOWN"' <<<"$pr_json")"
 repo="$(sed -E 's#^https://[^/]+/([^/]+/[^/]+)/pull/[0-9]+$#\1#' <<<"$url")"
 [[ $repo == */* && $repo != "$url" ]] || report UNAVAILABLE "could not parse the repository from $url"
 printf 'PR_GATE_HEAD=%s\n' "$head"
@@ -88,15 +89,23 @@ open_threads="$(jq -er '[.data.repository.pullRequest.reviewThreads.nodes[] | se
 [[ $(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' <<<"$threads") == false ]] ||
   report REVIEW_UNAVAILABLE "more than 100 review threads; check the rest by hand"
 
-case "$mergeable" in
-  MERGEABLE) ;;
-  CONFLICTING) report CONFLICT "PR #$pr conflicts with its base branch" ;;
-  *) report MERGE_STATE_PENDING "GitHub has not finished checking for conflicts ($mergeable)" ;;
-esac
+# The second read at the end can see a conflict or a new review decision that
+# appeared during this check, so the same checks run on both reads.
+check_snapshot() { # <pr-json>
+  case "$(jq -r '.mergeable // "UNKNOWN"' <<<"$1")" in
+    MERGEABLE) ;;
+    CONFLICTING) report CONFLICT "PR #$pr conflicts with its base branch" ;;
+    *) report MERGE_STATE_PENDING "GitHub has not finished checking for conflicts" ;;
+  esac
+  [[ $(jq -r '.reviewDecision // ""' <<<"$1") != CHANGES_REQUESTED ]] ||
+    report CHANGES_REQUESTED "a reviewer has requested changes"
+}
+check_snapshot "$pr_json"
 
 # A push during this check would make every result above stale, so read the head again.
-again="$(gh pr view "$pr" --json headRefOid,url,state,mergeable 2>/dev/null)" || report UNAVAILABLE "could not re-read PR #$pr"
+again="$(gh pr view "$pr" --json headRefOid,url,state,mergeable,reviewDecision 2>/dev/null)" || report UNAVAILABLE "could not re-read PR #$pr"
 [[ $(jq -r '.headRefOid' <<<"$again") == "$head" ]] || report STALE_HEAD "PR head changed during the check"
 [[ $(jq -r '.state' <<<"$again") == OPEN ]] || report NOT_OPEN "PR #$pr is no longer open"
+check_snapshot "$again"
 
 report READY "checks, review, threads and conflicts are clear on $head"
