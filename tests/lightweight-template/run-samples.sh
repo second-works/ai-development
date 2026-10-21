@@ -77,8 +77,39 @@ printf 'not a directory\n' >"$partial/.github"
 set +e; "$CAND/place.sh" "$partial" >/dev/null 2>"$WORK/err"; status=$?; set -e
 expect_status 1 "$status" "placement that fails part way"
 grep -q 'removed the' "$WORK/err" || fail "partial failure did not roll back"
-[[ ! -e $partial/AGENTS.md && ! -e $partial/.claude/settings.json ]] || fail "rollback left files from this run"
+[[ ! -e $partial/AGENTS.md && ! -e $partial/.claude && ! -e $partial/.agents ]] || fail "rollback left files or directories from this run"
 [[ $(<"$partial/.github") == 'not a directory' ]] || fail "rollback touched a file it did not create"
+
+interrupted="$WORK/interrupted"
+new_repo "$interrupted"
+shim="$WORK/slow-cp"
+mkdir -p "$shim"
+cat >"$shim/cp" <<EOF
+#!/usr/bin/env bash
+n=\$(( \$(cat "$shim/count" 2>/dev/null || echo 0) + 1 )); echo "\$n" >"$shim/count"
+[[ \$n -eq 3 ]] && { touch "$shim/paused"; sleep 2; }
+exec "$(command -v cp)" "\$@"
+EOF
+chmod +x "$shim/cp"
+PATH="$shim:$PATH" "$CAND/place.sh" "$interrupted" >/dev/null 2>"$WORK/err" &
+place_pid=$!
+for _ in $(seq 50); do [[ -e $shim/paused ]] && break; sleep 0.1; done
+[[ -e $shim/paused ]] || fail "interrupt test did not reach the third copy"
+kill -TERM "$place_pid"
+set +e; wait "$place_pid"; status=$?; set -e
+expect_status 1 "$status" "interrupted placement"
+grep -q 'removed the' "$WORK/err" || fail "interrupted placement did not roll back"
+[[ -z $(find "$interrupted" -path "$interrupted/.git" -prune -o -mindepth 1 -print) ]] ||
+  fail "interrupted placement left files or directories"
+
+linked="$WORK/linked"
+new_repo "$linked"
+mkdir -p "$WORK/outside"
+ln -s "$WORK/outside" "$linked/.claude"
+set +e; "$CAND/place.sh" "$linked" >/dev/null 2>"$WORK/err"; status=$?; set -e
+expect_status 1 "$status" "placement through a symlinked .claude"
+grep -q 'conflict: .claude is a symlink' "$WORK/err" || fail "symlinked parent was not reported"
+[[ -z $(ls -A "$WORK/outside") && ! -e $linked/AGENTS.md ]] || fail "placement wrote through a symlinked parent"
 
 # Generated projects may run these scripts with macOS Bash 3.2.
 if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
@@ -136,6 +167,17 @@ check_hook 2 'git push -f'
 check_hook 2 'git push --force-with-lease'
 check_hook 2 'git push origin +feature/issue-1-sample'
 check_hook 2 'git push' "$main_repo"
+check_hook 0 'git commit -m "block push to main and more"'
+check_hook 0 'git commit -m "push -f guard"'
+check_hook 0 'gh pr comment 1 --body "use git push origin main carefully"'
+check_hook 0 'git -C ../other push origin feature/a'
+check_hook 2 'git push origin "main"'
+check_hook 2 "git push origin 'HEAD:main'"
+check_hook 2 '/usr/bin/git push origin main'
+check_hook 2 '(git push --force)'
+check_hook 2 'git -c core.x=1 push origin main'
+check_hook 2 'FOO=1 git push -f'
+check_hook 2 "git push origin '+feature/issue-1-sample'"
 set +e; "$hook" <<<'{"tool_input": git push origin main' >/dev/null 2>&1; status=$?; set -e
 expect_status 2 "$status" "hook with unreadable input"
 nojq="$WORK/nojq"
@@ -154,7 +196,7 @@ mkdir -p "$fake/bin"
 cat >"$fake/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "pr view 7 --json headRefOid,url,state") f=pr.json ;;
+  "pr view 7 --json headRefOid,url,state,mergeable") f=pr.json ;;
   "pr view 7 --json comments") f=comments.json ;;
   api\ repos/*/check-runs*) f=checks.json ;;
   api\ graphql*) f=threads.json ;;
@@ -166,10 +208,10 @@ EOF
 chmod +x "$fake/bin/gh"
 head_sha="$(git -C "$proj" rev-parse HEAD)"
 old_sha="$(printf 'old' | shasum | cut -c1-40)"
-set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <open-threads>
+set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <open-threads> [mergeable] [more-threads]
   local d="$fake/data"
   rm -rf "$d"; mkdir -p "$d"
-  jq -n --arg h "$1" '{headRefOid: $h, url: "https://github.com/acme/app/pull/7", state: "OPEN"}' >"$d/pr.json"
+  jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" '{headRefOid: $h, url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m}' >"$d/pr.json"
   printf '%s' "$2" >"$d/checks.json"
   if [[ -n $3 ]]; then
     jq -n --arg s "$3" --arg st "$4" --argjson u "$5" '{comments: [{author: {login: "chatgpt-codex-connector"},
@@ -177,12 +219,13 @@ set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <ope
   else
     printf '{"comments": []}' >"$d/comments.json"
   fi
-  jq -n --argjson n "$6" '{data: {repository: {pullRequest: {reviewThreads: {nodes: ([range(0; $n)] | map({isResolved: false}) + [{isResolved: true}])}}}}}' >"$d/threads.json"
+  jq -n --argjson n "$6" --argjson more "${8:-false}" '{data: {repository: {pullRequest: {reviewThreads: {pageInfo: {hasNextPage: $more},
+    nodes: ([range(0; $n)] | map({isResolved: false}) + [{isResolved: true}])}}}}}' >"$d/threads.json"
 }
 ok_checks='{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"},{"name":"Security Preflight","status":"completed","conclusion":"success"}]}'
-check_gate() { # <expected-status> <label>
+check_gate() { # <expected-status> <label> [shell]
   local out s=0
-  out="$(cd "$proj" && FAKE_GH="$fake/data" PATH="$fake/bin:$PATH" "$gate" 7 2>&1)" || s=$?
+  out="$(cd "$proj" && FAKE_GH="$fake/data" PATH="$fake/bin:$PATH" ${3:-bash} "$gate" 7 2>&1)" || s=$?
   grep -q "^PR_GATE_STATUS=$1$" <<<"$out" || fail "$2: expected $1, got: $out"
   if [[ $1 == READY ]]; then expect_status 0 "$s" "$2"; else expect_status 1 "$s" "$2"; fi
 }
@@ -208,6 +251,18 @@ set_data "$head_sha" "$ok_checks" "" completed false 0
 check_gate REVIEW_UNAVAILABLE "no review state"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 2
 check_gate UNRESOLVED_THREADS "unresolved threads"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 false true
+check_gate REVIEW_UNAVAILABLE "more than 100 review threads"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 CONFLICTING
+check_gate CONFLICT "conflict with the base branch"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 UNKNOWN
+check_gate MERGE_STATE_PENDING "conflict check not finished"
+if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
+  set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+  check_gate READY "all clear under Bash 3.2" /bin/bash
+  set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+  check_gate CHECK_UNAVAILABLE "Security check missing under Bash 3.2" /bin/bash
+fi
 rm -f "$fake/data/pr.json"
 check_gate UNAVAILABLE "PR cannot be read"
 

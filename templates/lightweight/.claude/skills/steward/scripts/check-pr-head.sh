@@ -8,6 +8,7 @@
 #   2. every required check exists and succeeded (PR_GATE_CHECKS, comma separated)
 #   3. the formal review finished on this head with no unresolved findings
 #   4. no review thread is unresolved
+#   5. GitHub reports no conflict with the base branch
 # Prints PR_GATE_STATUS=<status> and PR_GATE_REASON=<text>. Exit 0 only for READY.
 # Needs gh (logged in) and jq. Anything it cannot read is reported, never passed.
 
@@ -28,10 +29,11 @@ for tool in gh jq git; do
   command -v "$tool" >/dev/null 2>&1 || report UNAVAILABLE "$tool is not installed"
 done
 
-pr_json="$(gh pr view "$pr" --json headRefOid,url,state 2>/dev/null)" || report UNAVAILABLE "could not read PR #$pr"
+pr_json="$(gh pr view "$pr" --json headRefOid,url,state,mergeable 2>/dev/null)" || report UNAVAILABLE "could not read PR #$pr"
 head="$(jq -er '.headRefOid' <<<"$pr_json" 2>/dev/null)" || report UNAVAILABLE "PR head is missing"
 url="$(jq -er '.url' <<<"$pr_json" 2>/dev/null)" || report UNAVAILABLE "PR url is missing"
 state="$(jq -r '.state' <<<"$pr_json")"
+mergeable="$(jq -r '.mergeable // "UNKNOWN"' <<<"$pr_json")"
 repo="$(sed -E 's#^https://[^/]+/([^/]+/[^/]+)/pull/[0-9]+$#\1#' <<<"$url")"
 [[ $repo == */* && $repo != "$url" ]] || report UNAVAILABLE "could not parse the repository from $url"
 printf 'PR_GATE_HEAD=%s\n' "$head"
@@ -78,10 +80,18 @@ owner="${repo%%/*}" name="${repo#*/}"
 threads="$(gh api graphql -F owner="$owner" -F name="$name" -F pr="$pr" -f query='
   query($owner: String!, $name: String!, $pr: Int!) {
     repository(owner: $owner, name: $name) { pullRequest(number: $pr) {
-      reviewThreads(first: 100) { nodes { isResolved } } } } }' 2>/dev/null)" ||
+      reviewThreads(first: 100) { pageInfo { hasNextPage } nodes { isResolved } } } } }' 2>/dev/null)" ||
   report REVIEW_UNAVAILABLE "could not read review threads"
 open_threads="$(jq -er '[.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)] | length' <<<"$threads" 2>/dev/null)" ||
   report REVIEW_UNAVAILABLE "could not parse review threads"
 [[ $open_threads -eq 0 ]] || report UNRESOLVED_THREADS "$open_threads review thread(s) are unresolved"
+[[ $(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' <<<"$threads") == false ]] ||
+  report REVIEW_UNAVAILABLE "more than 100 review threads; check the rest by hand"
 
-report READY "checks, review and threads are clear on $head"
+case "$mergeable" in
+  MERGEABLE) ;;
+  CONFLICTING) report CONFLICT "PR #$pr conflicts with its base branch" ;;
+  *) report MERGE_STATE_PENDING "GitHub has not finished checking for conflicts ($mergeable)" ;;
+esac
+
+report READY "checks, review, threads and conflicts are clear on $head"

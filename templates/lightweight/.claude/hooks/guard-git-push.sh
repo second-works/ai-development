@@ -23,10 +23,14 @@ cmd="$(printf '%s' "$input" | jq -er '.tool_input.command' 2>/dev/null)" ||
   block "could not read the command from the hook input"
 cwd="$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)"
 
-push_re='(^|[[:space:]])git([[:space:]].*)?[[:space:]]push([[:space:]]|$)'
-force_re='[[:space:]](--force|--force-with-lease|--force-if-includes|--mirror|-[a-zA-Z]*f[a-zA-Z]*)([[:space:]=]|$)'
-plus_re='[[:space:]]\+[^[:space:]]'
-main_re='([[:space:]:]|refs/heads/)(main|master)([[:space:]]|$)'
+# A segment is a push only when git starts it and push is git's subcommand:
+# optional "(" or "{", VAR=value prefixes, "env", a path such as /usr/bin/git,
+# and git's own options (-C <dir>, -c <key=value>, --no-pager ...) may come first.
+# Words like "push" inside a commit message or a PR body therefore do not count.
+push_re='^[[:space:]({]*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*(env[[:space:]]+)?([^[:space:]]*/)?git([[:space:]]+-[Cc][[:space:]]+[^[:space:]]+|[[:space:]]+-[^[:space:]]+)*[[:space:]]+push([[:space:]]|$)'
+force_re="[[:space:]][\"']?(--force|--force-with-lease|--force-if-includes|--mirror|-[a-zA-Z]*f[a-zA-Z]*)([\"'=)}[:space:]]|$)"
+plus_re="[[:space:]][\"']?\\+[^[:space:]]"
+main_re="([[:space:]:\"']|refs/heads/)(main|master)([\"')}[:space:]]|$)"
 
 found_push=0
 while IFS= read -r segment; do

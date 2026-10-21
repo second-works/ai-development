@@ -13,7 +13,7 @@
 | `.agents/skills/plan-to-issues/` | Codexが計画を親子Issueにする手順 |
 | `.claude/skills/steward/` | Claude CodeがIssueからマージ依頼まで進める手順 |
 | `.claude/settings.json`、`.claude/hooks/guard-git-push.sh` | main宛てのpushとforce pushを止めるフック、`.env` を読ませない設定 |
-| `scripts/check-pr-head.sh` | 最終headのcheck、正式レビュー、未解決スレッドを読み取りだけで照合する |
+| `scripts/check-pr-head.sh` | 最終headのcheck、正式レビュー、未解決スレッド、mainとの競合を読み取りだけで照合する |
 | `.github/` のテンプレート | 親子Issueの7項目、PRの検証欄 |
 | `scripts/verify.sh`、`scripts/security-preflight.sh` | 既存の原本（`templates/verification/`、`templates/security/`）をコピーする |
 
@@ -26,22 +26,24 @@ templates/lightweight/place.sh --dry-run <project-root>
 templates/lightweight/place.sh <project-root>
 ```
 
-- 置く前に全部の配置先を調べる。1つでも既にあれば、何も書かずに衝突を表示して止まる（既存の `AGENTS.md`、`CLAUDE.md`、`.claude/settings.json` などは手で統合する）。
-- 途中でコピーに失敗したら、その回に作ったファイルだけを消す。
+- 置く前に全部の配置先を調べる。1つでも既にあるか、親ディレクトリがsymlink（例: `.claude` → `~/.claude`）なら、何も書かずに衝突を表示して止まる（既存の `AGENTS.md`、`CLAUDE.md`、`.claude/settings.json` などは手で統合する）。
+- 途中でコピーに失敗したり中断されたりしたら、その回に作ったファイルと空のディレクトリだけを消す。
 - 既存projectへの配置と復旧の手順は、bootstrap（#195）で扱う。
 
 ## ガードの範囲と限界
 
-フックは、Bashのコマンド文字列と、作業ディレクトリの現在ブランチだけを見る。
+フックは、Bashのコマンド文字列と、作業ディレクトリの現在ブランチだけを見る。`;`、`&&`、`|`、改行で区切った各部分のうち、gitで始まり、pushがgitのサブコマンドであるものだけをpushとみなす。commitメッセージやPR本文の中の「push」「main」は対象にしない。
 
 | 止める | 止めない（限界） |
 | --- | --- |
-| `git push origin main`、`HEAD:main`、`refs/heads/main` | aliasやスクリプトの中のpush、変数で組み立てたコマンド |
+| `git push origin main`、`"main"`、`HEAD:main`、`refs/heads/main` | aliasやスクリプトの中のpush、`bash -c "..."` の中、変数で組み立てたコマンド |
 | `--force`、`-f`、`--force-with-lease`、`--mirror`、`+`付きrefspec | `gh` やGitHub APIからの操作、他のツール |
-| main / master上での `git push` | `git -C <別の場所>` で別repoを操作する場合のブランチ判定 |
-| jqがない、入力が読めないときのpush | ブランチ削除（`--delete`）、push以外のgit操作 |
+| `/usr/bin/git`、`git -C <dir>`、`git -c k=v`、`VAR=1 git`、`( ... )` の中のpush | `git -C <別の場所>` で別repoを操作する場合のブランチ判定 |
+| main / master上での `git push`、jqがない・入力が読めないときのpush | ブランチ削除（`--delete`）、push以外のgit操作 |
 
-文字列による検出なので、確実な保証にはならない。確実に守るのはGitHubのブランチ保護（このrepoでは未設定、#163）。`echo "git push main"` のような無害な文字列も止めることがある。
+**フック自体が実行できないときは止まらない。** Claude Codeはexit 2以外のフックの失敗を警告として扱い、コマンドをそのまま実行する。実行権限が外れた、`bash` が見つからない、`$CLAUDE_PROJECT_DIR` が空、といった場合はpushが通る。`settings.json` のdeny（`git push --force` / `-f` で始まるコマンド）はこのときも働くが、main宛ては防げない。
+
+文字列による検出なので、確実な保証にはならない。確実に守るのはGitHubのブランチ保護（このrepoでは未設定、#163）。
 
 `check-pr-head.sh` の正式レビューの判定は、Codex Reviewが書く要約コメント（`codex-review-state:v1`）を読む。別のレビューを使うprojectでは、`PR_GATE_REVIEWER` を変えるか、この照合を手で行う。必須checkの名前は `PR_GATE_CHECKS`（既定 `verification,Security Preflight`）で変える。
 
