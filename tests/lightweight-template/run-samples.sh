@@ -243,6 +243,10 @@ check_hook 2 'git >"/tmp/push log" push origin main'
 check_hook 2 'git 2>"/tmp/push log" push --force origin feature/x'
 check_hook 2 "git >'/tmp/push log' push origin main"
 check_hook 0 'git >"/tmp/push log" push origin feature/issue-1-sample'
+check_hook 2 'git push -o "note >" origin "main"'
+check_hook 2 "git push -o 'note >' origin 'main'"
+check_hook 2 'git push -o "note >" --force origin "feature/x"'
+check_hook 0 'git push -o "note >" origin "feature/issue-1-sample"'
 check_hook 0 'out=$(git push origin feature/issue-1-sample 2>&1)'
 check_hook 0 'out=`git push origin feature/issue-1-sample`'
 check_hook 2 'out=$(git push origin "$BRANCH" 2>&1)'

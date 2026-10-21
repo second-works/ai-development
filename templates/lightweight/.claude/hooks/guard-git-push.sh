@@ -59,12 +59,14 @@ found_push=0
 scan() { # check every segment of the command text on stdin
   local raw plain
   while IFS= read -r raw; do
+    # Push options carry free text (for example -o "ci +1" or -o "note >"); drop them
+    # first, so a < or > inside the text is not taken for a redirection below.
+    raw="$(printf '%s' "$raw" | sed -E "s/(^|[[:space:]])(-o|--push-option)(=|[[:space:]]+)(\"[^\"]*\"|'[^']*'|[^[:space:]]+)/\\1/g")"
     # The shell removes redirections and their targets before git sees its arguments
     # (git>log push origin main runs "git push origin main"), so remove them here too.
     # A quoted target may contain spaces (>"/tmp/push log"), so take the whole quote.
     raw="$(printf '%s' "$raw" | sed -E "s/[0-9]*(<<<|<<|>>|<>|<|>)[[:space:]]*(\"[^\"]*\"|'[^']*'|[^[:space:]<>]+)/ /g")"
-    # Push options carry free text (for example -o "ci +1"); drop them before checking.
-    plain="$(printf '%s' "$raw" | sed -E "s/(^|[[:space:]])(-o|--push-option)(=|[[:space:]]+)(\"[^\"]*\"|'[^']*'|[^[:space:]]+)/\\1/g" | tr -d "'\"\\")"
+    plain="$(printf '%s' "$raw" | tr -d "'\"\\")"
     if [[ ! $raw =~ $push_re && ! $plain =~ $push_re ]]; then
       [[ $raw =~ $dynamic_re ]] && block "a git subcommand built from a variable cannot be checked; write it literally: $raw"
       continue
