@@ -1,6 +1,6 @@
 # 軽量化の削減範囲と最小責務
 
-**Decision: 標準から外す対象は「通常フロー外のレビュー補助一式（pr-review-fix・JEV・Local Judge・Slack通知）」「自己管理の台帳・履歴資料」「巨大な必読flow」の3群とし、残す結果は親 #192 の11項目で固定する。本書は提案であり、削除・設定変更は行わない。**
+**Decision: 標準から外す対象は「通常フロー外のレビュー補助一式（pr-review-fix・JEV・Local Judge）」「自己管理の台帳・履歴資料」「巨大な必読flow」の3群とし、残す結果は親 #192 の11項目で固定する。Slack通知とFOLLOW-UP台帳は現役の保証なので、外すなら代替を先に成立させる移行対象とする。本書は提案であり、削除・設定変更は行わない。**
 
 親 [#192](https://github.com/second-works/ai-development/issues/192)、本Issue [#193](https://github.com/second-works/ai-development/issues/193)。後続 #194〜#197 は本書の対象一覧と人間確認を前提に進める。過去のKB値（[受入記録](simplification-acceptance.md)、[棚卸し](simplification-inventory.md)）は再利用せず、以下で取り直した。
 
@@ -22,8 +22,8 @@
 | 計画時の必読 | 8 files / 88,486 B | AGENTS、plan-to-issues 8,805、最小契約 40,232、Plan Review 14,899、Issue品質 5,787、Tier、親子template |
 | workflow | 6本 / 27,664 B | 標準: `ci.yml`、`security.yml`。手動・通知: `jev-triage`、`decision-shadow`、`local-judge-smoke`、`slack-failure-alert` |
 | 検査入口 | 28 suites、CI 29 step | step 1はshell構文、28は各 `tests/*/run-samples.sh` |
-| 外す候補A: レビュー補助一式 | 32 files / 271,020 B | pr-review-fix 7 files 86,453、auto-triage 13 files 73,364、手動workflow 4本、専用test 4 suites |
-| 外す候補B: 自己管理docs | 6 files / 140,568 B | harness台帳 63,844、instruction台帳 29,249、棚卸し 31,962、受入記録 8,392、review-followups 4,951、field lessons 2,170 |
+| 外す候補A: レビュー補助一式 | 32 files / 271,020 B | pr-review-fix 7 files 86,453、auto-triage 13 files 73,364、workflow 4本（手動3本とSlack通知）、専用test 4 suites。Slack通知は現役のため移行対象（4・5章） |
+| 外す候補B: 自己管理docs | 6 files / 140,568 B | harness台帳 63,844、instruction台帳 29,249、棚卸し 31,962、受入記録 8,392、review-followups 4,951、field lessons 2,170。review-followupsは現役の記録先のため移行対象（5章） |
 
 ## 3. 参照関係と配布経路
 
@@ -51,7 +51,9 @@
 | Risk Tierの3段階記録、Current State全文、Harness欄 | 短い手順へ統合 | 該当Issueに重要リスクだけ直接書く。全案件の常設欄は外す |
 | main宛push・force push・Secret混入の早期検出 | ガードへ置換 | 既存Security Preflight + Claude Codeのdeny/フック候補（#194）。文字列一致で完全保証とは書かない |
 | 現head・CI/Security分離のhelper判定 | ガードへ置換 | Security workflowとstewardの確認手順。helper専用の判定は持たない |
-| JEV・Decision Shadow・Local Judge・Slack通知 | 理由を示して廃止 | 標準配布・標準CIから外す。通常フローで未使用、Secret・外部送信面を持ち、保守費が大きい |
+| JEV・Decision Shadow・Local Judge | 理由を示して廃止 | 標準配布・標準CIから外す。通常フローで未使用、Secret・外部送信面を持ち、保守費が大きい |
+| CI・Security失敗時のSlack通知 | 残す（移行は要確認） | Template CI / Securityの`failure`・`timed_out`で`workflow_run`が自動起動する現役の保証。外すなら代替の失敗通知か、通知がなくなる影響の人間承認を先に得る |
+| FOLLOW-UP中央台帳への登録 | 短い手順へ統合（移行は要確認） | [レビュー正本](code-review-contract.md)が更新headの`FOLLOW-UP`かつ`ISSUE`に台帳登録commitを求め、PR templateも参照する現役手順。新しい記録先と契約・templateの切替を先に成立させる |
 | 台帳・棚卸し・受入記録の更新義務、文言一致だけの検査 | 理由を示して廃止 | 自己管理のための資産。履歴は復元元SHAを記録してmainから外す |
 | template-change-evaluatorの常時routing | 理由を示して廃止 | 必読から外す。必要時の任意Skillとして残すかは#197で判断 |
 
@@ -64,12 +66,12 @@
 | `.agents/skills/pr-review-fix/`（SKILL + scripts 6） | 未使用 | template-guide配布、`ci.yml`構文行、tests 8 suites、workflow 2本 | 6章の保証先を先に成立 |
 | `templates/review-comment-auto-triage/`（13 files） | 未使用 | `triage-with-providers.py`、`tests/local-judge`、`tests/review-comment-auto-triage` | hermes・FitnessAIは配置済み。既配布分の扱いは未確認 |
 | `.github/workflows/jev-triage.yml`、`decision-shadow.yml`、`local-judge-smoke.yml` | 未使用（`workflow_dispatch`のみ） | `tests/jev-triage-workflow`、`tests/local-judge` | Secret登録の削除は人間判断で別操作 |
-| `.github/workflows/slack-failure-alert.yml` | 標準外の通知 | 被参照は棚卸しだけ | #191のrunner移行候補と競合。#191の判断を先に確認 |
+| `.github/workflows/slack-failure-alert.yml` | 使用中（標準gate失敗時に自動起動） | `workflow_run`でTemplate CI / Security / JEV Triageの失敗を通知 | 削除候補にしない。外すなら代替の失敗通知か人間の明示承認を先に得る。PR #199はこのjobをhosted runnerに残したため、hosted runnerが止まっている間は通知も届かない |
 | `tests/pr-review-fix-jev/`、`tests/jev-triage-workflow/`、`tests/local-judge/`、`tests/review-comment-auto-triage/` | 対象資産の専用検査 | `ci.yml`の4 step | 対象資産と同じPRで外す。`test-wait-codex-review.py`の判定は6章 |
 | `docs/ai-development-harness-inventory.md` | 条件付き（検証変更時） | child/PR template、最小契約、tests 9 suites | 安全項目の所在をtest-design等へ移してから |
 | `docs/instruction-architecture-inventory.md`、`docs/simplification-inventory.md`、`docs/simplification-acceptance.md` | 履歴 | AGENTS末尾の配置履歴参照、README | 復元元SHAを記録 |
 | `docs/field-validation-lessons.md` | 未使用 | 棚卸しからだけ | 復元元SHAを記録 |
-| `docs/review-followups.md` | 未使用（pr-review-fix経由） | PR template、`tests/pr-review-followups` | FOLLOW-UPの記録先をIssue/PRへ一本化 |
+| `docs/review-followups.md` | 使用中（通常レビューのFOLLOW-UP記録先） | レビュー正本の台帳登録手順、PR template、`tests/pr-review-followups` | 削除候補にしない。新しい記録先を決め、レビュー正本・PR template・testを切り替えて成功させてから外す |
 | `docs/nine-standard-ai-development-flow.md` | 必読（54 KB） | AGENTS、tests 15 suites | 必読を解除し、生きた節だけstewardとREADMEへ。単純なarchive移動にしない |
 | `docs/minimal-development-contract.md` | 条件表（40 KB） | AGENTS、plan-to-issues、tests 6 suites | 条件表だけを短く残すか統合するかは#194で判断 |
 | 文言一致だけの文書契約test（`document-concision`、`template-simplification`、`issue-quality`、`current-state`、`adaptive-development-flow`、`template-change-evaluator`、`plan-review-gate`、`issue-template-ui`、`pr-review-followups`） | 文書の固定文言を検査 | `ci.yml` | 責務ごとに判定。安全文言は残すか置換。#168の分類（[28入口](simplification-inventory.md#28テスト入口の責務と削減判断)）を起点に再判定 |
@@ -80,7 +82,7 @@
 
 外す範囲: Skill本体と6 scripts、template-guideの配布、`ci.yml`の構文行・`pr-review-fix-jev` step、関連文書contractのSkill参照。削除はしない（#197で人間確認後）。
 
-stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド制限、Finding ID集計、JEV / Local Judge / provider比較、helperの待機ロジック全体、FOLLOW-UP中央台帳の更新手順。
+stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド制限、Finding ID集計、JEV / Local Judge / provider比較、helperの待機ロジック全体。FOLLOW-UP中央台帳への登録はpr-review-fixではなくレビュー正本の現役手順なので、4章のとおり記録先を切り替えるまで維持する。
 
 | 現在の検査 | 守っている結果 | 外した後の保証先 |
 | --- | --- | --- |
@@ -97,7 +99,7 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 | [#163](https://github.com/second-works/ai-development/issues/163) | open。main未保護、Ruleset/保護APIは403 | 保護がないため、push禁止等の文章ルールとガードを削らない。本計画で設定しない |
 | [#188](https://github.com/second-works/ai-development/issues/188) | open。検討Issue | 候補pathに `pr-review-fix/` を含む。pr-review-fixを外すと、その観点はSecurity templates側だけに絞られる。#188を勝手にcloseしない |
 | [#189](https://github.com/second-works/ai-development/issues/189) / [PR #190](https://github.com/second-works/ai-development/pull/190) | open。AGENTSへCursor Cloud節を追加 | #194/#197のAGENTS短縮と同じファイルを変える。#194開始前にmergeか保留かの人間判断が必要 |
-| [#191](https://github.com/second-works/ai-development/issues/191) | open。runner移行は開始承認待ち | hosted runnerが課金上限で停止中のため、本PRを含むCI/Securityが実行されない可能性がある。未実行を成功扱いしない。Slack通知を外す判断と移行対象が重なる |
+| [#191](https://github.com/second-works/ai-development/issues/191) | open。所有者の指示でCI・Securityの移行を開始（2026-10-21） | hosted runnerが課金上限で停止中。CIとSecurityのMac移行は[PR #199](https://github.com/second-works/ai-development/pull/199)で実施中で、Slack通知は移行対象外。未実行を成功扱いしない |
 | [#168](https://github.com/second-works/ai-development/issues/168) | closed | pr-review-fixの任意化は完了済み。重複実装しない |
 
 ## 8. 改訂計画の要点
