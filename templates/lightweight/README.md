@@ -32,14 +32,16 @@ templates/lightweight/place.sh <project-root>
 
 ## ガードの範囲と限界
 
-フックは、Bashのコマンド文字列と、作業ディレクトリの現在ブランチだけを見る。`;`、`&&`、`|`、改行で区切った各部分のうち、gitで始まり、pushがgitのサブコマンドであるものだけをpushとみなす。commitメッセージやPR本文の中の「push」「main」は対象にしない。
+フックは、Bashのコマンド文字列と、作業ディレクトリの現在ブランチだけを見る。`;`、`&&`、`|`、改行で区切り、引用符とバックスラッシュを外した各部分のうち、gitで始まり、pushがgitのサブコマンドであるものだけをpushとみなす。commitメッセージやPR本文の中の「push」「main」は対象にしない。
 
 | 止める | 止めない（限界） |
 | --- | --- |
-| `git push origin main`、`"main"`、`HEAD:main`、`refs/heads/main` | aliasやスクリプトの中のpush、`bash -c "..."` の中、変数で組み立てたコマンド |
+| `git push origin main`、`"main"`、`HEAD:'main'`、`refs/heads/main` | aliasやスクリプトの中のpush、`bash -c "..."` の中 |
 | `--force`、`-f`、`--force-with-lease`、`--mirror`、`+`付きrefspec | `gh` やGitHub APIからの操作、他のツール |
 | `/usr/bin/git`、`git -C <dir>`、`git -c k=v`、`VAR=1 git`、`( ... )` の中のpush | `git -C <別の場所>` で別repoを操作する場合のブランチ判定 |
 | main / master上での `git push`、jqがない・入力が読めないときのpush | ブランチ削除（`--delete`）、push以外のgit操作 |
+| `$` や `` ` `` で組み立てたpush（確かめられないため止める。ブランチ名はそのまま書く） | |
+| 宛先を書かないpushで、`remote.<name>.push` や `push.default=upstream` によってmain / masterへ送られるもの | 上記以外のgitの設定（`url.<base>.pushInsteadOf` など） |
 
 **フック自体が実行できないときは止まらない。** Claude Codeはexit 2以外のフックの失敗を警告として扱い、コマンドをそのまま実行する。実行権限が外れた、`bash` が見つからない、`$CLAUDE_PROJECT_DIR` が空、といった場合はpushが通る。`settings.json` のdeny（`git push --force` / `-f` で始まるコマンド）はこのときも働くが、main宛ては防げない。
 

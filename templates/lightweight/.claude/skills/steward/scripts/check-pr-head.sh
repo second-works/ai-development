@@ -94,4 +94,9 @@ case "$mergeable" in
   *) report MERGE_STATE_PENDING "GitHub has not finished checking for conflicts ($mergeable)" ;;
 esac
 
+# A push during this check would make every result above stale, so read the head again.
+again="$(gh pr view "$pr" --json headRefOid,url,state,mergeable 2>/dev/null)" || report UNAVAILABLE "could not re-read PR #$pr"
+[[ $(jq -r '.headRefOid' <<<"$again") == "$head" ]] || report STALE_HEAD "PR head changed during the check"
+[[ $(jq -r '.state' <<<"$again") == OPEN ]] || report NOT_OPEN "PR #$pr is no longer open"
+
 report READY "checks, review, threads and conflicts are clear on $head"

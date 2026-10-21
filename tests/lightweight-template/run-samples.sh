@@ -178,6 +178,19 @@ check_hook 2 '(git push --force)'
 check_hook 2 'git -c core.x=1 push origin main'
 check_hook 2 'FOO=1 git push -f'
 check_hook 2 "git push origin '+feature/issue-1-sample'"
+check_hook 2 "git push '--force' origin feature/issue-1-sample"
+check_hook 2 "git push origin HEAD:'main'"
+check_hook 2 'git push origin "$BRANCH"'
+check_hook 0 'git push origin'
+git -C "$proj" config remote.origin.push HEAD:refs/heads/main
+check_hook 2 'git push origin'
+git -C "$proj" config --unset remote.origin.push
+git -C "$proj" config push.default upstream
+git -C "$proj" config branch.feature/issue-1-sample.merge refs/heads/main
+check_hook 2 'git push'
+git -C "$proj" config branch.feature/issue-1-sample.merge refs/heads/feature/issue-1-sample
+check_hook 0 'git push'
+git -C "$proj" config --unset push.default
 set +e; "$hook" <<<'{"tool_input": git push origin main' >/dev/null 2>&1; status=$?; set -e
 expect_status 2 "$status" "hook with unreadable input"
 nojq="$WORK/nojq"
@@ -196,7 +209,9 @@ mkdir -p "$fake/bin"
 cat >"$fake/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "pr view 7 --json headRefOid,url,state,mergeable") f=pr.json ;;
+  "pr view 7 --json headRefOid,url,state,mergeable")
+    n=$(( $(cat "$FAKE_GH/pr-calls" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$FAKE_GH/pr-calls"
+    f=pr.json; [[ $n -gt 1 && -f "$FAKE_GH/pr-later.json" ]] && f=pr-later.json ;;
   "pr view 7 --json comments") f=comments.json ;;
   api\ repos/*/check-runs*) f=checks.json ;;
   api\ graphql*) f=threads.json ;;
@@ -251,6 +266,9 @@ set_data "$head_sha" "$ok_checks" "" completed false 0
 check_gate REVIEW_UNAVAILABLE "no review state"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 2
 check_gate UNRESOLVED_THREADS "unresolved threads"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq --arg h "$old_sha" '.headRefOid = $h' "$fake/data/pr.json" >"$fake/data/pr-later.json"
+check_gate STALE_HEAD "PR head changed during the check"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 false true
 check_gate REVIEW_UNAVAILABLE "more than 100 review threads"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0 CONFLICTING
