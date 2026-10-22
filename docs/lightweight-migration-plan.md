@@ -160,5 +160,8 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 - Slack の失敗通知は hosted runner のままで、届かない状態が続いている（#191 の残り）。
 - bootstrap の GIT_RULES の矛盾（#202）、Cursor 向けの追記（PR #190）、テンプレート還元の検討（#188）は未着手。
 - 標準 flow、最小契約、template-change-evaluator は参照用に残した。参照されていない節の削除は後続で判断する。
-- Cloudflare の Workers Builds（Worker `ai-development`）が、JEV の PoC（`templates/review-comment-auto-triage/wrangler.jsonc`）を build していた。所有者は「もう利用していないので解消してよい」と判断し、PR B（#209）を merge した。Cloudflare 側の Git 連携の解除（または Worker の削除）は、人間の操作として残っている。それまでは、main への push のたびに、このビルドが失敗する（必須の check ではない）。
-- JEV / Local Judge 用の repo の変数 `JEV_TRIAGE_URL` と Secret `JEV_TRIAGE_TOKEN` の削除は、人間の操作として残っている。
+
+解決済み（2026-10-22）:
+
+- Cloudflare の Workers Builds（Worker `ai-development`）が、JEV の PoC（`templates/review-comment-auto-triage/wrangler.jsonc`）を build していた。この Worker は 2026-09-20 に Issue #125 / PR #126 の作業で Git とつながったもの。所有者は「もう利用していないので解消してよい」と判断し、PR B（#209）を merge したあと、Worker を削除した。
+- JEV / Local Judge 用の repo の変数 `JEV_TRIAGE_URL`、Secret `JEV_TRIAGE_TOKEN`、Environment `local-judge-shadow`（Local Judge の変数と Secret を含む）は削除済み。
