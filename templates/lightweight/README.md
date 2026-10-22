@@ -30,7 +30,7 @@ templates/lightweight/place.sh --check <project-root>     # 不足・衝突・�
 templates/lightweight/place.sh --restore <project-root>   # 最後の配置で変えたものだけを戻す
 ```
 
-**出典の固定。** 候補はこのrepoの1つのcommitから読む。既定はHEADで、候補のファイルに未コミットの変更があれば止める（どのcommitにも対応しないため）。`--ref <commit>` で別のcommitを指定できる。読んだcommitのfull SHAは、dry-runの先頭と、配置先の `.ai/lightweight-placement.tsv` に記録する。
+**出典の固定。** 候補はこのrepoの1つのcommitから読む。既定はHEADで、候補のファイルに未コミットの変更があれば止める（どのcommitにも対応しないため）。`--ref <commit>` で別のcommitを指定できる。読んだcommitのfull SHAはdry-runの先頭に表示し、配置先の `.ai/lightweight-placement.tsv` には、配置したファイルの中身が最後に変わったときのcommitを記録する（中身が同じなら、新しいcommitから再実行しても記録は変えない）。
 
 **既存のファイルの扱い。** 全部の配置先を一時ディレクトリで組み立ててから書く。1つでも衝突があれば何も書かずに止まる（終了コード1）。
 
