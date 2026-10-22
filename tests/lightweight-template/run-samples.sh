@@ -92,6 +92,13 @@ done
 cmp -s "$ROOT/templates/verification/verify.sh" "$proj/scripts/verify.sh" || fail "verify.sh is not the existing original"
 grep -qxF "$(printf 'source\t%s' "$SRC_SHA")" "$proj/.ai/lightweight-placement.tsv" || fail "the full source SHA was not recorded"
 grep -q 'not verified yet' "$WORK/out" || fail "placement did not say that it is not verified yet"
+# Projects may check that every path written in AGENTS.md exists (hermes does), so
+# the placed instructions, markers included, must name only paths that were placed.
+for f in AGENTS.md CLAUDE.md; do
+  while IFS= read -r ref; do
+    [[ -e $proj/$ref ]] || fail "$f names $ref, which does not exist in the placed project"
+  done < <(grep -oE '(docs|\.agents|\.claude|templates|scripts)/[A-Za-z0-9_./-]+\.(md|sh)' "$proj/$f")
+done
 
 # Re-running changes nothing and makes no new backup.
 before="$(snapshot "$proj")"
@@ -190,10 +197,23 @@ done
 
 broken="$WORK/broken"
 new_repo "$broken"
-printf '%s\nhalf a block\n' '<!-- lightweight:begin (managed by templates/lightweight/place.sh; edit outside this block) -->' >"$broken/AGENTS.md"
+begin_mark="$(sed -n "s/^BEGIN_MARK='\(.*\)'$/\1/p" "$PLACE")"
+[[ -n $begin_mark ]] || fail "could not read BEGIN_MARK from place.sh"
+printf '%s\nhalf a block\n' "$begin_mark" >"$broken/AGENTS.md"
 run_place "$broken"
 expect_status 1 "$status" "placement with a broken block"
 grep -q '^conflict: AGENTS.md: the lightweight block markers are broken' "$WORK/err" || fail "broken markers were not reported"
+
+# A block with the older marker (it named templates/lightweight/place.sh) is not added twice.
+legacy="$WORK/legacy"
+new_repo "$legacy"
+printf '# Own\n\n%s\nold body\n<!-- lightweight:end -->\n' \
+  '<!-- lightweight:begin (managed by templates/lightweight/place.sh; edit outside this block) -->' >"$legacy/AGENTS.md"
+legacy_before="$(snapshot "$legacy")"
+run_place "$legacy"
+expect_status 1 "$status" "placement over a block with the older marker"
+grep -q '^conflict: AGENTS.md: has a lightweight block with an older marker' "$WORK/err" || fail "the older marker was not reported"
+[[ $legacy_before == "$(snapshot "$legacy")" ]] || fail "placement wrote over a block with the older marker"
 
 # Update to a newer candidate, pinning with --ref, and edits that block an update.
 upd="$WORK/update"

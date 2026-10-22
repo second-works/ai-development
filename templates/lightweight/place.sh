@@ -33,7 +33,8 @@ set -u
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd "$here/../.." && pwd)"
 
-BEGIN_MARK='<!-- lightweight:begin (managed by templates/lightweight/place.sh; edit outside this block) -->'
+# The markers name no path: projects may check that every path in AGENTS.md exists.
+BEGIN_MARK='<!-- lightweight:begin (managed by the ai-development lightweight placement; edit outside this block) -->'
 END_MARK='<!-- lightweight:end -->'
 STATE_REL='.ai/lightweight-placement.tsv'
 GUARD_COMMAND='"$CLAUDE_PROJECT_DIR"/.claude/hooks/guard-git-push.sh'
@@ -219,6 +220,12 @@ stage_block() { # <rel> <candidate file>
   local rel="$1" cand="$2" dst="$target/$1" new="$stage/new/$1" body="$stage/body/$1"
   mkdir -p "$(dirname "$new")" "$(dirname "$body")"
   local begins ends
+  # A block with another begin marker (an older wording) would not be found and
+  # would be added a second time.
+  if [[ -f $dst ]] && grep -v -xF -- "$BEGIN_MARK" "$dst" | grep -q '^<!-- lightweight:begin'; then
+    conflict "$rel: has a lightweight block with an older marker; put it back with --restore or remove the block by hand"
+    return 1
+  fi
   begins="$(marker_count "$BEGIN_MARK" "$dst")" ends="$(marker_count "$END_MARK" "$dst")"
   if [[ $rel == CLAUDE.md && -f $dst ]] && block_outside "$dst" | grep -qxF '@AGENTS.md'; then
     # The project already imports AGENTS.md; do not import it twice.
