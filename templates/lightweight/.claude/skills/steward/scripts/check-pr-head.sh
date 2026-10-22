@@ -56,8 +56,9 @@ if [[ -n ${PR_GATE_CHECKS:-} ]]; then
   IFS=',' read -r -a required <<<"$PR_GATE_CHECKS"
 else
   base="$(jq -er '.baseRefName' <<<"$pr_json" 2>/dev/null)" || report CHECK_UNAVAILABLE "PR base branch is missing"
-  contents="repos/$repo/contents/.github/pr-gate-checks?ref=$base"
-  if listed="$(gh api -H 'Accept: application/vnd.github.raw+json' "$contents" 2>/dev/null)"; then
+  # The branch name goes through --raw-field, so a name with + or & is sent as it is.
+  contents=(--method GET --raw-field "ref=$base" "repos/$repo/contents/.github/pr-gate-checks")
+  if listed="$(gh api -H 'Accept: application/vnd.github.raw+json' "${contents[@]}" 2>/dev/null)"; then
     while IFS= read -r line || [[ -n $line ]]; do
       line="${line%$'\r'}"
       [[ -z ${line//[[:space:]]/} || $line == '#'* ]] && continue
@@ -65,7 +66,7 @@ else
     done <<<"$listed"
   else
     # Only "no such file" falls back to the default; any other error is not success.
-    err="$(gh api "$contents" 2>&1 >/dev/null)"
+    err="$(gh api "${contents[@]}" 2>&1 >/dev/null)"
     grep -q 'HTTP 404' <<<"$err" || report CHECK_UNAVAILABLE "could not read .github/pr-gate-checks on $base"
   fi
 fi

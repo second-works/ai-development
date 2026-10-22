@@ -626,8 +626,11 @@ case "$*" in
   "pr view 7 --json comments") f=comments.json ;;
   api\ repos/*/check-runs*) f=checks.json ;;
   api\ repos/*/status*) f=statuses.json ;;
-  *contents/.github/pr-gate-checks\?ref=main*)
+  *contents/.github/pr-gate-checks*)
     # The base branch copy: the file, a server error, or 404 when there is none.
+    # The branch must arrive as a raw field, unchanged.
+    want="--raw-field ref=$(cat "$FAKE_GH/base" 2>/dev/null || echo main) "
+    [[ "$* " == *"$want"* ]] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; }
     if [[ -f "$FAKE_GH/gate-checks-error" ]]; then echo 'gh: Server Error (HTTP 500)' >&2; exit 1; fi
     if [[ -f "$FAKE_GH/gate-checks" && $1 == api && $2 == -H ]]; then cat "$FAKE_GH/gate-checks"; exit 0; fi
     echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;;
@@ -705,6 +708,13 @@ printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
 mkdir -p "$proj/.github" && printf 'ci\n' >"$proj/.github/pr-gate-checks"
 check_gate CHECK_UNAVAILABLE "a working tree .github/pr-gate-checks is ignored"
 rm -f "$proj/.github/pr-gate-checks"
+# A base branch name with + is sent as it is, so its file is still read: the default
+# checks all pass here, so falling back to them would wrongly give READY.
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq '.baseRefName = "release+security"' "$fake/data/pr.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/pr.json"
+printf 'release+security' >"$fake/data/base"
+printf 'ci\nAnalyze (python)\n' >"$fake/data/gate-checks"
+check_gate CHECK_UNAVAILABLE "base branch name with +"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
 touch "$fake/data/gate-checks-error"
 check_gate CHECK_UNAVAILABLE ".github/pr-gate-checks cannot be read"
