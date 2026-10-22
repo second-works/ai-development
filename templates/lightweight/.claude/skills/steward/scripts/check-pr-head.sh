@@ -77,6 +77,12 @@ runs="$(gh api "repos/$repo/commits/$head/check-runs?filter=latest&per_page=100"
 # The combined status keeps only the latest status of each context.
 statuses="$(gh api "repos/$repo/commits/$head/status?per_page=100" 2>/dev/null)" ||
   report CHECK_UNAVAILABLE "could not read commit statuses for $head"
+# Only one page (100) is read. A result left on a later page could be a failure, so
+# more than one page is not success.
+jq -e '(.total_count // (.check_runs | length)) <= (.check_runs | length)' <<<"$runs" >/dev/null 2>&1 ||
+  report CHECK_UNAVAILABLE "more than 100 checks on $head; check them by hand"
+jq -e '(.total_count // (.statuses | length)) <= (.statuses | length)' <<<"$statuses" >/dev/null 2>&1 ||
+  report CHECK_UNAVAILABLE "more than 100 commit statuses on $head; check them by hand"
 for name in "${required[@]}"; do
   from_run="$(jq -r --arg n "$name" '
     [.check_runs[] | select(.name == $n)] as $r

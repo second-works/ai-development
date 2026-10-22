@@ -678,6 +678,12 @@ done
 set_data "$head_sha" "$only_ci" "$head_sha" completed false 0
 rm -f "$fake/data/statuses.json"
 check_gate CHECK_UNAVAILABLE "commit statuses cannot be read"
+# Only one page is read, so a result that may sit on a later page is not success.
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq -n '{total_count: 101, statuses: [range(0; 100) | {context: "other-\(.)", state: "success"}]}' >"$fake/data/statuses.json"
+check_gate CHECK_UNAVAILABLE "more than 100 commit statuses"
+set_data "$head_sha" "$(jq -c '.total_count = 101' <<<"$ok_checks")" "$head_sha" completed false 0
+check_gate CHECK_UNAVAILABLE "more than 100 check runs"
 # A check run that succeeded does not hide a failed or pending status of the same name.
 for st in failure:CHECK_FAILED pending:CHECK_PENDING; do
   set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
