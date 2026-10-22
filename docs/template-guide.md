@@ -71,7 +71,7 @@ Goal / Context / Scope・Boundaries / Non-goals / Done / Verification / Children
 
 ## 4.1 デプロイ設計とRelease / Production計画
 
-Release / Production が適用される案件では、[docs/deployment-release-design.md](deployment-release-design.md) を Issue から指し、実装完了と本番投入可能を分けて記録します。Merge は Production Deploy を意味しません。
+Release / Production が適用される案件では、[docs/deployment-release-design.md](deployment-release-design.md) を Issue から指し、実装完了と本番投入可能を分けて記録します。Merge は Production Deploy を意味しません。CI、PR単位Security Check、Full-System Security Auditの`PASS`または理由と適格性を確認した`NOT_APPLICABLE`、Release判定、必要な backup と migration の確認を経て Production へ進み、Deploy 後の Health Check と Rollback まで確かめられるようにします。
 
 ## 4.2 実利用検証と検収
 
@@ -89,7 +89,7 @@ Goal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependen
 
 ## 6. 子Issue品質チェック
 
-子Issue を登録する前に、`plan-to-issues` の手順で、目的、変更範囲、独立した完了判定、1 PR でのレビュー可能性、依存関係、安全境界を確かめます。詳しい観点は [Issue Quality Check](issue-quality-check.md) を参照します。
+子Issue を登録する前に、`plan-to-issues` の手順で、目的、変更範囲、独立した完了判定、1 PR でのレビュー可能性、依存関係、安全境界を確かめます。詳しい観点は [Issue Quality Check](issue-quality-check.md) を参照します。Score は補助の表示で、高ScoreでもMUST不足を打ち消さない。
 
 ## 7. Pull Requestテンプレート
 
@@ -97,7 +97,7 @@ Goal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependen
 
 対応 Issue（`Closes #`）、変更内容、判断と前提（Risk Tier）、検証（対象 head の full SHA、ローカル、CI / Security、正式レビュー、必要なときだけユーザー検収）、未完了と対象外を記録します。未実行、全件 skip、取得できない結果、古い head の結果は成功と書きません。
 
-CI、Security、正式レビューは別々に確かめ、最終 Merge は人間が判断します。最終 head の照合は `scripts/check-pr-head.sh <PR番号>` で行います。
+CI、Security、正式レビューは別々に確かめ、最終 Merge は人間が判断します。最終 head の照合は `scripts/check-pr-head.sh <PR番号>` で行います。Auto-Fix / Auto-Merge の例外レーンを採用する場合は [safe-auto-fix-auto-merge.md](safe-auto-fix-auto-merge.md) の Safety Gate に従い、新規採用は別の承認とします。
 
 ## 8. 標準検証入口とGitHub Actions CIテンプレート
 

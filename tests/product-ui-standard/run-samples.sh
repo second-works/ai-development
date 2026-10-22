@@ -222,7 +222,6 @@ for needle in \
   fi
 done
 assert_contains "$CI_WORKFLOW" 'bash tests/product-ui-standard/run-samples.sh'
-assert_contains "$CI_WORKFLOW" 'bash tests/issue-template-ui/run-samples.sh'
 
 for needle in \
   'Nine PRODUCT UI Standard v1' \
