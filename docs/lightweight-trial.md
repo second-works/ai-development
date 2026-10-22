@@ -1,6 +1,6 @@
 # 軽量構成の限定試行
 
-**状態: 準備中（#196）。試行先の実装Issueと変更範囲は、人間の確認待ち。実配置はまだしていない。**
+**状態: 準備中（#196）。変更範囲は決定済み（2章）。実装するIssueは人間の確認待ちで、実配置はまだしていない。**
 
 親 [#192](https://github.com/second-works/ai-development/issues/192)、本Issue [#196](https://github.com/second-works/ai-development/issues/196)。配置の仕組みは [#195](https://github.com/second-works/ai-development/issues/195)（PR #201）の `templates/lightweight/place.sh`。
 
@@ -12,7 +12,8 @@
 | 元SHA（復旧元） | main `10419e1a49b62b28c6862102c7f08d8c9d03f4b2`（2026-10-22にremoteで確認） | 確定 |
 | 配置元 | ai-development main `19426a233b7751ed7de7e033dec2a32aecfdea4f` | 確定 |
 | 配置する場所 | main から切った試行用ブランチの、別のworktree | 案。ローカルのcheckoutは `issue-7-isolated-skill-delegation` ブランチで、ステージ済み47件・未追跡111件の作業中のため使わない |
-| 実装するIssue（1件） | 未定 | **人間の確認待ち**（2章） |
+| 実装するIssue（1件） | 未定 | **人間の確認待ち** |
+| 運用方針 | 試行後も hermes-self-improvement は軽量版で運用する | 所有者が決定（2026-10-22） |
 | 実装PRの追跡先 | hermes-self-improvement の別PR。この文書のPRは試行記録だけ | 確定 |
 | 担当 | Claude Code（実装・レビュー指摘対応）、Codex Review（正式レビュー）、人間（マージ） | 確定 |
 
@@ -35,12 +36,13 @@
 - 作成: `CLAUDE.md`、`.claude/settings.json`、`.claude/hooks/guard-git-push.sh`、`.claude/skills/steward/SKILL.md`、`scripts/check-pr-head.sh`、`.ai/lightweight-placement.tsv`
 - 更新: `AGENTS.md`（末尾に軽量ブロックを追記。既存の本文は変えない）
 
-**判断が必要な点:** すべて `--keep` すると、AGENTS.md には旧標準のルール（標準flow、pr-review-fixなどの必読）と軽量のルールが並ぶ。そのため「読む量」の比較が成り立たない。比較を成り立たせるには、次の2つが必要になる。
+すべて `--keep` すると、AGENTS.md には旧標準のルール（標準flow、pr-review-fixなどの必読）と軽量のルールが並ぶ。そのため「読む量」の比較が成り立たない。
 
-1. plan-to-issues とIssue / PRテンプレートを軽量版に置き換える（hermesの既存ファイルを先に外す）。
-2. AGENTS.md の旧標準の必読指定を外す。
+**決定（所有者、2026-10-22、依頼元セッション経由）: 提案どおり置き換える。今後、hermes-self-improvement は軽量版で運用する。**
 
-`verify.sh` と `security-preflight.sh` は project固有の調整があるので、`--keep` で残す案とする。
+1. `.agents/skills/plan-to-issues/SKILL.md` と、Issue / PRテンプレート3つ（`parent-issue.md`、`child-issue.md`、`pull_request_template.md`）を軽量版に置き換える。hermesの既存ファイルを先に外してから配置する。
+2. AGENTS.md から、旧標準の必読指定を外す。
+3. `scripts/verify.sh` と `scripts/security-preflight.sh` は、project固有の調整があるので `--keep` で残す。
 
 ## 3. 比較の条件
 
