@@ -12,7 +12,7 @@
 | フォルダ | `~/actions-runner-ai-development` |
 | `runs-on` | `[self-hosted, macOS, ai-development]` |
 | 対象workflow | `ci.yml`（job `verification`）、`security.yml`（job `security-preflight`） |
-| 対象外 | `slack-failure-alert.yml`（Secretを持つ通知をMacへ渡さない）、手動workflow 3本（`decision-shadow`、`jev-triage`、`local-judge-smoke`） |
+| 対象外 | `slack-failure-alert.yml`（Secretを持つ通知をMacへ渡さない） |
 
 ## 安全境界
 

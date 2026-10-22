@@ -4,7 +4,6 @@ on:
   workflow_run:
     workflows:
       - Template CI
-      - JEV Triage
       - Security
     types:
       - completed

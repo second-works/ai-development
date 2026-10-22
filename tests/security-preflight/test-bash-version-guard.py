@@ -10,10 +10,6 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = [
     ("templates/security/security-preflight.sh", [str(ROOT)], True),
-    (".agents/skills/pr-review-fix/scripts/prepare-pr.sh", ["1"], False),
-    (".agents/skills/pr-review-fix/scripts/verify-pr-head.sh", ["1", "a" * 40, "b" * 40], False),
-    (".agents/skills/pr-review-fix/scripts/wait-checks.sh", ["github.com/owner/repo", "a" * 40], False),
-    (".agents/skills/pr-review-fix/scripts/wait-codex-review.sh", ["github.com/owner/repo", "1", "a" * 40, "100", "200", "0"], False),
 ]
 
 
@@ -21,8 +17,6 @@ for relative, _, _ in SCRIPTS:
     source = (ROOT / relative).read_text(encoding="utf-8")
     if "BASH_VERSINFO[0] < 5" not in source:
         raise AssertionError(f"{relative}: missing Bash 5 guard")
-if '"$BASH" "$SECURITY_PREFLIGHT_SCRIPT"' not in (ROOT / ".agents/skills/pr-review-fix/scripts/wait-checks.sh").read_text(encoding="utf-8"):
-    raise AssertionError("wait-checks must run fallback preflight with its verified Bash")
 
 legacy_bash = Path("/bin/bash")
 if legacy_bash.exists():
