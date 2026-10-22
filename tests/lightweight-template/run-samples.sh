@@ -92,6 +92,13 @@ done
 cmp -s "$ROOT/templates/verification/verify.sh" "$proj/scripts/verify.sh" || fail "verify.sh is not the existing original"
 grep -qxF "$(printf 'source\t%s' "$SRC_SHA")" "$proj/.ai/lightweight-placement.tsv" || fail "the full source SHA was not recorded"
 grep -q 'not verified yet' "$WORK/out" || fail "placement did not say that it is not verified yet"
+# Projects may check that every path written in AGENTS.md exists (hermes does), so
+# the placed instructions, markers included, must name only paths that were placed.
+for f in AGENTS.md CLAUDE.md; do
+  while IFS= read -r ref; do
+    [[ -e $proj/$ref ]] || fail "$f names $ref, which does not exist in the placed project"
+  done < <(grep -oE '(docs|\.agents|\.claude|templates|scripts)/[A-Za-z0-9_./-]+\.(md|sh)' "$proj/$f")
+done
 
 # Re-running changes nothing and makes no new backup.
 before="$(snapshot "$proj")"
@@ -190,10 +197,23 @@ done
 
 broken="$WORK/broken"
 new_repo "$broken"
-printf '%s\nhalf a block\n' '<!-- lightweight:begin (managed by templates/lightweight/place.sh; edit outside this block) -->' >"$broken/AGENTS.md"
+begin_mark="$(sed -n "s/^BEGIN_MARK='\(.*\)'$/\1/p" "$PLACE")"
+[[ -n $begin_mark ]] || fail "could not read BEGIN_MARK from place.sh"
+printf '%s\nhalf a block\n' "$begin_mark" >"$broken/AGENTS.md"
 run_place "$broken"
 expect_status 1 "$status" "placement with a broken block"
 grep -q '^conflict: AGENTS.md: the lightweight block markers are broken' "$WORK/err" || fail "broken markers were not reported"
+
+# A block with the older marker (it named templates/lightweight/place.sh) is not added twice.
+legacy="$WORK/legacy"
+new_repo "$legacy"
+printf '# Own\n\n%s\nold body\n<!-- lightweight:end -->\n' \
+  '<!-- lightweight:begin (managed by templates/lightweight/place.sh; edit outside this block) -->' >"$legacy/AGENTS.md"
+legacy_before="$(snapshot "$legacy")"
+run_place "$legacy"
+expect_status 1 "$status" "placement over a block with the older marker"
+grep -q '^conflict: AGENTS.md: has a lightweight block with an older marker' "$WORK/err" || fail "the older marker was not reported"
+[[ $legacy_before == "$(snapshot "$legacy")" ]] || fail "placement wrote over a block with the older marker"
 
 # Update to a newer candidate, pinning with --ref, and edits that block an update.
 upd="$WORK/update"
@@ -600,11 +620,20 @@ mkdir -p "$fake/bin"
 cat >"$fake/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "pr view 7 --json headRefOid,url,state,mergeable,reviewDecision,reviews")
+  "pr view 7 --json headRefOid,baseRefName,url,state,mergeable,reviewDecision,reviews")
     n=$(( $(cat "$FAKE_GH/pr-calls" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$FAKE_GH/pr-calls"
     f=pr.json; [[ $n -gt 1 && -f "$FAKE_GH/pr-later.json" ]] && f=pr-later.json ;;
   "pr view 7 --json comments") f=comments.json ;;
   api\ repos/*/check-runs*) f=checks.json ;;
+  api\ repos/*/status*) f=statuses.json ;;
+  *contents/.github/pr-gate-checks*)
+    # The base branch copy: the file, a server error, or 404 when there is none.
+    # The branch must arrive as a raw field, unchanged.
+    want="--raw-field ref=$(cat "$FAKE_GH/base" 2>/dev/null || echo main) "
+    [[ "$* " == *"$want"* ]] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; }
+    if [[ -f "$FAKE_GH/gate-checks-error" ]]; then echo 'gh: Server Error (HTTP 500)' >&2; exit 1; fi
+    if [[ -f "$FAKE_GH/gate-checks" && $1 == api && $2 == -H ]]; then cat "$FAKE_GH/gate-checks"; exit 0; fi
+    echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;;
   api\ graphql*) f=threads.json ;;
   *) exit 1 ;;
 esac
@@ -617,8 +646,9 @@ old_sha="$(printf 'old' | shasum | cut -c1-40)"
 set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <open-threads> [mergeable] [more-threads] [decision]
   local d="$fake/data"
   rm -rf "$d"; mkdir -p "$d"
-  jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" --arg r "${9:-}" '{headRefOid: $h, url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m, reviewDecision: $r}' >"$d/pr.json"
+  jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" --arg r "${9:-}" '{headRefOid: $h, baseRefName: "main", url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m, reviewDecision: $r}' >"$d/pr.json"
   printf '%s' "$2" >"$d/checks.json"
+  printf '{"statuses": []}' >"$d/statuses.json"
   if [[ -n $3 ]]; then
     jq -n --arg s "$3" --arg st "$4" --argjson u "$5" '{comments: [{author: {login: "chatgpt-codex-connector"},
       body: ("<!-- codex-review-state:v1 " + ({code_review: {commit_sha: $s, status: $st, has_unresolved_findings: $u}} | tojson) + " -->")}]}' >"$d/comments.json"
@@ -641,6 +671,53 @@ set_data "$old_sha" "$ok_checks" "$old_sha" completed false 0
 check_gate STALE_HEAD "local HEAD differs from the PR head"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
 check_gate CHECK_UNAVAILABLE "Security check missing"
+# Workflows that report through the commit status API instead of a check run.
+only_ci='{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}'
+for st in success:READY pending:CHECK_PENDING failure:CHECK_FAILED error:CHECK_FAILED; do
+  set_data "$head_sha" "$only_ci" "$head_sha" completed false 0
+  jq -n --arg s "${st%%:*}" '{statuses: [{context: "Security Preflight", state: $s}, {context: "other", state: "failure"}]}' >"$fake/data/statuses.json"
+  check_gate "${st#*:}" "Security reported as a commit status: ${st%%:*}"
+done
+set_data "$head_sha" "$only_ci" "$head_sha" completed false 0
+rm -f "$fake/data/statuses.json"
+check_gate CHECK_UNAVAILABLE "commit statuses cannot be read"
+# Only one page is read, so a result that may sit on a later page is not success.
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq -n '{total_count: 101, statuses: [range(0; 100) | {context: "other-\(.)", state: "success"}]}' >"$fake/data/statuses.json"
+check_gate CHECK_UNAVAILABLE "more than 100 commit statuses"
+set_data "$head_sha" "$(jq -c '.total_count = 101' <<<"$ok_checks")" "$head_sha" completed false 0
+check_gate CHECK_UNAVAILABLE "more than 100 check runs"
+# A check run that succeeded does not hide a failed or pending status of the same name.
+for st in failure:CHECK_FAILED pending:CHECK_PENDING; do
+  set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+  jq -n --arg s "${st%%:*}" '{statuses: [{context: "Security Preflight", state: $s}]}' >"$fake/data/statuses.json"
+  check_gate "${st#*:}" "check run success with a commit status ${st%%:*}"
+done
+# Required checks named by the project, read from the base branch on GitHub.
+named_runs='{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"},{"name":"Analyze (python)","status":"completed","conclusion":"success"}]}'
+set_data "$head_sha" "$named_runs" "$head_sha" completed false 0
+printf '# required checks\nci\n\nAnalyze (python)\r\nSecurity Preflight' >"$fake/data/gate-checks"
+jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
+check_gate READY "checks named in .github/pr-gate-checks"
+set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
+check_gate CHECK_UNAVAILABLE "a check named in .github/pr-gate-checks is missing"
+# Local edits cannot drop a required check: the working tree copy is not read.
+set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
+mkdir -p "$proj/.github" && printf 'ci\n' >"$proj/.github/pr-gate-checks"
+check_gate CHECK_UNAVAILABLE "a working tree .github/pr-gate-checks is ignored"
+rm -f "$proj/.github/pr-gate-checks"
+# A base branch name with + is sent as it is, so its file is still read: the default
+# checks all pass here, so falling back to them would wrongly give READY.
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq '.baseRefName = "release+security"' "$fake/data/pr.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/pr.json"
+printf 'release+security' >"$fake/data/base"
+printf 'ci\nAnalyze (python)\n' >"$fake/data/gate-checks"
+check_gate CHECK_UNAVAILABLE "base branch name with +"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+touch "$fake/data/gate-checks-error"
+check_gate CHECK_UNAVAILABLE ".github/pr-gate-checks cannot be read"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"},{"name":"Security Preflight","status":"completed","conclusion":"skipped"}]}' "$head_sha" completed false 0
 check_gate CHECK_UNAVAILABLE "Security check skipped"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"failure"},{"name":"Security Preflight","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
@@ -688,6 +765,10 @@ if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   check_gate READY "all clear under Bash 3.2" /bin/bash
   set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
   check_gate CHECK_UNAVAILABLE "Security check missing under Bash 3.2" /bin/bash
+  set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+  printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
+  jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
+  check_gate READY "checks file and a commit status under Bash 3.2" /bin/bash
 fi
 rm -f "$fake/data/pr.json"
 check_gate UNAVAILABLE "PR cannot be read"
