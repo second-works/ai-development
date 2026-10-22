@@ -5,7 +5,6 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 doc="$repo_root/docs/deployment-release-design.md"
 flow="$repo_root/docs/nine-standard-ai-development-flow.md"
 guide="$repo_root/docs/template-guide.md"
-harness="$repo_root/docs/ai-development-harness-inventory.md"
 acceptance="$repo_root/docs/acceptance-verification.md"
 preflight="$repo_root/templates/security/security-preflight.sh"
 
@@ -54,9 +53,6 @@ assert_contains "$doc" '### Full-System Security Audit'
 assert_contains "$doc" 'identity不一致ではRelease判定とProduction Deployへ進まない'
 assert_contains "$guide" "docs/deployment-release-design.md"
 assert_contains "$guide" 'Full-System Security Auditの`PASS`または理由と適格性を確認した`NOT_APPLICABLE`'
-assert_contains "$harness" '| E-06 | Deployment Design / Release Gate | E | STRENGTHEN |'
-assert_contains "$harness" 'Full-System Security Auditの`PASS / FAIL / NOT_APPLICABLE`'
-assert_contains "$harness" '#56、#110、E-06'
 assert_contains "$preflight" "secret_pattern"
 
 security_result="$($preflight "$repo_root")"

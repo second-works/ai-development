@@ -2,7 +2,7 @@
 
 **Decision: 標準から外す対象は「通常フロー外のレビュー補助一式（pr-review-fix・JEV・Local Judge）」「自己管理の台帳・履歴資料」「巨大な必読flow」の3群とし、残す結果は親 #192 の11項目で固定する。Slack通知とFOLLOW-UP台帳は現役の保証なので、外すなら代替を先に成立させる移行対象とする。本書は提案であり、削除・設定変更は行わない。**
 
-親 [#192](https://github.com/second-works/ai-development/issues/192)、本Issue [#193](https://github.com/second-works/ai-development/issues/193)。後続 #194〜#197 は本書の対象一覧と人間確認を前提に進める。過去のKB値（[受入記録](simplification-acceptance.md)、[棚卸し](simplification-inventory.md)）は再利用せず、以下で取り直した。
+親 [#192](https://github.com/second-works/ai-development/issues/192)、本Issue [#193](https://github.com/second-works/ai-development/issues/193)。後続 #194〜#197 は本書の対象一覧と人間確認を前提に進める。過去のKB値（受入記録 `simplification-acceptance.md`、棚卸し `simplification-inventory.md`。どちらも #197 で削除し、復元元は `f2f8d3f0635e70f14b4dc50a18f70656bfdf9205`）は再利用せず、以下で取り直した。
 
 ## 1. 基準と測定方法
 
@@ -74,7 +74,7 @@
 | `docs/review-followups.md` | 使用中（通常レビューのFOLLOW-UP記録先） | レビュー正本の台帳登録手順、PR template、`tests/pr-review-followups` | 削除候補にしない。新しい記録先を決め、レビュー正本・PR template・testを切り替えて成功させてから外す |
 | `docs/nine-standard-ai-development-flow.md` | 必読（54 KB） | AGENTS、tests 15 suites | 必読を解除し、生きた節だけstewardとREADMEへ。単純なarchive移動にしない |
 | `docs/minimal-development-contract.md` | 条件表（40 KB） | AGENTS、plan-to-issues、tests 6 suites | 条件表だけを短く残すか統合するかは#194で判断 |
-| 文言一致だけの文書契約test（`document-concision`、`template-simplification`、`issue-quality`、`current-state`、`adaptive-development-flow`、`template-change-evaluator`、`plan-review-gate`、`issue-template-ui`、`pr-review-followups`） | 文書の固定文言を検査 | `ci.yml` | 責務ごとに判定。安全文言は残すか置換。#168の分類（[28入口](simplification-inventory.md#28テスト入口の責務と削減判断)）を起点に再判定 |
+| 文言一致だけの文書契約test（`document-concision`、`template-simplification`、`issue-quality`、`current-state`、`adaptive-development-flow`、`template-change-evaluator`、`plan-review-gate`、`issue-template-ui`、`pr-review-followups`） | 文書の固定文言を検査 | `ci.yml` | 責務ごとに判定。安全文言は残すか置換。#168の分類（28入口（`simplification-inventory.md`。#197 で削除、復元元 `f2f8d3f`））を起点に再判定 |
 
 残す実行回帰: `verification`、`app-template`、`security-preflight`、`github-state`、`html-status-report`、`cloud-agent-environment`、`instruction-architecture`のread-only部分。`scripts/collect-github-state.py`等はstewardで使わなければ配布から外す候補だが、未確認。
 
@@ -131,3 +131,34 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 | B | `f2f8d3f0635e70f14b4dc50a18f70656bfdf9205` | `.agents/skills/pr-review-fix/`（SKILL と scripts 6） | 重大指摘・Request changes・未解決スレッドを成功にしない、head の一致、CI と Security の別判定、FOLLOW-UP の記入項目 | `scripts/check-pr-head.sh`（合成データのテストあり。check run と commit status、base の必須 check 名）。FOLLOW-UP の記入項目と登録後の手順は台帳 `docs/review-followups.md` と `docs/code-review-contract.md`（`tests/pr-review-followups`） |
 | B | 同上 | `templates/review-comment-auto-triage/`、`.github/workflows/jev-triage.yml`・`decision-shadow.yml`・`local-judge-smoke.yml`、`tests/pr-review-fix-jev`・`jev-triage-workflow`・`local-judge`・`review-comment-auto-triage` | JEV / Local Judge の手動評価とその検査 | 廃止（通常フローで未使用、Secret と外部送信の面を持つ）。登録済み Secret の削除は別の人間の操作として残す。配布済みの hermes / FitnessAI は対象外 |
 | B | 同上 | Slack 通知の監視対象から JEV Triage を外した。security-preflight の helper についての確認と、Bash 5 ガードの helper 4行 | 通知、helper の Bash 5 ガード | Slack 通知は CI と Security の失敗で引き続き起動する。helper は削除したので対象なし。Security Preflight 本体の Bash 5 ガードの検査は残る |
+| C | `f2f8d3f0635e70f14b4dc50a18f70656bfdf9205`（5つの docs と issue-quality はこの後変わっていない） | `docs/ai-development-harness-inventory.md`、`instruction-architecture-inventory.md`、`simplification-inventory.md`、`simplification-acceptance.md`、`field-validation-lessons.md` | 自己管理の台帳・棚卸し・受入記録。Harness 台帳は「検査を足す前に失敗モードと削除条件を記録する」原則も持っていた | 履歴は復元元から読む。原則は記録先を Issue / PR に変えて template-guide の12章に残した。docs/archive へは移していない |
+| C | 同上 | `tests/issue-quality`（承認された一覧の文書契約 tests の残り1つ）と、deployment-design・verification-evidence の台帳についての確認 | Issue 品質の文言と台帳の文言 | Issue 品質の判断は `plan-to-issues` の停止条件（`tests/plan-to-issues` が検査）と参照用の `docs/issue-quality-check.md`。台帳は廃止 |
+
+## 11. 前後の比較（#197 完了時）
+
+2章の「変更前」（main `b2715a7`、#193 の時点）と、#197 の PR C の時点の比較。サイズは UTF-8 の bytes で、追跡ファイルだけを数えた。
+
+| 項目 | 変更前 | #197 後 | 注記 |
+| --- | --- | --- | --- |
+| 追跡ファイル全体 | 143 files / 1,011,056 B | 124 files / 713,128 B | #194〜#196 で軽量構成の候補・配置・試行記録が増えた分を含む（#197 着手時は 159 files / 1,147,986 B） |
+| 配布量 | 71 files / 704,858 B（template-guide の手動 copy） | 12 files / 41,588 B（`place.sh` が置くもの） | 参照用の docs は配布しない。Issue が指したときに ai-development のものを読む |
+| 実装時の必読 | 7 files / 97,795 B | 3 files / 9,248 B（AGENTS.md、CLAUDE.md、steward） | 約 1/10。標準 flow・最小契約などは参照用に残した |
+| workflow | 6本 | 3本（`ci.yml`、`security.yml`、`slack-failure-alert.yml`） | 手動の JEV / Local Judge 3本を削除。Slack 通知は残した |
+| 検査入口 | 28 suites | 17 suites | 文書の固定文言だけを検査する8つと、削除した資産の専用4つを外した。`lightweight-template`（安全の文言、配置と復旧、照合）と `place.sh --check .` を足した |
+
+親 #192 の Done との照合:
+
+- 実装担当と計画担当が明確で、必読の巨大な flow と、通常の pr-review-fix 依存がない: 満たした（PR A、B）
+- 配布ファイル、必読量、標準 workflow、検査入口の前後と削減理由が短く記録される: 上の表と10章
+- 既存設定を壊さず配置でき、再実行・競合・途中失敗・今回差分だけの復旧が確認できる: #195（PR #201、#204、#206）
+- 限定試行で負担と手戻りを比べた: #196（`docs/lightweight-trial.md`）
+- 全子Issueの証拠と残課題の照合、人間の最終判断: 親 #192 は閉じていない（人間が判断する）
+
+残課題（解決扱いにしない）:
+
+- main は保護されていない（#163）。main への直接 push と force push の禁止は、文章のルールとフックによる早期検出だけで、確実な保証ではない。
+- Slack の失敗通知は hosted runner のままで、届かない状態が続いている（#191 の残り）。
+- bootstrap の GIT_RULES の矛盾（#202）、Cursor 向けの追記（PR #190）、テンプレート還元の検討（#188）は未着手。
+- 標準 flow、最小契約、template-change-evaluator は参照用に残した。参照されていない節の削除は後続で判断する。
+- Cloudflare の Workers Builds が `templates/review-comment-auto-triage/wrangler.jsonc` を build していた件は、PR B の merge 前に所有者が判断する。
+- JEV / Local Judge 用に登録した Secret の削除は、別の人間の操作として残っている。

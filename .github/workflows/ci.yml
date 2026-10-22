@@ -79,9 +79,6 @@ jobs:
       - name: HTML status report regression
         run: bash tests/html-status-report/run-samples.sh
 
-      - name: Issue quality documentation contract
-        run: bash tests/issue-quality/run-samples.sh
-
       - name: Lightweight template
         run: bash tests/lightweight-template/run-samples.sh
 

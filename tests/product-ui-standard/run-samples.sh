@@ -247,7 +247,7 @@ for needle in \
   'Visual Review / UI Acceptance' \
   'Plan Review Gate' \
   'Acceptance Verification' \
-  'Harness Minimalism / ETCSLV'; do
+  '検査やGateの追加・変更は、防ぎたい失敗と見直しの条件をIssueとPRに書く'; do
   assert_contains "${STANDARD}" "${needle}"
 done
 
