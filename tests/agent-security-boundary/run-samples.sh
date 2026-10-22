@@ -33,14 +33,10 @@ require_marker "docs/ai-agent-security-boundary.md" "理由、残るリスク、
 require_marker "docs/ai-agent-security-boundary.md" "git pushによるremote Repositoryへの書き込み"
 require_marker "docs/ai-agent-security-boundary.md" "適用可否"
 
-require_marker "AGENTS.md" "docs/ai-agent-security-boundary.md"
 require_marker "docs/ai-agent-security-boundary.md" "Human Approval Boundary"
 require_marker "docs/ai-agent-security-boundary.md" "Sensitive Read Capability × External Write Capability"
-require_marker "AGENTS.md" "UNMANAGED"
-
-require_marker ".github/pull_request_template.md" "# Agent Security Boundary"
-require_marker ".github/pull_request_template.md" "Sensitive Read Capability × External Write Capability"
-require_marker ".github/pull_request_template.md" "Prompt Injection"
+# The PR and Issue templates and AGENTS.md are now the lightweight ones (#197). Their
+# safety wording is checked in tests/lightweight-template.
 
 require_marker "docs/github-repository-security-baseline.md" "ai-agent-security-boundary.md"
 # 未保護・取得不能を成功扱いせず、設定承認と実mainの安全境界を維持する。
@@ -72,16 +68,6 @@ require_section_marker "docs/template-guide.md" "## 2. 新規プロジェクト�
 require_section_marker "docs/template-guide.md" "## 15. 新規リポジトリ初期化チェックリスト" "## 16. 普段の短縮指示" "docs/ai-agent-security-boundary.md"
 require_marker "docs/nine-standard-ai-development-flow.md" "AI Agent Security Boundary"
 require_marker ".agents/skills/pr-review-fix/SKILL.md" "AI Agent Security Boundary"
-
-# 入力の境界と参照先を確認する。詳細制御は上の正本チェックを維持する。
-for template in parent child; do
-  file=".github/ISSUE_TEMPLATE/$template-issue.md"
-  require_marker "$file" '# Scope / Boundaries'
-  require_marker "$file" '情報分類・送信先・権限範囲とHuman Approval'
-  require_marker "$file" '../blob/main/docs/ai-agent-security-boundary.md'
-  require_marker "$file" '理由、残るリスク、代替制御、承認者'
-  require_marker "$file" '未承認の本番・Deploy・破壊的操作・Secrets・認証/権限/Security Policy/公開/課金/repo保護設定変更は停止'
-done
 
 if (( failures != 0 )); then
   exit 1

@@ -3,9 +3,9 @@ set -Eeuo pipefail
 
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 agents="$ROOT/AGENTS.md"
+# The repository uses the lightweight Skill (#197); place.sh --check keeps it equal to
+# templates/lightweight/.agents/skills/plan-to-issues/SKILL.md.
 skill="$ROOT/.agents/skills/plan-to-issues/SKILL.md"
-inventory="$ROOT/docs/instruction-architecture-inventory.md"
-harness="$ROOT/docs/ai-development-harness-inventory.md"
 
 require() {
   local file="$1"
@@ -42,51 +42,29 @@ require "$ROOT/docs/plan-review-gate.md" '既存Issueの実装・レビュー・
 require "$ROOT/docs/plan-review-gate.md" 'Plan ReviewまたはChild Issue Quality Gateの停止条件'
 
 require "$skill" 'name: plan-to-issues'
-require "$skill" 'Framework Decision（適用時）'
-require "$skill" 'UI Level Decision（UI適用を確認し、UIがある場合だけ記録）'
-require "$skill" 'UIの適用確認は全案件で行う'
-require "$skill" 'Plan Review Gate'
-require "$skill" 'Risk Tier'
-require "$skill" 'Child Issue Quality Gate'
-require "$skill" '`NEEDS_DECISION` の場合はIssue登録へ進まない'
-require "$skill" '1子Issue = 1 PR'
-require "$skill" '1 PRで完結する場合'
-require "$skill" '空の親Issueを作ること自体を目的にしない'
-require "$skill" '.github/ISSUE_TEMPLATE/parent-issue.md'
-require "$skill" '.github/ISSUE_TEMPLATE/child-issue.md'
-require "$skill" 'Plan Review結果（`PASS / NOT_APPLICABLE`）、理由、正本参照'
-require "$skill" '単一Issueでも、Plan Reviewの判定・理由・正本参照'
-require "$skill" 'MUST不足'
-require "$skill" 'GitHubが返したIssue番号やURLを使用し、番号を推測しない'
-require "$skill" 'Issue登録が完了したら、このSkillの作業は終了する'
-require "$skill" 'Issueの実装を開始しない'
-require "$skill" '同じ詳細をSkill本文へ複製して独自基準を作らない'
+# Stop instead of guessing, one PR per child Issue, real numbers, and no implementation.
+for needle in \
+  '登録せずに必要な判断だけを示して止まる' \
+  '子Issueは1つにつき1 PRとする' \
+  '1 PRで終わるときは、親Issueを作らず単一のIssueにする' \
+  'Goal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependenciesの7項目' \
+  'Risk Tier（LOW / MEDIUM / HIGH）と理由' \
+  '安全への影響が分からなければHIGH' \
+  'ユーザーが登録を依頼したときだけGitHubへ書き込む' \
+  '番号は推測しない' \
+  'ブランチ作成、実装、PR作成、マージ、次のIssueへの着手はしない'; do
+  require "$skill" "$needle"
+done
 
-require "$inventory" '`Plan Review Gate > Plan to Issues Routing` | `ENTRYPOINT` | `KEEP`'
-require "$inventory" '.agents/skills/plan-to-issues/SKILL.md'
-require "$inventory" '`plan-to-issues` は合意済み計画からGitHub Issueへの変換に限定'
-require "$harness" '#148'
-require "$harness" '.agents/skills/plan-to-issues/SKILL.md'
 
 for template in parent child; do
   file="$ROOT/.github/ISSUE_TEMPLATE/$template-issue.md"
-  require "$file" '# Goal'
-  require "$file" '# Context'
-  require "$file" '# Scope / Boundaries'
-  require "$file" '# Non-goals'
-  require "$file" '# Done'
-  require "$file" '# Verification'
-  require "$file" '依存がなければ「なし」'
-  require "$file" 'Plan Reviewの判定（PASS / NOT_APPLICABLE）、理由'
-  require "$file" '../blob/main/docs/plan-review-gate.md'
-  require "$file" '../blob/main/docs/minimal-development-contract.md#条件付き参照'
-  require "$file" 'MUST不足なら登録・実装開始を停止'
+  require "$file" 'Risk Tier（LOW / MEDIUM / HIGH）と理由'
+  require "$file" '人間の承認が必要な操作'
 done
-require "$skill" '非UIに `NONE` 欄を強制しない'
 
 
-require "$agents" '.agents/skills/plan-to-issues/SKILL.md を必ず読む'
-require "$agents" '生成だけの依頼から実装を始めない'
+require "$agents" '.agents/skills/plan-to-issues/'
 
 # 文書に載せた記入例を検査する限定fixture。任意の計画を判定する実行Gateではない。
 python3 - "$ROOT" <<'PY'

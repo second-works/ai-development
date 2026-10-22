@@ -4,9 +4,7 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOC="${ROOT_DIR}/docs/acceptance-verification.md"
-PR="${ROOT_DIR}/.github/pull_request_template.md"
 FLOW="${ROOT_DIR}/docs/nine-standard-ai-development-flow.md"
-AGENTS="${ROOT_DIR}/AGENTS.md"
 INVENTORY="${ROOT_DIR}/docs/ai-development-harness-inventory.md"
 
 assert_contains() {
@@ -38,23 +36,13 @@ for marker in \
   assert_contains "$DOC" "$marker"
 done
 
-for marker in \
-  'Verification Evidence / Residual Risk Summary' \
-  'Verification Evidence record / source' \
-  'Verified:' \
-  'Failed:' \
-  'Not Verified:' \
-  'Blocked / Skipped:' \
-  'Known Remaining Risk:' \
-  'Human Decision Required:'; do
-  assert_contains "$PR" "$marker"
-done
+# The PR template and AGENTS.md are now the lightweight ones (#197). Their safety
+# wording is checked in tests/lightweight-template.
 
 assert_contains "$FLOW" 'Requirement → Risk → Test → Result → Evidence'
 assert_contains "$FLOW" 'Verification Evidence Contract / Residual Risk Summary'
 assert_contains "${ROOT_DIR}/docs/code-review-contract.md" 'Review Evidence Contractはレビュー指摘の成立条件とPR因果を記録する契約'
 assert_contains "${ROOT_DIR}/docs/code-review-contract.md" 'Verification Evidence Contract / Residual Risk Summary'
-assert_contains "$AGENTS" '未確認を完了にしない'
 assert_contains "$INVENTORY" 'テスト実行をRequirement検証と混同すること'
 assert_contains "$INVENTORY" 'Residual Risk Summary'
 assert_contains "$INVENTORY" '#119'

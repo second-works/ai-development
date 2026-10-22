@@ -280,6 +280,7 @@ assert_contains "${README}" 'docs/product-ui-standard.md'
 assert_contains "${README}" 'templates/app/docs/design.md'
 
 
-assert_contains "${ROOT_DIR}/AGENTS.md" 'Framework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docs'
+# The PR template and AGENTS.md are now the lightweight ones (#197). Their safety
+# wording is checked in tests/lightweight-template.
 
 printf 'PRODUCT UI standard contract: ok\n'

@@ -3,7 +3,6 @@
 set -Eeuo pipefail
 
 ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
-inventory="$ROOT/docs/instruction-architecture-inventory.md"
 agents="$ROOT/AGENTS.md"
 git_bin="$(command -v git)"
 if ! "$git_bin" --version >/dev/null 2>&1; then
@@ -83,11 +82,6 @@ before_raw_index="$(digest_file "$git_dir/index")"
 before_index="$("$git_bin" -C "$ROOT" ls-files --stage -v -z | digest_stream)"
 before_worktree="$("$tar_bin" -C "$ROOT" --exclude=.git -cf - . | digest_stream)"
 
-[[ -f "$inventory" ]] || {
-  printf 'instruction architecture inventory is missing: %s\n' "$inventory" >&2
-  exit 1
-}
-
 require() {
   local file="$1"
   local needle="$2"
@@ -97,128 +91,33 @@ require() {
   }
 }
 
-require "AGENTS.md" 'docs/instruction-architecture-inventory.md'
-require "AGENTS.md" 'docs/code-review-contract.md'
-require "AGENTS.md" '失敗・不能・全工程skip時はcommit / PR作成 / review依頼へ進まず停止'
-require "AGENTS.md" 'P0 / P1 / BLOCKING P2'
-require "AGENTS.md" '通常レーンの最終Mergeは人間が判断する'
-require "AGENTS.md" '未承認UNMANAGEDへCONFIDENTIALを送らない'
-require "AGENTS.md" '人間承認まで停止する'
-
-require "AGENTS.md" '回数だけを停止理由にしない'
-require "AGENTS.md" '.agents/skills/plan-to-issues/SKILL.md を必ず読む'
-require "AGENTS.md" '生成だけの依頼から実装を始めない'
-require "AGENTS.md" '計画のIssue化 / UI / Framework / RAG / Security / 外部送信 / Deploy / 検収 / State / 検証変更 / repo設定・依存保守'
-require "AGENTS.md" 'docs/minimal-development-contract.md の条件表と該当正本を読む'
-require "docs/plan-review-gate.md" '「この方向でIssue化して」'
-require "docs/plan-review-gate.md" '既存Issueの実装・レビュー・コメント確認'
-if grep -Fq 'pr-review-fix/SKILL.md' "$ROOT/AGENTS.md"; then
+# The repository runs on the lightweight template (#197): AGENTS.md is this
+# repository's own section plus the managed lightweight block. The block itself
+# is compared with the template by templates/lightweight/place.sh --check.
+require "AGENTS.md" '<!-- lightweight:begin'
+require "AGENTS.md" './scripts/verify.sh'
+require "AGENTS.md" 'docs/review-followups.md'
+# The large flow and the conditional contract are reference material, not required reading.
+for heavy in docs/nine-standard-ai-development-flow.md docs/minimal-development-contract.md \
+  .agents/skills/template-change-evaluator/SKILL.md; do
+  if grep -Fq -- "$heavy" "$agents"; then
+    printf 'AGENTS.md must not require reading %s\n' "$heavy" >&2
+    exit 1
+  fi
+done
+if grep -Fq 'pr-review-fix' "$agents"; then
   printf 'normal review must not auto-route to pr-review-fix Skill\n' >&2
   exit 1
 fi
-# Every literal root entry and conditional-contract Markdown destination must exist.
-# This is a bounded route check in the existing suite, not a new source resolver.
+# Every path that AGENTS.md names must exist.
 python3 - "$ROOT" <<'PYROUTES'
 from pathlib import Path
 import re,sys
 root=Path(sys.argv[1]);agents=(root/'AGENTS.md').read_text()
-for target in re.findall(r'(?:docs|\.agents/skills)/[\w./-]+\.md',agents):
-    if target=='docs/design.md': continue # 案件ごとのPRODUCT design; not this repo's template implementation
+for target in re.findall(r'(?:docs|\.agents/skills|\.claude/skills|templates|scripts)/[\w./-]+\.(?:md|sh)',agents):
     assert (root/target).is_file(),target
-contract=root/'docs/minimal-development-contract.md'
-conditions=contract.read_text().split('## 常時必須と条件付きの分離',1)[1].split('## 採用した最小AGENTS本文',1)[0]
-for target in re.findall(r'\]\(([^)#]+\.md)(?:#[^)]*)?\)',conditions):
-    if '://' in target: continue
-    assert (contract.parent/target).is_file(),target
 PYROUTES
-# Run the actual guide's placement example in a fresh temporary project.
-python3 - "$ROOT" <<'PYPLACEMENT'
-from pathlib import Path
-import os,re,subprocess,sys,tempfile
-root=Path(sys.argv[1])
-section=(root/'docs/template-guide.md').read_text().split('### 最小AGENTSと参照先の配置',1)[1].split('## 2.1 Risk Tierの記入',1)[0]
-commands=re.search(r'```bash\n(.*?)\n```',section,re.S).group(1)
-with tempfile.TemporaryDirectory(prefix='minimal-agents-placement-') as temp:
-    project=Path(temp)/'project'
-    env=dict(os.environ,template_source_root=str(root),project_output_root=str(project))
-    subprocess.run(['bash','-c',commands],check=True,env=env,capture_output=True,text=True)
-    agents=(project/'AGENTS.md').read_text()
-    assert 'このrepoの検証は全' not in agents
-    for target in re.findall(r'(?:docs|\.agents/skills)/[\w./-]+\.md',agents):
-        if target=='docs/design.md':continue # 案件固有のPRODUCT designは別作成
-        assert (project/target).is_file(),target
-    contract=project/'docs/minimal-development-contract.md'
-    conditions=contract.read_text().split('## 常時必須と条件付きの分離',1)[1].split('## 採用した最小AGENTS本文',1)[0]
-    for target in re.findall(r'\]\(([^)#]+\.md)(?:#[^)]*)?\)',conditions):
-        if '://' in target:continue
-        assert (contract.parent/target).is_file(),target
-    assert (project/'templates/verification/verify.sh').is_file()
-    assert (project/'.agents/skills/pr-review-fix/scripts/verify-pr-head.sh').is_file()
-    before=(project/'AGENTS.md').read_bytes()
-    repeat=subprocess.run(['bash','-c',commands],env=env,capture_output=True,text=True)
-    assert repeat.returncode!=0,'existing project must not be overwritten'
-    assert (project/'AGENTS.md').read_bytes()==before
-PYPLACEMENT
-require ".agents/skills/pr-review-fix/SKILL.md" 'ユーザーがSkill名やPR番号を明示しなくても'
-require ".agents/skills/pr-review-fix/SKILL.md" '「コメント確認して修正して」'
-require ".agents/skills/pr-review-fix/SKILL.md" '単なるIssueコメント閲覧'
-require "docs/instruction-architecture-inventory.md" '## Decision First'
-require "docs/instruction-architecture-inventory.md" '変更前の `AGENTS.md`: **47,136 bytes**'
-require "docs/instruction-architecture-inventory.md" '変更後 `AGENTS.md`: 47,438 bytes（`+302 bytes`）'
-require "docs/instruction-architecture-inventory.md" '現行35トップレベルセクション（`##`）をすべて列挙し'
-require "docs/instruction-architecture-inventory.md" '## Overlap, contradiction, and source-of-truth ledger'
-require "docs/instruction-architecture-inventory.md" 'IA-01'
-require "docs/instruction-architecture-inventory.md" 'IA-02'
-require "docs/instruction-architecture-inventory.md" '### IA-02 Review Evidence layer map'
-require "docs/instruction-architecture-inventory.md" '`README.md`'
-require "docs/instruction-architecture-inventory.md" '`docs/template-guide.md`'
-require "docs/instruction-architecture-inventory.md" '`docs/ai-development-harness-inventory.md#V-02`'
-require "docs/instruction-architecture-inventory.md" '`docs/ai-execution-state.md`'
-require "docs/instruction-architecture-inventory.md" '`docs/nine-standard-ai-development-flow.md`'
-require "docs/instruction-architecture-inventory.md" '`.agents/skills/pr-review-fix/SKILL.md`'
-require "docs/instruction-architecture-inventory.md" '`Core Rules > Template Change Evaluation Routing` | `ENTRYPOINT` | `KEEP`'
-require "docs/instruction-architecture-inventory.md" '`.agents/skills/template-change-evaluator/SKILL.md`'
-require "docs/instruction-architecture-inventory.md" '`template-change-evaluator` はテンプレート改善の採否・重複・配置判断'
-require "docs/instruction-architecture-inventory.md" '`Plan Review Gate > Plan to Issues Routing` | `ENTRYPOINT` | `KEEP`'
-require "docs/instruction-architecture-inventory.md" '`.agents/skills/plan-to-issues/SKILL.md`'
-require "docs/instruction-architecture-inventory.md" '`plan-to-issues` は合意済み計画からGitHub Issueへの変換に限定'
-require "docs/instruction-architecture-inventory.md" '`tests/review-evidence/run-samples.sh`'
-require "docs/instruction-architecture-inventory.md" '`tests/template-simplification/run-samples.sh`'
-require "docs/instruction-architecture-inventory.md" '`tests/verification-evidence/run-samples.sh`'
-require "docs/instruction-architecture-inventory.md" '`tests/pr-review-followups/run-samples.sh`'
-require "docs/instruction-architecture-inventory.md" '正本競合は未解消として記録する'
-require "docs/instruction-architecture-inventory.md" 'docs側とSkill側を正本参照入口へ短縮'
-require "docs/instruction-architecture-inventory.md" '`Parent Issue Completion` | `ENTRYPOINT` | `KEEP`'
-require "docs/instruction-architecture-inventory.md" '## Agent-executed protocol'
-require "docs/instruction-architecture-inventory.md" '### Execution record'
-require "docs/instruction-architecture-inventory.md" '### Historical verification record (pre-self-reference)'
-require "docs/instruction-architecture-inventory.md" 'PRのheadを証跡文書自身のコミットへ自己参照させない'
-require "docs/instruction-architecture-inventory.md" '## Read-only smoke test'
-require "docs/instruction-architecture-inventory.md" 'branch、commit、push、PR、Issueコメントを作成しない'
-require "docs/instruction-architecture-inventory.md" 'index entryと`assume-unchanged` / `skip-worktree` flag'
-require "docs/instruction-architecture-inventory.md" 'dangling symbolic refを含むref storage'
-require "docs/instruction-architecture-inventory.md" 'common ref storage'
-require "tests/instruction-architecture/run-samples.sh" 'GIT_OPTIONAL_LOCKS=0'
-require "tests/instruction-architecture/run-samples.sh" 'before_raw_index'
-require "docs/instruction-architecture-inventory.md" '`AGENTS.md`、`docs/`、`.agents/skills/`、`.github/`、`tests/`'
-require "docs/instruction-architecture-inventory.md" '`docs/architecture/rag-design.md` はRAG採用プロジェクトの案件固有記録'
-
-while IFS= read -r section; do
-  [[ -n "$section" ]] || continue
-  row="$(grep -F -- "| \`$section\` |" "$inventory" || true)"
-  [[ -n "$row" ]] || {
-    printf 'AGENTS section is not recorded in inventory: %s\n' "$section" >&2
-    exit 1
-  }
-  case "$row" in
-    *'| `KEEP` |'*|*'| `SHORTEN+REFERENCE` |'*|*'| `MOVE` |'*|*'| `MERGE` |'*) ;;
-    *)
-      printf 'AGENTS section has no relocation candidate: %s\n' "$section" >&2
-      exit 1
-      ;;
-  esac
-done < <(sed -n 's/^## \(.*\)$/\1/p' "$agents")
-
+# Reference material stays reachable: README links each of these.
 for path in \
   docs/code-review-contract.md \
   docs/test-design.md \
@@ -227,40 +126,54 @@ for path in \
   docs/product-ui-standard.md \
   docs/adaptive-development-flow.md \
   docs/ai-agent-security-boundary.md \
-  docs/ai-development-harness-inventory.md \
-  docs/ai-execution-state.md \
   docs/architecture/framework-decision.md \
-  docs/architecture/rag-guidelines.md \
   docs/acceptance-verification.md \
   docs/deployment-release-design.md \
   docs/github-repository-security-baseline.md \
-  docs/issue-quality-check.md \
   docs/plan-review-gate.md \
-  docs/safe-auto-fix-auto-merge.md \
+  docs/template-guide.md \
   docs/nine-standard-ai-development-flow.md \
-  templates/verification/verify.sh \
-  templates/security/security-preflight.sh \
-  .agents/skills/pr-review-fix/SKILL.md \
-  .agents/skills/template-change-evaluator/SKILL.md \
-  .agents/skills/plan-to-issues/SKILL.md \
-  .github/workflows/ci.yml \
-  .github/workflows/security.yml; do
+  docs/minimal-development-contract.md; do
   [[ -e "$ROOT/$path" ]] || {
     printf 'instruction architecture source is missing: %s\n' "$path" >&2
     exit 1
   }
-  if [[ "$path" == docs/* ]]; then
-    if ! grep -Fq "$path" "$agents" && ! grep -Fq "(${path#docs/})" "$ROOT/docs/minimal-development-contract.md"; then
-      printf 'canonical document is unreachable from AGENTS or its conditional table: %s\n' "$path" >&2
-      exit 1
-    fi
-  fi
+  grep -Fq "($path)" "$ROOT/README.md" || {
+    printf 'reference document is not linked from README.md: %s\n' "$path" >&2
+    exit 1
+  }
 done
+for path in templates/verification/verify.sh templates/security/security-preflight.sh \
+  .agents/skills/plan-to-issues/SKILL.md .claude/skills/steward/SKILL.md \
+  .github/workflows/ci.yml .github/workflows/security.yml; do
+  [[ -e "$ROOT/$path" ]] || { printf 'instruction architecture source is missing: %s\n' "$path" >&2; exit 1; }
+done
+# Run the guide's placement example in a fresh temporary project.
+python3 - "$ROOT" <<'PYPLACEMENT'
+from pathlib import Path
+import os,re,subprocess,sys,tempfile
+root=Path(sys.argv[1])
+section=(root/'docs/template-guide.md').read_text().split('### 最小AGENTSと参照先の配置',1)[1].split('## 2.1 Risk Tierの記入',1)[0]
+commands=re.search(r'```bash\n(.*?)\n```',section,re.S).group(1)
+with tempfile.TemporaryDirectory(prefix='lightweight-placement-') as temp:
+    project=Path(temp)/'project'
+    env=dict(os.environ,template_source_root=str(root),project_output_root=str(project))
+    subprocess.run(['bash','-c',commands],check=True,env=env,capture_output=True,text=True)
+    agents=(project/'AGENTS.md').read_text()
+    assert '<!-- lightweight:begin' in agents
+    assert 'ai-development 固有の境界' not in agents,'this repository section must not be placed'
+    for target in ('CLAUDE.md','.claude/settings.json','.claude/skills/steward/SKILL.md',
+                   '.agents/skills/plan-to-issues/SKILL.md','scripts/verify.sh','scripts/check-pr-head.sh',
+                   '.ai/lightweight-placement.tsv'):
+        assert (project/target).is_file(),target
+    before=(project/'AGENTS.md').read_bytes()
+    repeat=subprocess.run(['bash','-c',commands],env=env,capture_output=True,text=True)
+    assert repeat.returncode==0,'re-running the placement must be a no-op'
+    assert (project/'AGENTS.md').read_bytes()==before,'re-running the placement changed AGENTS.md'
+PYPLACEMENT
+require "tests/instruction-architecture/run-samples.sh" 'GIT_OPTIONAL_LOCKS=0'
+require "tests/instruction-architecture/run-samples.sh" 'before_raw_index'
 
-grep -Fq -- '## Read-only smoke test' "$inventory"
-grep -Fq -- '## Deferred decisions and follow-up boundary' "$inventory"
-grep -Fq -- '## Overlap, contradiction, and source-of-truth ledger' "$inventory"
-grep -Fq -- '## Agent-executed protocol' "$inventory"
 after_head="$("$git_bin" -C "$ROOT" rev-parse --verify HEAD)"
 after_branch="$("$git_bin" -C "$ROOT" symbolic-ref --quiet --short HEAD || printf '<detached>')"
 after_refs="$("$git_bin" -C "$ROOT" for-each-ref --format='%(refname) %(objectname) %(symref)')"

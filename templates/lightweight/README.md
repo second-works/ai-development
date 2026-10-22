@@ -1,6 +1,6 @@
-# 軽量構成の候補
+# 軽量構成
 
-**状態: 候補（#194）。標準の配布はまだ切り替えていない。** 今の標準は repo 直下の `AGENTS.md`、`docs/`、`.agents/skills/` のまま。限定試行（#196）で確かめてから、#197 で標準にするかを判断する。
+**状態: 標準（#197 で切り替え）。** 新しいprojectにはここから `place.sh` で配置する。このrepo自身も同じ構成を配置して使い、CI の `place.sh --check .` で、repo直下のファイルがここと一致していることを確かめる。限定試行の記録は [lightweight-trial](../../docs/lightweight-trial.md)。
 
 親 [#192](https://github.com/second-works/ai-development/issues/192)、削減範囲は [lightweight-migration-plan.md](../../docs/lightweight-migration-plan.md)。
 
