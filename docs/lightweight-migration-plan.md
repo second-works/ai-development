@@ -156,9 +156,9 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 
 残課題（解決扱いにしない）:
 
-- 配布済みの各 project（hermes など）では、bootstrap の `upgrade`（新しい `.ai/GIT_RULES.md`）と `place.sh` の再実行（Cursor 向けの節）をまだ行っていない。
+- bootstrap を配置した project（`~/AI作成物`、`~/openclaw`、`~/worker`）では、新しい `.ai/GIT_RULES.md` を配る bootstrap の `upgrade` をまだ行っていない。
+- 軽量構成を配置した hermes では、Cursor 向けの節を入れる `place.sh` の再実行をまだ行っていない。
 - `~/openclaw/git-guide.md`（openclaw-ops）に、main への直接コミットを認める記述が残っている。
-- hermes に残る JEV / Local Judge の資産の削除は、second-works/hermes-self-improvement#24 で対応中（merge は所有者の確認待ち）。
 
 解決済み（2026-10-22〜23）:
 
@@ -170,3 +170,4 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 - Slack の失敗通知: 所有者の判断で対応しない（2026-10-23）。届かなかった原因は hosted runner の課金で、repo を public にしたので無料で動く見込み。次に CI が失敗するまで、届くかは確かめられない。
 - Cursor 向けの指示（#189）: 軽量テンプレートの AGENTS.md に「Cursor Cloud specific instructions」の節を足した（PR #214）。PR #190 は閉じた。
 - テンプレート還元の検討（#188）: ハーネスプロジェクトの作業が止まっているため、一旦閉じた。再開するときは新しい Issue で現行の軽量構成を基準にする。
+- hermes に残っていた JEV / Local Judge のスクリプトと PoC を削除し、呼び出す経路をなくした（second-works/hermes-self-improvement#24、merge `75d09d8`、2026-10-23）。
