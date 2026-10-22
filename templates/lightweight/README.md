@@ -66,16 +66,21 @@ templates/lightweight/place.sh --restore <project-root>   # 最後の配置で�
 | `git push origin main`、`"main"`、`HEAD:'main'`、`refs/heads/main`、行継続で次の行にある宛先 | aliasやスクリプトの中のpush、`bash -c "..."` の中 |
 | `--force`、`-f`、`--force-with-lease`、`--mirror`、`+`付きrefspec | `gh` やGitHub APIからの操作、他のツール |
 | `--all`、`--branches`、`:`、`*` を含むrefspec | ブランチ削除（`--delete`）、push以外のgit操作 |
-| `/usr/bin/git`、`git -C <dir>`、`--git-dir <dir>`、`VAR=1 git`、`env -i`、`then` / `do` / `time` / `command` / `!` / `xargs` / `timeout 60` / `nice` / `sudo -u <user>` の後ろ、`( ... )`、`$( ... )`、`` ` ... ` `` の中 | `git -C <別の場所>` で別repoを操作する場合のブランチと設定の判定 |
+| `/usr/bin/git`、`git -C <dir>`、`--git-dir <dir>`、`VAR=1 git`、`env -i`、`then` / `do` / `time` / `command` / `!` / `xargs` / `timeout 60` / `nice` / `sudo -u <user>` の後ろ、`( ... )`、`$( ... )`、`` ` ... ` `` の中 | `git -C <別の場所>` や `cd <別の場所> &&` で別repoを操作する場合のブランチと設定の判定（下の「別のrepoでのpush」） |
 | `$` や `` ` `` で組み立てたpush、gitのサブコマンドを変数にしたもの（確かめられないため止める。そのまま書く） | 上記以外の凝った書き方（関数、eval、ヒアドキュメントで渡すスクリプトなど） |
 | main / master上での `git push`、jqがない・入力が読めないときのpush | |
 | 宛先を書かないpushで、`remote.<name>.push`（main / master、`*`、`:`）、`push.default=matching`、`push.default=upstream` によってmain / masterへ送られるもの | 上記以外のgitの設定（`url.<base>.pushInsteadOf` など） |
 
 **止めすぎることがある。** 引用符の中の `;`、`|`、`$(`、バッククォートも区切りとして扱う。そのため、`git commit -m "note; git push origin main"` や、PR本文のインラインコード（`` --body "use `git push origin main`" ``）のように、メッセージの中で区切りの後ろに「git push … main」が来る形は止まる。安全側の誤検知なので、本文は `--body-file` でファイルから渡すか、メッセージを書き換えて再実行する。
 
+**別のrepoでのpush。** ブランチと設定は、Claude Codeの作業ディレクトリ（セッションを開いたrepo）で判定する。`git -C <別の場所>` や `cd <別の場所> &&` で別のrepoをpushすると、次の2つが起きる。
+
+- 作業ディレクトリのrepoがmain / master上にあると、別repoのfeature branchへの安全なpushも止まる。作業ディレクトリのrepoをIssue branchに切り替えてから実行する（未コミットの変更があって切り替えられないときは、そのrepoでセッションを開き直す）。
+- 作業ディレクトリのrepoがfeature branch上にあると、別repoのmain上での宛先を書かない `git push` は止まらない。宛先に `main` / `master` を書いたpushは、文字列で止める。別repoでは、宛先のbranchを必ず書いてpushする。そのrepoにGitHubのブランチ保護がなければ、mainへ入ってしまう。
+
 **フック自体が実行できないときは止まらない。** Claude Codeはexit 2以外のフックの失敗を警告として扱い、コマンドをそのまま実行する。実行権限が外れた、`bash` が見つからない、`$CLAUDE_PROJECT_DIR` が空、といった場合はpushが通る。`settings.json` のdeny（`git push --force` / `-f` で始まるコマンド）はこのときも働くが、main宛ては防げない。
 
-文字列による検出なので、確実な保証にはならない。確実に守るのはGitHubのブランチ保護（このrepoでは未設定、#163）。
+文字列による検出なので、確実な保証にはならない。確実に守るのはGitHubのブランチ保護。ai-developmentのmainは2026-10-22に設定した（#163）。配置先のrepoでは、それぞれ設定を確かめる（privateのrepoは、無料プランでは設定できない）。
 
 `check-pr-head.sh` の正式レビューの判定は、Codex Reviewが書く要約コメント（`codex-review-state:v1`）と、レビュアーごとの最新の判定（APPROVED / CHANGES_REQUESTED / DISMISSED。後のCOMMENTEDでは消えない）を読み、Request changesが残っていれば止める。GitHubの `reviewDecision` はレビュー必須のブランチ保護があるときだけ値が入るので、補助として読む。通常のPRコメントで届いた指摘は読まないので、steward 8のとおり自分で読む。別のレビューを使うprojectでは、`PR_GATE_REVIEWER` を変えるか、この照合を手で行う。必須checkの名前は、projectの `.github/pr-gate-checks`（1行に1つ。`#` で始まる行と空行は無視）に書く。照合は、GitHub上のPRのbaseブランチにある版を読む。手元の未コミットの編集や、照合するPR自身の変更で必須checkを減らせないようにするためで、変更はmergeの後に効く（このファイルの変更は人間のレビュー対象）。`PR_GATE_CHECKS`（カンマ区切り）があればそちらを優先し、ファイルがなければ既定の `verification,Security Preflight` を使う。ファイルを読めないとき（404以外のエラー）は成功にしない。各名前は、check runと、同じheadのcommit status（同じcontext）の両方で探し、どちらかに失敗か実行中があれば止める（Securityの結果をcommit statusで報告するworkflow向け）。commit statusは書き込み権限があれば誰でも作れるので、この照合は誤りを防ぐためのもので、偽装は防がない。
 
