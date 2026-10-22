@@ -625,6 +625,7 @@ case "$*" in
     f=pr.json; [[ $n -gt 1 && -f "$FAKE_GH/pr-later.json" ]] && f=pr-later.json ;;
   "pr view 7 --json comments") f=comments.json ;;
   api\ repos/*/check-runs*) f=checks.json ;;
+  api\ repos/*/status*) f=statuses.json ;;
   api\ graphql*) f=threads.json ;;
   *) exit 1 ;;
 esac
@@ -639,6 +640,7 @@ set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <ope
   rm -rf "$d"; mkdir -p "$d"
   jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" --arg r "${9:-}" '{headRefOid: $h, url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m, reviewDecision: $r}' >"$d/pr.json"
   printf '%s' "$2" >"$d/checks.json"
+  printf '{"statuses": []}' >"$d/statuses.json"
   if [[ -n $3 ]]; then
     jq -n --arg s "$3" --arg st "$4" --argjson u "$5" '{comments: [{author: {login: "chatgpt-codex-connector"},
       body: ("<!-- codex-review-state:v1 " + ({code_review: {commit_sha: $s, status: $st, has_unresolved_findings: $u}} | tojson) + " -->")}]}' >"$d/comments.json"
@@ -661,6 +663,25 @@ set_data "$old_sha" "$ok_checks" "$old_sha" completed false 0
 check_gate STALE_HEAD "local HEAD differs from the PR head"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
 check_gate CHECK_UNAVAILABLE "Security check missing"
+# Workflows that report through the commit status API instead of a check run.
+only_ci='{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}'
+for st in success:READY pending:CHECK_PENDING failure:CHECK_FAILED error:CHECK_FAILED; do
+  set_data "$head_sha" "$only_ci" "$head_sha" completed false 0
+  jq -n --arg s "${st%%:*}" '{statuses: [{context: "Security Preflight", state: $s}, {context: "other", state: "failure"}]}' >"$fake/data/statuses.json"
+  check_gate "${st#*:}" "Security reported as a commit status: ${st%%:*}"
+done
+set_data "$head_sha" "$only_ci" "$head_sha" completed false 0
+rm -f "$fake/data/statuses.json"
+check_gate CHECK_UNAVAILABLE "commit statuses cannot be read"
+# Required checks named by the project instead of the default.
+printf '# required checks\nci\n\nAnalyze (python)\r\nSecurity Preflight' >"$proj/.github/pr-gate-checks"
+set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"},{"name":"Analyze (python)","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
+check_gate READY "checks named in .github/pr-gate-checks"
+set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
+check_gate CHECK_UNAVAILABLE "a check named in .github/pr-gate-checks is missing"
+rm -f "$proj/.github/pr-gate-checks"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"},{"name":"Security Preflight","status":"completed","conclusion":"skipped"}]}' "$head_sha" completed false 0
 check_gate CHECK_UNAVAILABLE "Security check skipped"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"failure"},{"name":"Security Preflight","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
@@ -708,6 +729,11 @@ if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   check_gate READY "all clear under Bash 3.2" /bin/bash
   set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
   check_gate CHECK_UNAVAILABLE "Security check missing under Bash 3.2" /bin/bash
+  printf 'ci\nSecurity Preflight\n' >"$proj/.github/pr-gate-checks"
+  set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+  jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
+  check_gate READY "checks file and a commit status under Bash 3.2" /bin/bash
+  rm -f "$proj/.github/pr-gate-checks"
 fi
 rm -f "$fake/data/pr.json"
 check_gate UNAVAILABLE "PR cannot be read"

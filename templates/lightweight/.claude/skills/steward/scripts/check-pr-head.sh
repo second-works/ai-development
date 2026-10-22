@@ -5,7 +5,10 @@
 #
 # Checks, all on the PR's current head SHA:
 #   1. the local HEAD is the same commit as the PR head
-#   2. every required check exists and succeeded (PR_GATE_CHECKS, comma separated)
+#   2. every required check exists and succeeded, as a check run or, when there is no
+#      check run of that name, as a commit status of the same context. The names come
+#      from PR_GATE_CHECKS (comma separated), else .github/pr-gate-checks (one per
+#      line; blank lines and lines starting with # are ignored), else the default.
 #   3. the formal review finished on this head with no unresolved findings
 #   4. no review thread is unresolved
 #   5. GitHub reports no conflict with the base branch
@@ -17,7 +20,19 @@
 
 set -u
 
-checks_csv="${PR_GATE_CHECKS:-verification,Security Preflight}"
+default_checks='verification,Security Preflight'
+checks_file="$(git rev-parse --show-toplevel 2>/dev/null)/.github/pr-gate-checks"
+required=()
+if [[ -n ${PR_GATE_CHECKS:-} ]]; then
+  IFS=',' read -r -a required <<<"$PR_GATE_CHECKS"
+elif [[ -f $checks_file ]]; then
+  while IFS= read -r line || [[ -n $line ]]; do
+    line="${line%$'\r'}"
+    [[ -z ${line//[[:space:]]/} || $line == '#'* ]] && continue
+    required+=("$line")
+  done <"$checks_file"
+fi
+[[ ${#required[@]} -gt 0 ]] || IFS=',' read -r -a required <<<"$default_checks"
 reviewer="${PR_GATE_REVIEWER:-chatgpt-codex-connector}"
 
 report() {
@@ -48,7 +63,7 @@ local_head="$(git rev-parse HEAD 2>/dev/null)" || report UNAVAILABLE "could not 
 # filter=latest keeps only the newest run of each check, so a re-run replaces an old failure.
 runs="$(gh api "repos/$repo/commits/$head/check-runs?filter=latest&per_page=100" 2>/dev/null)" ||
   report CHECK_UNAVAILABLE "could not read checks for $head"
-IFS=',' read -r -a required <<<"$checks_csv"
+statuses=''
 for name in "${required[@]}"; do
   summary="$(jq -r --arg n "$name" '
     [.check_runs[] | select(.name == $n)] as $r
@@ -57,6 +72,20 @@ for name in "${required[@]}"; do
       elif any($r[]; .conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral") then "failed"
       elif any($r[]; .conclusion == "success") then "success"
       else "skipped" end' <<<"$runs" 2>/dev/null)" || report CHECK_UNAVAILABLE "could not parse checks"
+  if [[ $summary == missing ]]; then
+    # Some workflows report through the commit status API instead of a check run.
+    # The combined status keeps only the latest status of each context.
+    if [[ -z $statuses ]]; then
+      statuses="$(gh api "repos/$repo/commits/$head/status?per_page=100" 2>/dev/null)" ||
+        report CHECK_UNAVAILABLE "could not read commit statuses for $head"
+    fi
+    summary="$(jq -r --arg n "$name" '
+      [.statuses[] | select(.context == $n) | .state] as $s
+      | if ($s | length) == 0 then "missing"
+        elif any($s[]; . == "pending") then "pending"
+        elif all($s[]; . == "success") then "success"
+        else "failed" end' <<<"$statuses" 2>/dev/null)" || report CHECK_UNAVAILABLE "could not parse commit statuses"
+  fi
   case "$summary" in
     success) ;;
     missing) report CHECK_UNAVAILABLE "check '$name' was not found on $head" ;;

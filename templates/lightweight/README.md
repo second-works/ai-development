@@ -77,7 +77,7 @@ templates/lightweight/place.sh --restore <project-root>   # 最後の配置で�
 
 文字列による検出なので、確実な保証にはならない。確実に守るのはGitHubのブランチ保護（このrepoでは未設定、#163）。
 
-`check-pr-head.sh` の正式レビューの判定は、Codex Reviewが書く要約コメント（`codex-review-state:v1`）と、レビュアーごとの最新の判定（APPROVED / CHANGES_REQUESTED / DISMISSED。後のCOMMENTEDでは消えない）を読み、Request changesが残っていれば止める。GitHubの `reviewDecision` はレビュー必須のブランチ保護があるときだけ値が入るので、補助として読む。通常のPRコメントで届いた指摘は読まないので、steward 8のとおり自分で読む。別のレビューを使うprojectでは、`PR_GATE_REVIEWER` を変えるか、この照合を手で行う。必須checkの名前は `PR_GATE_CHECKS`（既定 `verification,Security Preflight`）で変える。
+`check-pr-head.sh` の正式レビューの判定は、Codex Reviewが書く要約コメント（`codex-review-state:v1`）と、レビュアーごとの最新の判定（APPROVED / CHANGES_REQUESTED / DISMISSED。後のCOMMENTEDでは消えない）を読み、Request changesが残っていれば止める。GitHubの `reviewDecision` はレビュー必須のブランチ保護があるときだけ値が入るので、補助として読む。通常のPRコメントで届いた指摘は読まないので、steward 8のとおり自分で読む。別のレビューを使うprojectでは、`PR_GATE_REVIEWER` を変えるか、この照合を手で行う。必須checkの名前は、projectの `.github/pr-gate-checks`（1行に1つ。`#` で始まる行と空行は無視）に書く。`PR_GATE_CHECKS`（カンマ区切り）があればそちらを優先し、どちらもなければ既定の `verification,Security Preflight` を使う。check runにない名前は、同じheadのcommit status（同じcontext）でも探す（Securityの結果をcommit statusで報告するworkflow向け）。commit statusを読めないときは成功にしない。
 
 ## pr-review-fixから引き継がないもの
 
