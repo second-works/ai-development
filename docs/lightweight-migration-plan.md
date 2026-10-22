@@ -157,7 +157,7 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 残課題（解決扱いにしない）:
 
 - Slack の失敗通知は hosted runner のままで、届かない状態が続いている（#191 の残り）。
-- bootstrap の GIT_RULES の矛盾（#202）、Cursor 向けの追記（PR #190）、テンプレート還元の検討（#188）は未着手。
+- Cursor 向けの追記（PR #190）、テンプレート還元の検討（#188）は未着手。
 - 標準 flow、最小契約、template-change-evaluator は参照用に残した。参照されていない節の削除は後続で判断する。
 
 解決済み（2026-10-22）:
@@ -165,3 +165,4 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 - Cloudflare の Workers Builds（Worker `ai-development`）が、JEV の PoC（`templates/review-comment-auto-triage/wrangler.jsonc`）を build していた。この Worker は 2026-09-20 に Issue #125 / PR #126 の作業で Git とつながったもの。所有者は「もう利用していないので解消してよい」と判断し、PR B（#209）を merge したあと、Worker を削除した。
 - JEV / Local Judge 用の repo の変数 `JEV_TRIAGE_URL`、Secret `JEV_TRIAGE_TOKEN`、Environment `local-judge-shadow`（Local Judge の変数と Secret を含む）は削除済み。
 - main の保護（#163）: 所有者が repo を public に変更し、main に branch protection を設定した（2026-10-22）。PR 必須（承認数0）、required checks は `verification` と `Security Preflight`（GitHub Actions）、未解決の会話があると merge できない、force push とブランチ削除は禁止、管理者にも適用。self-hosted runner は Mac のまま使い、外部の人の PR の workflow は所有者の承認が要る設定にする。
+- bootstrap の GIT_RULES の矛盾（#202）: ai-project-bootstrap の `templates/GIT_RULES.md` から main への直接コミットの例外を削除した（NineDragon00/ai-project-bootstrap#2、merge `0e0dec8`、2026-10-23）。配布済みの各 project の `.ai/GIT_RULES.md` は、bootstrap の `upgrade` を実行するまで古いままで、`place.sh` は引き続き警告する。`~/openclaw/git-guide.md`（openclaw-ops）に同じ例外が残っている（範囲外）。
