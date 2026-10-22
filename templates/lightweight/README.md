@@ -54,7 +54,7 @@ templates/lightweight/place.sh --restore <project-root>   # 最後の配置で�
 
 **ai-project-bootstrapとの併用の限界。**
 
-- 古い `.ai/GIT_RULES.md` は「文書だけの変更はmainへ直接コミットしてよい」としていて、置くAGENTS.md（mainへ直接pushしない）と矛盾する。配置時に見つけたら警告し、AGENTS.mdに従う。`.ai/GIT_RULES.md` 自体はbootstrap側で直す。
+- 古い `.ai/GIT_RULES.md` は「文書だけの変更はmainへ直接コミットしてよい」としていて、置くAGENTS.md（mainへ直接pushしない）と矛盾する。配置時に見つけたら警告し、AGENTS.mdに従う。bootstrap側の正本は2026-10-23に直した（#202）ので、bootstrapの `upgrade` を実行すれば新しい内容に置き換わる。
 - bootstrapの `enable-claude` は、`@AGENTS.md` を含むCLAUDE.mdを固定の内容で書き直す。配置の後にbootstrapを動かすと、CLAUDE.mdの管理ブロックが消える。`--check` は「outdated: CLAUDE.md」として示すので、`place.sh` を再実行する。
 
 ## ガードの範囲と限界
