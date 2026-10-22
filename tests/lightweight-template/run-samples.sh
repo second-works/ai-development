@@ -620,12 +620,17 @@ mkdir -p "$fake/bin"
 cat >"$fake/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 case "$*" in
-  "pr view 7 --json headRefOid,url,state,mergeable,reviewDecision,reviews")
+  "pr view 7 --json headRefOid,baseRefName,url,state,mergeable,reviewDecision,reviews")
     n=$(( $(cat "$FAKE_GH/pr-calls" 2>/dev/null || echo 0) + 1 )); echo "$n" >"$FAKE_GH/pr-calls"
     f=pr.json; [[ $n -gt 1 && -f "$FAKE_GH/pr-later.json" ]] && f=pr-later.json ;;
   "pr view 7 --json comments") f=comments.json ;;
   api\ repos/*/check-runs*) f=checks.json ;;
   api\ repos/*/status*) f=statuses.json ;;
+  *contents/.github/pr-gate-checks\?ref=main*)
+    # The base branch copy: the file, a server error, or 404 when there is none.
+    if [[ -f "$FAKE_GH/gate-checks-error" ]]; then echo 'gh: Server Error (HTTP 500)' >&2; exit 1; fi
+    if [[ -f "$FAKE_GH/gate-checks" && $1 == api && $2 == -H ]]; then cat "$FAKE_GH/gate-checks"; exit 0; fi
+    echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;;
   api\ graphql*) f=threads.json ;;
   *) exit 1 ;;
 esac
@@ -638,7 +643,7 @@ old_sha="$(printf 'old' | shasum | cut -c1-40)"
 set_data() { # <pr-head> <checks> <review-sha> <review-status> <unresolved> <open-threads> [mergeable] [more-threads] [decision]
   local d="$fake/data"
   rm -rf "$d"; mkdir -p "$d"
-  jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" --arg r "${9:-}" '{headRefOid: $h, url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m, reviewDecision: $r}' >"$d/pr.json"
+  jq -n --arg h "$1" --arg m "${7:-MERGEABLE}" --arg r "${9:-}" '{headRefOid: $h, baseRefName: "main", url: "https://github.com/acme/app/pull/7", state: "OPEN", mergeable: $m, reviewDecision: $r}' >"$d/pr.json"
   printf '%s' "$2" >"$d/checks.json"
   printf '{"statuses": []}' >"$d/statuses.json"
   if [[ -n $3 ]]; then
@@ -673,15 +678,30 @@ done
 set_data "$head_sha" "$only_ci" "$head_sha" completed false 0
 rm -f "$fake/data/statuses.json"
 check_gate CHECK_UNAVAILABLE "commit statuses cannot be read"
-# Required checks named by the project instead of the default.
-printf '# required checks\nci\n\nAnalyze (python)\r\nSecurity Preflight' >"$proj/.github/pr-gate-checks"
-set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"},{"name":"Analyze (python)","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+# A check run that succeeded does not hide a failed or pending status of the same name.
+for st in failure:CHECK_FAILED pending:CHECK_PENDING; do
+  set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+  jq -n --arg s "${st%%:*}" '{statuses: [{context: "Security Preflight", state: $s}]}' >"$fake/data/statuses.json"
+  check_gate "${st#*:}" "check run success with a commit status ${st%%:*}"
+done
+# Required checks named by the project, read from the base branch on GitHub.
+named_runs='{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"},{"name":"Analyze (python)","status":"completed","conclusion":"success"}]}'
+set_data "$head_sha" "$named_runs" "$head_sha" completed false 0
+printf '# required checks\nci\n\nAnalyze (python)\r\nSecurity Preflight' >"$fake/data/gate-checks"
 jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
 check_gate READY "checks named in .github/pr-gate-checks"
 set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
-jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
+printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
 check_gate CHECK_UNAVAILABLE "a check named in .github/pr-gate-checks is missing"
+# Local edits cannot drop a required check: the working tree copy is not read.
+set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
+mkdir -p "$proj/.github" && printf 'ci\n' >"$proj/.github/pr-gate-checks"
+check_gate CHECK_UNAVAILABLE "a working tree .github/pr-gate-checks is ignored"
 rm -f "$proj/.github/pr-gate-checks"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+touch "$fake/data/gate-checks-error"
+check_gate CHECK_UNAVAILABLE ".github/pr-gate-checks cannot be read"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"},{"name":"Security Preflight","status":"completed","conclusion":"skipped"}]}' "$head_sha" completed false 0
 check_gate CHECK_UNAVAILABLE "Security check skipped"
 set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"failure"},{"name":"Security Preflight","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
@@ -729,11 +749,10 @@ if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   check_gate READY "all clear under Bash 3.2" /bin/bash
   set_data "$head_sha" '{"check_runs":[{"name":"verification","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
   check_gate CHECK_UNAVAILABLE "Security check missing under Bash 3.2" /bin/bash
-  printf 'ci\nSecurity Preflight\n' >"$proj/.github/pr-gate-checks"
   set_data "$head_sha" '{"check_runs":[{"name":"ci","status":"completed","conclusion":"success"}]}' "$head_sha" completed false 0
+  printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
   jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
   check_gate READY "checks file and a commit status under Bash 3.2" /bin/bash
-  rm -f "$proj/.github/pr-gate-checks"
 fi
 rm -f "$fake/data/pr.json"
 check_gate UNAVAILABLE "PR cannot be read"
