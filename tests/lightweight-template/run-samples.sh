@@ -50,6 +50,8 @@ require_text "$agents" "AGENTS.md" \
   'IssueのGoal / Scope / Non-goals / Done / Verification / Dependenciesを読み' \
   '範囲外の変更は別Issueに分ける' \
   '推測で埋めず、人間に確認する' \
+  '承認済みの範囲と小さな実装判断は進める' \
+  '新しい重要設計は、人間の承認を得てから行う' \
   '他者の未コミット変更とブランチを保護する' \
   '本番、Deploy、破壊操作、認証、権限、課金、公開範囲、repo保護設定の変更' \
   'Secretsと実データをcommit、Issue、PR、logへ出さない' \
