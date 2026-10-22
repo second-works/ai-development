@@ -67,7 +67,6 @@ require_section_marker() {
 require_section_marker "docs/template-guide.md" "## 2. 新規プロジェクト開始時の使い方" "## 3. AGENTS.md" "docs/ai-agent-security-boundary.md"
 require_section_marker "docs/template-guide.md" "## 15. 新規リポジトリ初期化チェックリスト" "## 16. 普段の短縮指示" "docs/ai-agent-security-boundary.md"
 require_marker "docs/nine-standard-ai-development-flow.md" "AI Agent Security Boundary"
-require_marker ".agents/skills/pr-review-fix/SKILL.md" "AI Agent Security Boundary"
 
 if (( failures != 0 )); then
   exit 1

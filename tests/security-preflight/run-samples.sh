@@ -4,7 +4,6 @@ set -Eeuo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 preflight="$repo_root/templates/security/security-preflight.sh"
-wait_checks="$repo_root/.agents/skills/pr-review-fix/scripts/wait-checks.sh"
 
 assert_contains() {
   local file="$1"
@@ -25,13 +24,6 @@ for state in SECURITY_PASSED SECURITY_FAILED SECURITY_NOT_APPLICABLE SECURITY_UN
 done
 assert_contains "$preflight" 'npm audit --json --audit-level=high --package-lock-only'
 assert_contains "$preflight" 'escape_path'
-assert_contains "$wait_checks" 'CI_STATUS='
-assert_contains "$wait_checks" 'SECURITY_STATUS='
-assert_contains "$wait_checks" 'SECURITY_UNAVAILABLE'
-assert_contains "$wait_checks" 'security_pattern'
-assert_contains "$wait_checks" '^analy[sz]e'
-assert_contains "$wait_checks" 'SECURITY_FAILED'
-assert_contains "$wait_checks" 'security-preflight.sh'
 assert_contains "$repo_root/docs/nine-standard-ai-development-flow.md" 'CIの成功をSecurityの成功として扱わない'
 assert_contains "$repo_root/docs/nine-standard-ai-development-flow.md" 'SECURITY_NOT_APPLICABLE'
 assert_contains "$repo_root/docs/nine-standard-ai-development-flow.md" 'Security Preflight'

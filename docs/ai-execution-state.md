@@ -243,7 +243,7 @@ Current StateとGitHub観測が矛盾した場合は、古いStateを正とせ�
 ## 既存契約との関係
 
 - Nine標準AI開発フローの`Issue → Branch → 実装 → Verify → PR → CI → Security → Review → 人間Merge`を変更しない。
-- `pr-review-fix`は同じPRのhead branch、PR番号、head SHA、expected SHAを固定し、このStateへ検証結果とレビューラウンドを反映する。
+- レビュー指摘の修正は、同じPRのhead branch、PR番号、head SHA、expected SHAを固定し、このStateへ検証結果とレビューラウンドを反映する（`pr-review-fix` Skill は #197 で削除）。
 - Review Evidence ContractとFOLLOW-UP台帳は指摘の根拠と後続管理を担う。非BLOCKING P2を理由に無制限の修正ループへ戻さない。
 - Security BoundaryとHuman Approval Boundaryは既存の正本文書を優先し、Current Stateはその判定を緩和しない。
 - Implementation Done、Merged、Deployed、Product Acceptedは別状態として保持し、Mergeを実利用検収の代わりにしない。

@@ -14,7 +14,7 @@ Codex Code Reviewを、GitHub Actions CI後・人間の最終確認前の標準�
 
 ### 既存PRコメントの直接対応
 
-既存PRのコメントは、CodexがGitHubの指摘・Issue・現head・差分を直接確認して対応する。通常経路ではpr-review-fixやそのhelperを起動しない。同Skillは手動資産として保持し、ユーザーが明示して使う場合の任意参照とする。対象PRが一意に定まらなければ、推測で別PRを書き換えない。
+既存PRのコメントは、CodexがGitHubの指摘・Issue・現head・差分を直接確認して対応する。標準の手順は軽量構成の steward（`.claude/skills/steward/SKILL.md`）で、最終headの照合は `scripts/check-pr-head.sh` が行う。旧 `pr-review-fix` Skill と helper は #197 で削除した（復元元は docs/lightweight-migration-plan.md の10章）。対象PRが一意に定まらなければ、推測で別PRを書き換えない。
 
 指摘の根拠、今回差分との因果、受入条件を確認し、関連する契約・呼出元・対称実装までまとめて点検する。妥当なIssue内修正は同じhead branchで行い、更新headの検証と再レビューを確認する。改善候補・既存の未変更問題・誤検知を、重大度だけで今回の必須修正へ広げない。
 

@@ -4,7 +4,6 @@ set -Eeuo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 REVIEW_FILE="${ROOT_DIR}/docs/code-review-contract.md"
-SKILL_FILE="${ROOT_DIR}/.agents/skills/pr-review-fix/SKILL.md"
 LEDGER_FILE="${ROOT_DIR}/docs/review-followups.md"
 
 required_initial_review_markers=(
@@ -18,7 +17,7 @@ required_initial_review_markers=(
   "既存コード全体の改善探索へ無制限に広げず"
 )
 
-for review_file in "${REVIEW_FILE}" "${SKILL_FILE}"; do
+for review_file in "${REVIEW_FILE}"; do
   for marker in "${required_initial_review_markers[@]}"; do
     grep -Fq -- "${marker}" "${review_file}" || {
       printf 'missing initial review contract marker in %s: %s\n' "${review_file}" "${marker}" >&2
@@ -42,37 +41,9 @@ for marker in "${required_agents_markers[@]}"; do
   }
 done
 
-required_skill_markers=(
-  "## FOLLOW-UPの記録・参照"
-  "発生元Issue / PR"
-  "対象機能・領域"
-  "FOLLOW-UPとした理由"
-  "今回後回しにしてもマージ可能と判断した根拠"
-  "想定される将来の症状 / 不具合"
-  "関連ファイル・モジュール等の調査入口"
-  '推奨扱い: `ISSUE` または `NOTE`'
-  "../../../docs/review-followups.md"
-  '`ISSUE` として台帳へ登録'
-  'P2を `FOLLOW-UP` かつ `ISSUE` と判定した場合'
-  "台帳登録commit"
-  'git push origin "HEAD:refs/heads/$HEAD_BRANCH"'
-  "EXPECTED_SHA"
-  "台帳登録後の新しいSHA"
-  "標準検証入口"
-  "security"
-  '`@codex review`'
-  "open"
-  "resolved"
-  "superseded"
-)
-
-for marker in "${required_skill_markers[@]}"; do
-  grep -Fq -- "${marker}" "${SKILL_FILE}" || {
-    printf 'missing FOLLOW-UP Skill marker: %s\n' "${marker}" >&2
-    exit 1
-  }
-done
-
+# The recording fields and the steps after registration live in the ledger itself
+# (checked below) and in docs/code-review-contract.md; the pr-review-fix Skill that
+# repeated them was removed in #197.
 required_ledger_markers=(
   "# Review Follow-ups"
   "Follow-up ID"

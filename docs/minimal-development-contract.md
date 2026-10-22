@@ -148,11 +148,10 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 | 初回Codex Review | AGENTS → `docs/code-review-contract.md` | 現行AGENTS Code Review Rulesのレビュー観点・初回標準探索、Review Evidence Contract、Severity/分類、Rule Promotion。一般reviewから必ず到達 |
 | 指摘の分類・修正・再検証 | AGENTS → `docs/code-review-contract.md` → GitHubのcomment / head / checksを直接確認 | 同じPR branch、full SHA照合、P2四分類、根拠あるBLOCKINGの修正、現head再検証・再review。全関連責務をまとめて確認し、回数だけで停止しない |
 | 既採用のSafe Auto-Fix / Auto-Merge | AGENTS / 条件表 → `docs/safe-auto-fix-auto-merge.md` | 人間の明示採用・全Safety Gate・記録主体・制限回数・現head検証。通常レビューの回数停止廃止をこの例外レーンの制限緩和に転用しない |
-| 手動比較評価 | 明示的な評価依頼 → auto-triage / Local Judge README | 通常レーンでは呼ばない。非権威・Secret・送信/課金・trusted branch等の境界は維持 |
 
 初回reviewを既存指摘専用Skillの自動起動に依存させない。[review正本](code-review-contract.md)はPR #174で旧AGENTSのCode Review Rules / Review Evidence Contract / Rule Promotionを移した。初回探索の全責務と証拠項目を移し、AGENTSの明示入口と関連テストから読めることを確認して旧詳細を短縮した。本文案の対象pathを置くだけでは移行完了ではない。
 
-2026-10-03の人間指示により、今後の通常コメント対応はpr-review-fixを自動起動せず、Codexが根拠を確認して直接実施する。同Skill・helperは手動資産として保持し、削除・Securityの回避はしない。レビュー回数ではなく未解決の実害・安全境界・仕様判断を停止条件とする。AGENTSのrouting同期はIssue #177で行う。Skill/helperは手動資産として保持する。
+2026-10-03の人間指示により、今後の通常コメント対応はpr-review-fixを自動起動せず、Codexが根拠を確認して直接実施する。同Skill・helperと auto-triage / Local Judge は #197 で削除した（復元元は lightweight-migration-plan.md の10章）。レビュー回数ではなく未解決の実害・安全境界・仕様判断を停止条件とする。AGENTSのrouting同期はIssue #177で行う。Skill/helperは手動資産として保持する。
 
 ## Phase 3 / 4への移行条件
 
