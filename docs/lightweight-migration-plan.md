@@ -140,8 +140,8 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 
 | 項目 | 変更前 | #197 後 | 注記 |
 | --- | --- | --- | --- |
-| 追跡ファイル全体 | 143 files / 1,011,056 B | 124 files / 718,183 B | #194〜#196 で軽量構成の候補・配置・試行記録が増えた分を含む（#197 着手時は 159 files / 1,147,986 B） |
-| 配布量 | 71 files / 704,858 B（template-guide の手動 copy） | 12 files / 41,588 B（`place.sh` が置くもの） | 参照用の docs は配布しない。Issue が指したときに ai-development のものを読む |
+| 追跡ファイル全体 | 143 files / 1,011,056 B | 124 files / 719,317 B | #194〜#196 で軽量構成の候補・配置・試行記録が増えた分を含む（#197 着手時は 159 files / 1,147,986 B） |
+| 配布量 | 71 files / 704,858 B（template-guide の手動 copy） | 12 files / 41,826 B（`place.sh` が置くもの） | 参照用の docs は配布しない。Issue が指したときに ai-development のものを読む |
 | 実装時の必読 | 7 files / 97,795 B | 3 files / 9,248 B（AGENTS.md、CLAUDE.md、steward） | 約 1/10。標準 flow・最小契約などは参照用に残した |
 | workflow | 6本 | 3本（`ci.yml`、`security.yml`、`slack-failure-alert.yml`） | 手動の JEV / Local Judge 3本を削除。Slack 通知は残した |
 | 検査入口 | 28 suites | 17 suites | 文書の固定文言だけを検査する8つと、削除した資産の専用4つを外した。`lightweight-template`（安全の文言、配置と復旧、照合）と `place.sh --check .` を足した |
