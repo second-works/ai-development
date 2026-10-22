@@ -299,7 +299,7 @@ UI Acceptanceでは最低限、次を確認する。
 
 - Plan Reviewは [Plan Review Gate](plan-review-gate.md) を正本とし、UI Level / PRODUCT未決定事項の具体的統合は後続子Issue #95で行う。本Issueでは独立したUI Gateを作らず、責務境界と参照先を定義する。
 - 検収は [Acceptance Verification](acceptance-verification.md) を正本とし、Visual/UI Acceptanceの具体的統合は後続子Issue #94で行う。本IssueではImplementation、Deploy、Product Acceptanceを混同しない責務境界を定義する。
-- Harnessの追加・変更は [Harness Minimalism / ETCSLV](ai-development-harness-inventory.md) に従う。
+- 検査やGateの追加・変更は、防ぎたい失敗と見直しの条件をIssueとPRに書く（[template-guide](template-guide.md) の12.2章）。
 - `NONE` に不要なUIチェックを課さず、`UTILITY` にPRODUCT相当の重いVisual Reviewを強制しない。
 - 自動検証はsemantic HTML、lint、既知のaccessibility ruleなど決定論的な範囲を優先し、主観的なデザイン品質を自動合否にしない。
 - 重要なUX判断、既存状態モデルとの衝突、Design Systemの強制につながる変更はDesign Decisionへエスカレーションする。

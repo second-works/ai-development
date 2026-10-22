@@ -118,7 +118,7 @@ IssueやPRでAIエージェントがToolを使う場合は、docs/ai-agent-secur
 
 ## 4.2 Harness Minimalism確認
 
-AIエージェントや開発Toolを追加または変更するIssueでは、docs/ai-development-harness-inventory.md の該当項目を確認する。
+AIエージェントや開発Toolを追加または変更するIssueでは、防ぎたい失敗と見直しの条件をIssueとPRに書く（中央の台帳は #197 で廃止）。
 
 - 解決する失敗モードと発火条件を記録する。
 - 入力とContext、出力とState変更、決定論的判定の可否を記録する。

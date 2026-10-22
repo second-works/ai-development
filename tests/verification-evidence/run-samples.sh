@@ -5,7 +5,6 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 DOC="${ROOT_DIR}/docs/acceptance-verification.md"
 FLOW="${ROOT_DIR}/docs/nine-standard-ai-development-flow.md"
-INVENTORY="${ROOT_DIR}/docs/ai-development-harness-inventory.md"
 
 assert_contains() {
   local file="$1"
@@ -43,9 +42,6 @@ assert_contains "$FLOW" 'Requirement → Risk → Test → Result → Evidence'
 assert_contains "$FLOW" 'Verification Evidence Contract / Residual Risk Summary'
 assert_contains "${ROOT_DIR}/docs/code-review-contract.md" 'Review Evidence Contractはレビュー指摘の成立条件とPR因果を記録する契約'
 assert_contains "${ROOT_DIR}/docs/code-review-contract.md" 'Verification Evidence Contract / Residual Risk Summary'
-assert_contains "$INVENTORY" 'テスト実行をRequirement検証と混同すること'
-assert_contains "$INVENTORY" 'Residual Risk Summary'
-assert_contains "$INVENTORY" '#119'
 
 doc_line="$(grep -nF '## 5. Verification Evidence Contract / Residual Risk Summary' "$DOC" | cut -d: -f1)"
 record_line="$(grep -nF '## 6. 検収記録' "$DOC" | cut -d: -f1)"

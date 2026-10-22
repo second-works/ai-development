@@ -267,12 +267,11 @@ Security PreflightはBash 5以上が必要です。macOS標準`/bin/bash` 3.2で
 
 テンプレート利用プロジェクトでは、適用可否を「対象外」とだけ書かず、対象Tool、データ分類、代替制御、承認者まで記録する。
 
-## 12.2 Harness MinimalismとETCSLV台帳
+## 12.2 検査やGateを足すとき・減らすとき
 
-AI開発テンプレートへ新しいハーネスを追加する前に、docs/ai-development-harness-inventory.md へ失敗モード、発火条件、Context、State、決定論的判定、コスト、重複、安全上の必須性、判定、削除・再評価条件を記録する。
+検査、Gate、フックなどを足すときは、防ぎたい失敗、いつ働くか、削除や見直しの条件を、そのIssueとPRに書く。中央の台帳（旧 `docs/ai-development-harness-inventory.md`）は #197 で廃止した。
 
-既存ハーネスを削除または簡素化する場合は、対象の受入条件、代替制御、影響範囲、実測結果、対象SHAを記録する。
-新規プロジェクトでは、台帳を常時Contextへ投入せず、追加または変更するハーネスに関係する項目を参照する。
+既存の検査を削除または簡素化するときは、守っていた結果、代わりの保証、影響範囲、対象SHAを記録し、代わりの保証が成り立ってから削除する（[test-design](test-design.md)）。
 
 モデル、Codex、Tool、CIの能力向上だけを理由にSecurity Boundary、Human Approval Boundary、Production保護を弱めない。
 対象外やREMOVE_CANDIDATEの判定は、失敗モードと代替制御を確認した別IssueまたはPRで決定する。
@@ -370,17 +369,10 @@ Merge後の次Issue着手と、Deploy後の実利用検証・検収は独立し�
 
 新しい開発リポジトリを作成したら以下を確認します。
 
-- [ ] 最小 `AGENTS.md` と同revisionの `docs/` 一式を配置（単体copyしない）
-- [ ] `.agents/skills/` と参照原本 `templates/` を配置
-- [ ] `docs/nine-standard-ai-development-flow.md` / `docs/code-review-contract.md` / `docs/test-design.md` / `docs/minimal-development-contract.md` と条件表の参照先を対象projectで開ける
-- [ ] ai-development自身の検証行を除き、対象projectの `scripts/verify.sh` とCIを設定
-- [ ] `docs/ai-agent-security-boundary.md` を配置
-- [ ] `docs/ai-development-harness-inventory.md` を配置
-- [ ] `docs/architecture/framework-decision.md` を配置
-- [ ] `docs/plan-review-gate.md` を配置
-- [ ] 親Issueテンプレートを配置
-- [ ] 子Issueテンプレートを配置
-- [ ] PRテンプレートを配置
+- [ ] `templates/lightweight/place.sh` で軽量構成を配置（dry-run の差分を確かめてから。2章）
+- [ ] 対象projectの `scripts/verify.sh` と、README のビルド・テスト手順を設定
+- [ ] `.github/pr-gate-checks` に必須の check 名を書く
+- [ ] 情報の読み取りや外部送信を伴う案件では `docs/ai-agent-security-boundary.md` の確認方法を Issue に書く
 - [ ] 技術スタックに合うActions CIを配置
 - [ ] 初期Bootstrap時にテスト0件でも意図せずCI失敗しないことを確認
 - [ ] 最初のテスト作成後はテスト失敗がCIを確実に失敗させることを確認

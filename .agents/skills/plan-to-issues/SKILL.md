@@ -19,6 +19,7 @@ description: 合意済みの計画をGitHubの親Issueと子Issueへ変換して
 - 依存関係が分からず、順番を決められない
 - UI、データ移行、Security、本番などの重要な判断を推測する必要がある
 - 対象のrepositoryを特定できない
+- 子Issueの目的（Goal）、完了の判定（Done）、確かめ方（Verification）、安全境界（Risk Tier、人間の承認が必要な操作、扱う情報と送信先）のどれかを、確かめられる形で書けない
 
 調査しないと決められない事項は、調査用のIssueとして分ける。
 

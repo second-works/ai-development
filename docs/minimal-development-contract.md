@@ -36,7 +36,7 @@ Safetyの適用確認は常時行うが、専門項目を全案件へ複製し�
 | Deploy / RC監査 | 配備・Release Candidate・本番投入を伴う | [Deployment](deployment-release-design.md)。artifact identity、監査、復旧、承認不足なら投入停止 |
 | Product Acceptance | 実利用・利用者確認がDoneに含まれる、または配備する | [Acceptance](acceptance-verification.md)。実装/merge/deployと受入を区別。対象不一致、未実施、BLOCKERを完了にしない |
 | State / 観測 | 複数段階の再開・配備/検収artifact・レビュー修正の対象識別が必要 | [Execution state](ai-execution-state.md)。今回必要な識別値と取得時刻をPRへ。全Issueへのschema全文転記は廃止候補。旧SHA成功を再利用しない |
-| Harness / 検証変更 | test・Gate・CI・実行環境の保証を追加/統合/削除する | 現行[Harness台帳](ai-development-harness-inventory.md)・関連test。失敗モードと削除後の保証先をIssue/PRへ記載。代替成功前に旧保証を消さない |
+| Harness / 検証変更 | test・Gate・CI・実行環境の保証を追加/統合/削除する | [template-guide](template-guide.md#122-検査やgateを足すとき減らすとき) の12.2章と [test-design](test-design.md)・関連test。防ぎたい失敗と削除後の保証先をIssue/PRへ記載。代替成功前に旧保証を消さない |
 | 親Issue完了 | 子PR merge後の親Issue Close / 全体完了判断 | [親完了正本](parent-issue-completion.md)を適用。必要な全子IssueのMerge / Close、親のチェックボックス更新、全体DoneとPR / CI / Security / Review / 手動確認の照合、warning / deprecation等の残課題確認・必要な後続Issue、人間最終確認を必須とする |
 | 既採用Safe Auto-Fix / Auto-Merge | 人間が既に例外レーンを明示採用したprojectのみ | [Safety Gate](safe-auto-fix-auto-merge.md)。全条件・記録された主体・同一head検証を満たす場合だけ既存例外を適用。未採用projectへの新規導入は別の人間判断。通常の直接コメント対応から例外を推定しない |
 | Repository / 依存保守 | 新project、repo保護・Secrets/scanner設定、依存更新 | [GitHub baseline](github-repository-security-baseline.md)、[標準フロー](nine-standard-ai-development-flow.md)。CI/Security/reviewを維持し、メジャー更新はbreaking changeと用途互換を確認。設定変更は人間承認 |
@@ -185,7 +185,7 @@ project範囲、人間承認境界。Risk Tierと理由を一行記録。
 | Implementation Workflow / Standard Verification Gate / GitHub Actions CI / Before PR / PR Description | 通常実装入口 → nine-standard-ai-development-flow.md。verify順/対象外理由/環境固定、commit・PR前停止、self-review、CI、証拠・残課題 |
 | Parent Issue Completion | 親Close入口 → parent-issue-completion.md（先行作成）。元の5項目全体 |
 | Code Review Rules / Review Evidence Contract / Rule Promotion | 初回・指摘対応入口 → code-review-contract.md（先行作成）。探索・根拠・四分類・保証昇格。通常Skill起動/回数停止のみ最新人間指示へ変更。既採用Safe Auto-Fix / Auto-Merge例外は条件表とSafety Gate正本へ到達させ、同レーン固有の制限を保持 |
-| Harness Minimalism | 検証変更trigger → ai-development-harness-inventory.md。失敗モード、代替、実測、削除順、安全境界を保持。毎Issue台帳のみ削減 |
+| Harness Minimalism | 検証変更trigger → [template-guide](template-guide.md#122-検査やgateを足すとき減らすとき) の12.2章と [test-design](test-design.md)。失敗モード、代替、実測、削除順、安全境界をIssue/PRへ記録する（中央の台帳は #197 で廃止） |
 | GitHub Guardrails / Dependabot / CodeQL・Code Scanning | repo設定・依存保守trigger → github-repository-security-baseline.md / 標準フロー。人間設定承認・メジャー用途互換・利用不能記録 |
 | Secrets / AI Agent Security Boundary | 常駐禁止と情報読取・外部書込入口 → ai-agent-security-boundary.md。分類/環境/allowlist/承認、非trusted、例外理由・代替・承認者 |
 | Security Preflight | 現head Security入口 → 標準フローとtemplates/security/security-preflight.sh。4状態・fallback・Bash 5・未監査/失敗の優先関係 |
@@ -239,7 +239,7 @@ MDC-09 / MDC-10: 内部の改善提案を含む評価triggerへ原文どおり�
 | PRODUCTの5段階参照・Component / Visual / Accessibility | product-ui-standard.mdのAI / Codex Reference Contractと案件docs/design.md。重要判断欠落・矛盾・取得不能時停止。非PRODUCTへ過剰適用しない |
 | Security分類・環境・Read/Write・最小権限・承認・例外・Prompt Injection | Boundariesへ今回値、ai-agent-security-boundary.mdの適用チェック。機密送信・権限・Production等は明示承認まで停止。適用制御の例外は理由・残るリスク・代替制御・承認者を必須とする |
 | テスト6観点・安全なテスト削除 | Verificationで必要ケース・期待結果を選ぶ。test-design.mdに従い代替成功前に旧保証を消さない |
-| Harness / ETCSLV・失敗モード・再評価条件 | 検証・Tool保証変更時だけai-development-harness-inventory.mdを参照し台帳項目・代替保証・削除順・再評価条件を記録 |
+| Harness / ETCSLV・失敗モード・再評価条件 | 検証・Tool保証変更時だけ [template-guide](template-guide.md#122-検査やgateを足すとき減らすとき) の12.2章と [test-design](test-design.md) を参照し、防ぎたい失敗・代替保証・削除順・再評価条件をIssue/PRへ記録 |
 | Current State / acceptance_status / Product Acceptance / 対象SHA | 再開・検証引き継ぎ・検収識別時だけai-execution-state.mdを参照。schema v3と現head検証、同一artifact照合・不一致停止は保持 |
 | Release policy / RC audit / 検収計画 / 全体完了 | 適用時はdeployment-release-design.md、acceptance-verification.mdへ接続。監査結果・RC静的監査・Staging・identity・検収条件を記録。親Closeはparent-issue-completion.mdの5項目を確認し、MergeだけでProduct Acceptedにしない |
 
@@ -323,10 +323,10 @@ Phase 4の削減準備。基準main `059fc9ea043b6b724cbfd68fad4f2859a23b350e` �
 
 ## Issue #183: 独立保証後の台帳検査削減
 
-#181/PR #182の独立回帰成功とmain包含後、2026-10-04の人間による提示差分の個別承認に基づき、Harnessの台帳schema・固定文言・CI登録だけの検査を削減する。台帳資料は保持し、書式一致をCI条件にする責務を外す。削減前原文と責務分類・保証先は [削減記録](simplification-inventory.md#issue-183-harness台帳検査の削減) を参照する。
+#181/PR #182の独立回帰成功とmain包含後、2026-10-04の人間による提示差分の個別承認に基づき、Harnessの台帳schema・固定文言・CI登録だけの検査を削減する。台帳資料は保持し、書式一致をCI条件にする責務を外す。削減前原文と責務分類・保証先は 削減記録（`simplification-inventory.md`。#197 で削除、復元元 `f2f8d3f`） を参照する。
 
 残存28suite、Cloud Agentと旧間接6suiteの独立CI、安全正本と必要時参照は保持する。Security / Review / Human Approvalの意味を緩めず、既存projectに移行を強制しない。#161/PR #167の追加メタ検査は採用せず、既存Issue/PRは人間の整理判断まで保持する。Phase 5受入は別途確認する。
 
 ## Issue #185: 最小フローの実利用受入
 
-READMEをIssue生成・Codex実装の入口へ同期する。最小Issue #181/#183/#185、直接コメント修正、guideの実copyと非上書き、生成verify正常/失敗時停止、安全境界、旧Issue #157/#161〜#163の再判定は [実利用受入記録](simplification-acceptance.md) を参照する。最終headのCI/Security/Reviewと親の完了照合はPRとGitHub親 #168へ記録する。検証前の結果を完了としない。
+READMEをIssue生成・Codex実装の入口へ同期する。最小Issue #181/#183/#185、直接コメント修正、guideの実copyと非上書き、生成verify正常/失敗時停止、安全境界、旧Issue #157/#161〜#163の再判定は 実利用受入記録（`simplification-acceptance.md`。#197 で削除、復元元 `f2f8d3f`） を参照する。最終headのCI/Security/Reviewと親の完了照合はPRとGitHub親 #168へ記録する。検証前の結果を完了としない。
