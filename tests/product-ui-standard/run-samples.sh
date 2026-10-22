@@ -222,7 +222,6 @@ for needle in \
   fi
 done
 assert_contains "$CI_WORKFLOW" 'bash tests/product-ui-standard/run-samples.sh'
-assert_contains "$CI_WORKFLOW" 'bash tests/issue-template-ui/run-samples.sh'
 
 for needle in \
   'Nine PRODUCT UI Standard v1' \
@@ -280,6 +279,7 @@ assert_contains "${README}" 'docs/product-ui-standard.md'
 assert_contains "${README}" 'templates/app/docs/design.md'
 
 
-assert_contains "${ROOT_DIR}/AGENTS.md" 'Framework Decision → UI Level → docs/product-ui-standard.md / Component Decision Rules → 案件 docs/design.md → 採用component / library固有docs'
+# The PR template and AGENTS.md are now the lightweight ones (#197). Their safety
+# wording is checked in tests/lightweight-template.
 
 printf 'PRODUCT UI standard contract: ok\n'

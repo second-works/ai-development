@@ -3,7 +3,6 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 doc="$repo_root/docs/deployment-release-design.md"
-parent="$repo_root/.github/ISSUE_TEMPLATE/parent-issue.md"
 flow="$repo_root/docs/nine-standard-ai-development-flow.md"
 guide="$repo_root/docs/template-guide.md"
 harness="$repo_root/docs/ai-development-harness-inventory.md"
@@ -66,9 +65,8 @@ grep -Fq 'SECURITY_STATUS=SECURITY_PASSED' <<<"$security_result" || {
   exit 1
 }
 
-assert_contains "$parent" '../blob/main/docs/deployment-release-design.md'
-assert_contains "$parent" '監査結果とRC identityを照合'
-assert_contains "$parent" '../blob/main/docs/acceptance-verification.md'
+# The PR and Issue templates and AGENTS.md are now the lightweight ones (#197). Their
+# safety wording is checked in tests/lightweight-template.
 assert_contains "$doc" 'Release Candidate SHA / artifact identity、RC静的監査・Staging確認、Full-System Security Auditの結果・理由'
 
 printf 'deployment design documentation contract: ok\n'

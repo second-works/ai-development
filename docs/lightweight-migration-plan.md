@@ -118,3 +118,13 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 | 限定試行先（Codex計画の候補はhermes-self-improvement） | **未確認** |
 | PR #190を#194より先にmergeするか | **未確認** |
 | 既配布済みrepoのauto-triage等の扱い | **未確認**。本計画の範囲外として各repoで判断 |
+
+## 10. 切り替えの記録（#197）
+
+所有者の承認（2026-10-22）に従い、3つのPR（A 切り替え、B レビュー補助一式の削除、C 履歴docsと文書契約testsの整理）で進める。1子Issue = 1 PR の例外として #197 に記録した。削除したものは、下の「削除直前のmain」から復元できる。
+
+| PR | 削除直前のmain | 削除・置き換えたもの | 守っていた結果 | 代わりの保証先 |
+| --- | --- | --- | --- | --- |
+| A | `1a4fb71797b9ab02023ab24024cc6755de35a870` | repo直下の AGENTS.md の旧本文、旧 `plan-to-issues`、旧 Issue / PR テンプレート（軽量版に置き換え）。template-guide の1〜7章 | 作業境界、停止条件、安全ルール、Issue / PR の記入欄 | 軽量版の AGENTS.md・steward・テンプレート（`tests/lightweight-template` で安全の文言を検査）。repo直下とテンプレートの一致は `place.sh --check .`（同テストと CI） |
+| A | 同上 | `tests/document-concision`、`template-simplification`、`current-state`、`adaptive-development-flow`、`template-change-evaluator`、`plan-review-gate`、`issue-template-ui` | 旧 AGENTS.md・旧テンプレート・docs の固定文言 | 安全の文言は上と同じく `tests/lightweight-template`。切り替えで対象の文言そのものがなくなったので、残りは廃止 |
+| A | 同上 | 残す tests 10個の、旧 AGENTS.md・旧テンプレートについての確認（docs とスクリプトについての確認は残した） | 同上 | 同上 |

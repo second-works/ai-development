@@ -7,8 +7,6 @@ doc="$repo_root/docs/acceptance-verification.md"
 flow="$repo_root/docs/nine-standard-ai-development-flow.md"
 deployment="$repo_root/docs/deployment-release-design.md"
 guide="$repo_root/docs/template-guide.md"
-parent="$repo_root/.github/ISSUE_TEMPLATE/parent-issue.md"
-pr="$repo_root/.github/pull_request_template.md"
 
 assert_contains() {
   local file="$1"
@@ -80,13 +78,8 @@ assert_contains "$deployment" 'acceptance-verification.md'
 assert_contains "$deployment" 'Monitoring開始 / Rollback判断'
 assert_contains "$deployment" 'Monitoring / Rollbackを妨げない'
 assert_contains "$guide" 'acceptance-verification.md'
-assert_contains "$parent" '# Verification'
-assert_contains "$parent" '環境・成功/失敗条件・人間確認・対象artifact'
-assert_contains "$parent" 'Acceptance Verification'
-assert_contains "$parent" '../blob/main/docs/acceptance-verification.md'
-assert_contains "$parent" '子PRのMergeだけでなく実利用シナリオと人間の最終確認'
-assert_contains "$pr" '# 実利用検証 / Product Acceptance'
-assert_contains "$pr" 'Acceptance Verification'
+# The PR and Issue templates and AGENTS.md are now the lightweight ones (#197). Their
+# safety wording is checked in tests/lightweight-template.
 assert_contains "$guide" '次Issue着手と、Deploy後の実利用検証・検収は独立した工程'
 
 flow_line="$(grep -nF 'Production Deploy後は、Health Check / Smoke Testとは別に実利用シナリオ' "$flow" | cut -d: -f1)"

@@ -6,7 +6,6 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 REVIEW_FILE="${ROOT_DIR}/docs/code-review-contract.md"
 SKILL_FILE="${ROOT_DIR}/.agents/skills/pr-review-fix/SKILL.md"
 FLOW_FILE="${ROOT_DIR}/docs/nine-standard-ai-development-flow.md"
-PR_FILE="${ROOT_DIR}/.github/pull_request_template.md"
 README_FILE="${ROOT_DIR}/README.md"
 GUIDE_FILE="${ROOT_DIR}/docs/template-guide.md"
 
@@ -60,28 +59,11 @@ for marker in \
   assert_contains "$FLOW_FILE" "$marker"
 done
 
-for marker in \
-  '- 差分:' \
-  '- 判断と理由:' \
-  '- Issue受入条件:' \
-  '- 変更しない範囲 / 主な影響:' \
-  '- 標準検証 / 手動確認:' \
-  '- 対象SHA:' \
-  '- CI:' \
-  '- Security Preflight判定:' \
-  '- Codex Review:'; do
-  assert_contains "$PR_FILE" "$marker"
-done
+# The PR template and AGENTS.md are now the lightweight ones (#197). Their safety
+# wording is checked in tests/lightweight-template.
 
-for marker in \
-  'Review Evidence Contract' \
-  'P0 / P1 / BLOCKING P2:' \
-  '非BLOCKING P2の分類・Follow-up:' \
-  '修正時のPR番号・head branch・修正後SHA:'; do
-  assert_contains "$PR_FILE" "$marker"
-done
 
-for file in "${ROOT_DIR}/AGENTS.md" "$REVIEW_FILE" "$SKILL_FILE" "$FLOW_FILE" "$PR_FILE" "$README_FILE" "$GUIDE_FILE"; do
+for file in "$REVIEW_FILE" "$SKILL_FILE" "$FLOW_FILE" "$README_FILE" "$GUIDE_FILE"; do
   assert_absent "$file" 'P2は原則としてMerge前に修正する。残す場合は人間が理由を確認して明示判断する。'
   assert_absent "$file" 'P2のみ残る場合は人間の理由確認と明示判断が必要である。'
   assert_absent "$file" 'P2が0件、または残置理由を人間が明示判断'

@@ -2,206 +2,102 @@
 
 ## 1. このリポジトリの役割
 
-`ai-development` は、各AI開発プロジェクトで共通利用する開発ルール・Issue/PRテンプレート・CI/セキュリティ設定の原本を管理するリポジトリです。
+`ai-development` は、各AI開発プロジェクトで共通に使う開発ルール、Issue / PR テンプレート、CI / セキュリティ設定の原本を管理するリポジトリです。
 
-新しいプロジェクトでは、このリポジトリの内容をそのまま全部コピーするのではなく、プロジェクトの技術構成に合わせて必要なテンプレートを選び、調整して利用します。
+標準の構成は、`templates/lightweight/` の軽量構成です（#192 で切り替え。限定試行の記録は [lightweight-trial](lightweight-trial.md)）。ほかの資料（UI、Deploy、検収、Security境界など）は、Issue が指したときに読む参照用の資料です。
 
-基本思想は次の分担です。
+役割の分担:
 
-- ChatGPT: 要件整理、設計、親Issue/子Issueの作成、Issue品質チェック
-- GitHub: Issue、PR、履歴、CI、セキュリティ、マージ制御
-- Codex: Issue単位の実装、ローカルテスト、PR作成、既存PRのhead branchでの修正
-- GitHub Actions: Codexとは独立した機械的な再検証
-- 人間: 仕様確定、例外判断、最終レビュー、Merge
+- Codex: 計画とIssue化（`.agents/skills/plan-to-issues/`）
+- Claude Code: Issueの実装から、レビュー指摘への対応、マージ依頼まで（`.claude/skills/steward/`）
+- Codex Review: 正式レビュー
+- GitHub Actions: Codex / Claude Code とは独立した機械的な再検証
+- 人間: 重要な判断、検収、Merge
 
 ## 2. 新規プロジェクト開始時の使い方
 
-新しいプロジェクトでは、まずGitHubに対象プロジェクト用リポジトリを作成します。
+新しいプロジェクトでは、まず GitHub にリポジトリを作り、軽量構成を配置します（下の手順）。そのうえで、技術構成に合わせて次を設定します。
 
-その後、原則として以下を準備します。
+1. `.github/workflows/ci.yml`（8章の技術構成別テンプレートから選ぶ）
+2. Security Preflight と、利用できれば CodeQL（12章）
+3. Dependabot（10章）と Secrets 管理の方針（11章）
+4. Ruleset / Branch protection と `Automatically delete head branches`（9章）
+5. `.github/pr-gate-checks` に、マージ依頼の前に必須とする check の名前（CI と Security の job 名）
+6. README に、プロジェクト固有のビルド、テスト、使ってはいけない環境
 
-1. `AGENTS.md` と、その参照先を支える `docs/` 一式（下記配置手順）
-2. `docs/ai-agent-security-boundary.md`
-3. `docs/ai-development-harness-inventory.md`
-4. `.github/ISSUE_TEMPLATE/parent-issue.md`
-5. `.github/ISSUE_TEMPLATE/child-issue.md`
-6. `.github/pull_request_template.md`
-7. `.github/workflows/ci.yml`
-8. Dependabot設定
-9. Secrets管理方針
-10. Security Preflight
-11. 利用可能ならCodeQL
-12. Ruleset / Branch protection
-13. `Automatically delete head branches` の有効化
-14. Framework Decision正本文書（`docs/architecture/framework-decision.md`）を配置
-15. Plan Review正本文書（`docs/plan-review-gate.md`）を配置
-16. `.agents/skills/` と参照用 `templates/` 一式を配置し、Skill / State契約 / 標準検証原本への入口を保つ
-
-設定後、計画書を親Issue・子Issueへ変換します。新規Web/UI案件ではFramework DecisionをUI Level DecisionとPlan Reviewより前に確認し、その結果を引き継ぎます。子Issue単位でCodexに実装させます。ただし、Issue化の前に [docs/plan-review-gate.md](plan-review-gate.md) のPlan Review Gate（Grilling）を実施します。重大な未決定事項がある場合はNEEDS_DECISIONとしてIssue化を止め、Design Decision確定後に再Reviewします。
-
-
-
+情報の読み取りや外部への送信を伴う案件では、[AI Agent Security Boundary](ai-agent-security-boundary.md)（`docs/ai-agent-security-boundary.md`）で情報分類・宛先・権限・承認を確かめます。新規Web/UI案件では [Framework Decision](architecture/framework-decision.md) と [UI標準](product-ui-standard.md) を、計画の重要な未決は [Plan Review Gate](plan-review-gate.md) を、Issue が指したときに読みます。
 
 ### 最小AGENTSと参照先の配置
 
-最小AGENTSは単体で配布しない。`AGENTS.md` と `docs/` 一式を同じ原本revisionから配置する。必須入口には `docs/nine-standard-ai-development-flow.md`、`docs/code-review-contract.md`、`docs/test-design.md`、`docs/design-state-modeling.md`、`docs/parent-issue-completion.md`、`docs/minimal-development-contract.md` があり、条件表から参照するSecurity / Framework / UI / RAG / State / Acceptance等も含める。directory構造を維持し、参照先を選別して欠落させない。
+配置は `templates/lightweight/place.sh` で行います。置く前に全部の配置先を確かめ、既存の設定を上書きせず、衝突があれば何も書かずに止まります。既存の AGENTS.md / CLAUDE.md には管理ブロックを足し、`.claude/settings.json` は足りない設定だけを足します。詳しい挙動と復旧（`--restore`）、更新（再実行）、照合（`--check`）は [templates/lightweight/README.md](../templates/lightweight/README.md) を参照します。
 
-Skillの入口・State契約・文書からの原本参照も維持するため、`.agents/skills/` と `templates/` を参照資産として併せて配置する。配置はSkill/helperの実行許可や自動起動を意味しない。通常reviewはCodexが直接対応する。Actions・Dependabot・verifyの実行設定は引き続き技術構成に合うものを選び、以下の原本copyだけで実行設定済みと扱わない。
-
-次の例は新規projectの未配置directoryに限定する。`template_source_root` は原本checkout、`project_output_root` は対象projectのabsolute pathへ設定する。既存projectへ一括上書きせず、既存のAGENTS / docsとの責務・差分を個別に確認する。
+次の例では、`template_source_root` に ai-development の checkout、`project_output_root` に対象プロジェクトの absolute path を設定します。配置先は git リポジトリの root に限ります。
 
 ```bash
 set -e
-: "${template_source_root:?原本checkoutのabsolute pathを設定する}"
+: "${template_source_root:?ai-developmentのcheckoutのabsolute pathを設定する}"
 : "${project_output_root:?対象projectのabsolute pathを設定する}"
-for path in AGENTS.md docs .agents/skills templates; do
-  test -e "$template_source_root/$path"
-  if test -e "$project_output_root/$path"; then
-    printf '既存の配置先を上書きしません: %s\n' "$path" >&2
-    exit 1
-  fi
-done
-mkdir -p "$project_output_root/.agents"
-# ai-development自身の検証行は生成projectへ持ち込まない。
-awk '!/^このrepoの検証は全 /' "$template_source_root/AGENTS.md" > "$project_output_root/AGENTS.md"
-cp -R "$template_source_root/docs" "$project_output_root/docs"
-cp -R "$template_source_root/.agents/skills" "$project_output_root/.agents/skills"
-cp -R "$template_source_root/templates" "$project_output_root/templates"
+mkdir -p "$project_output_root"
+git -C "$project_output_root" rev-parse --git-dir >/dev/null 2>&1 || git -C "$project_output_root" init -q
+"$template_source_root/templates/lightweight/place.sh" --dry-run "$project_output_root"
+"$template_source_root/templates/lightweight/place.sh" "$project_output_root"
 ```
 
-配置後、root AGENTS内の `docs/` / Skill path、および `docs/minimal-development-contract.md` の条件表の参照先が対象projectで開けることを確認する。案件固有の `docs/design.md` はPRODUCT案件で別途作成する。必要な正本が欠落・取得不能ならIssue生成・実装開始へ進まず、配置を修復する。`scripts/verify.sh` とCIは下記の標準検証・技術スタック別手順で設定する。
-
+dry-run の差分を確かめてから配置します。プロジェクト固有の `scripts/verify.sh` などを残すときは `--keep <path>` を付けます。配置は有効化や検証の成功ではありません。新しい Claude Code のセッションでフックが読み込まれること、`./scripts/verify.sh`、CI、Security は別に確かめます。
 
 ## 2.1 Risk Tierの記入
 
-新規プロジェクトでは `docs/adaptive-development-flow.md` も配置する。Child IssueとPRのRisk Tier欄に `LOW / MEDIUM / HIGH` の今回値と理由を記入し、詳細は [正本文書](adaptive-development-flow.md) を参照する。
-
-既定MEDIUM、混在は最大Tier、安全影響不明・Gate変更はHIGH。LOWは実行動作・API・依存・workflow・安全ルールに影響しない文言や表示だけの変更に限定する。LOWの目的・範囲・根拠・テスト証拠は一段落で記録でき、対象外欄は理由をまとめて参照できる。必須情報を空欄にしてよいという意味ではない。
-
-MEDIUMでは影響と通常テスト、HIGHでは安全境界・復旧・必要な承認と追加検証を記す。標準検証・CI・Security・Codex Review・Human Merge判断・適用対象Acceptanceは省略しない。Issue化前、実装開始時、PR提出前、影響変更時に再判定する。
-
-## 2.2 テンプレートに記入する値
-
-テンプレートは今回の判断・範囲・証拠を記入し、停止条件、安全境界、検収、レビュー収束の詳細は正本文書を参照する。リンクだけで必要な今回値を省略してはならない。
-
-記述はDecision Firstとし、冒頭で採用案、主要理由、影響を把握できるようにする。Non-goalsへ今回扱わない範囲を記録し、Alternativesは原則として案と主要な却下理由の表にする。背景、用語、将来拡張などの定型章は判断に必要な場合だけ追加する。
-
-生成後は、重複説明、意思決定に不要な章、同じ理由の言い換え、将来の可能性だけを述べる文章を削除する。コード、diff、Issueから自明な内容も再掲しない。ただし、既存Gateが要求する今回値と証拠は削除しない。
-
-Design Decisionの最小構成は次のとおりとする。案件固有の判断や既存Gateに必要な情報がある場合だけ節を追加する。
-
-```md
-# Decision
-採用:
-理由:
-影響:
-
-# Alternatives
-| 案 | 却下理由 |
-| --- | --- |
-
-# Non-goals
-- 今回扱わないもの
-
-# Implementation Notes
-意思決定の理解に必要な場合のみ記載
-```
-
-| Tier | テンプレートに記入する値 | 正本参照で不足しない情報 |
-| --- | --- | --- |
-| LOW | 目的、範囲、理由、テスト証拠を一段落で記入する。 | 必須Gate、Security、Review、人間Merge判断。 |
-| MEDIUM | 目的、範囲、影響、6観点のテスト、対象SHAと検証結果を記入する。 | 停止条件、安全境界、検収、レビュー収束の詳細。 |
-| HIGH | MEDIUMに加え、安全境界、復旧、必要な人間承認と追加検証を記入する。 | 正本文書の制約を満たした具体的な承認・例外の根拠。 |
-
-詳細をテンプレートへ再掲せず、[Adaptive Development Flow](adaptive-development-flow.md)、[AI Agent Security Boundary](ai-agent-security-boundary.md)、[Acceptance Verification](acceptance-verification.md)、[Review Follow-ups](review-followups.md)、[Safe Auto-Fix / Auto-Merge](safe-auto-fix-auto-merge.md)を正本として参照する。
+子Issue と PR には、Risk Tier（`LOW / MEDIUM / HIGH`）と理由を記入します。既定は MEDIUM、混在は最大の Tier、安全への影響が不明なものと Gate 自体の変更は HIGH です。LOW は、実行の動作・API・依存・workflow・安全ルールに影響しない文言や表示だけの変更に限ります。HIGH では、安全境界、復旧、必要な人間の承認と追加の検証を書き、別のセッションでもレビューします。Tier によって標準検証、CI、Security、正式レビュー、人間の Merge 判断を免除しません。詳しくは [Adaptive Development Flow](adaptive-development-flow.md) を参照します。
 
 ## 3. AGENTS.md
 
-### 目的
+軽量構成の `AGENTS.md`（約 2.4 KB）は、作業境界、検証とレビュー、必要なときに読むものだけを持ちます。標準 flow や最小契約を毎回読む必要はありません。主なルール:
 
-CodexなどのAIエージェントに、プロジェクトで守るべき共通ルールを伝えるためのファイルです。
+- Issue の範囲内だけ変更し、1子Issue = 1 PR で進める
+- main へ直接 push しない、force push しない、他者の未コミット変更を守る
+- 本番、Deploy、破壊操作、認証、権限、課金、公開範囲、repo 保護設定の変更と、新しい重要設計は人間の承認を得る
+- Secrets と実データを commit、Issue、PR、log へ出さない
+- commit と PR の前に標準検証と自己レビューを行い、失敗・実行不能・全件 skip を成功にしない
+- PR 後は最終 head で CI、Security、正式レビューを別々に確かめ、重大な指摘を未解決のままマージを依頼しない
+- 実装、CI 成功、ユーザー検収を区別する
 
-主なルール:
-
-- GitHub Issueを仕様の基準とする
-- 1子Issue = 1 PR
-- Issue範囲外を実装しない
-- 依存Issueを確認する
-- mainへ直接pushしない
-- 必要なテストを実行する
-- GitHub Actions CIの結果も確認する
-- Codexレビュー後の修正は既存PRのhead branchへ反映し、head SHA更新を確認する
-- レビュー指摘はReview Evidence Contractで成立条件・期待結果・実結果・PR因果・受入条件・再現または静的根拠を記録する
-- 秘密情報をcommitしない
-- 仕様が不明確なら推測で拡張しない
-
-### 新規プロジェクトでの扱い
-
-上記「最小AGENTSと参照先の配置」に従い、`ai-development/AGENTS.md` と `docs/` / Skill / 参照原本を併せて配置します。AGENTS末尾のai-development自身に固有な検証・配置履歴行は持ち込まず、対象projectの `./scripts/verify.sh`、技術構成、禁止事項を設定します。AGENTSだけのコピーで移行完了にしません。
+プロジェクト固有のルールは、管理ブロックの外（AGENTS.md の上の節）に書きます。
 
 ## 4. 親Issueテンプレート
 
 ファイル: `.github/ISSUE_TEMPLATE/parent-issue.md`
 
-親IssueはGoal / Context / Scope・Boundaries / Non-goals / Done / Verification / Children・Dependenciesでロードマップを記録する。Plan Reviewの判定・理由・正本参照はContextへ短く保存する。Risk Tierと安全境界は常時必要。専門事項は[最小契約の条件付き参照](minimal-development-contract.md#条件付き参照)に従い該当時だけ追加し、非該当の空欄は作らない。親の全体Doneは子Mergeだけでなく目的と人間確認で判定する。
+Goal / Context / Scope・Boundaries / Non-goals / Done / Verification / Children・Dependencies でロードマップを記録します。Done は子PRのマージだけでなく、利用者の確認や実際の利用で判定できる条件で書きます。
 
 ## 4.1 デプロイ設計とRelease / Production計画
 
-Issue計画時に、実装完了と本番投入可能を分けて記録します。
-Deployment as Codeの正本は [docs/deployment-release-design.md](deployment-release-design.md) です。
-Release / Productionが適用される場合に、Production runtime、Container、Persistent data、Deployment method、Secretsの扱い、backup / migration、Full-System Security Audit、Smoke Test、Health Check、Monitoring、Rollbackの今回値または設計記録への参照を追加します。非Deploy案件には空欄を設けません。
-
-プロジェクトごとにCloudflare、Home PC / VPS、self-hosted runner、Docker / Compose、Staging、自動Deploy、人間承認の要否を判断し、不要なものは理由を記録します。
-MergeはProduction Deployを意味しません。CI、PR単位Security Check、Full-System Security Auditの`PASS`または理由と適格性を確認した`NOT_APPLICABLE`、Release判定、必要なbackupとmigration確認を経てProductionへ進み、Deploy後のHealth CheckとRollbackまで確認可能にします。
-詳細な手順・データ互換性・Secretsの安全条件は正本文書へ集約し、親Issueや標準フローへ重複記載しません。
+Release / Production が適用される案件では、[docs/deployment-release-design.md](deployment-release-design.md) を Issue から指し、実装完了と本番投入可能を分けて記録します。Merge は Production Deploy を意味しません。CI、PR単位Security Check、Full-System Security Auditの`PASS`または理由と適格性を確認した`NOT_APPLICABLE`、Release判定、必要な backup と migration の確認を経て Production へ進み、Deploy 後の Health Check と Rollback まで確かめられるようにします。
 
 ## 4.2 実利用検証と検収
 
-実装・Deployの完了と、作る目的を満たしたことの検収を分けて記録します。検収の正本は [docs/acceptance-verification.md](acceptance-verification.md) です。
-
-親Issueの計画段階で、解決したい課題、対象ユーザー、実利用シナリオ、成功条件、失敗条件、検証環境、実データ / fixture、人間確認項目、検収タイミングを定義します。
-
-Deploy後は、Health Check / Smoke Testとは別に主要ユースケースを最初から最後まで実行し、計画時の成功条件と照合します。`Implementation Done`、`Deployed`、`Product Accepted` は別状態です。検収結果は `Accepted` / `Not Accepted` / `Conditional` で記録し、発見事項は `ACCEPTANCE BLOCKER` / `DEFECT` / `IMPROVEMENT` / `FUTURE` に分類します。重要なRequirement・主要リスクの検証証跡と残存リスク要約は、[Verification Evidence Contract](acceptance-verification.md#5-verification-evidence-contract--residual-risk-summary)に従って記録します。
-
-新要求や改善案を、元PRのレビュー修正ループへ無制限に戻しません。必要に応じて別Issue候補として次サイクルへ送り、設計前提の誤りは `Design Decision Escalation` へ戻します。
+実装・Deploy の完了と、目的を満たしたことの検収を分けます。検収の正本は [docs/acceptance-verification.md](acceptance-verification.md) です。`Implementation Done`、`Deployed`、`Product Accepted` は別の状態です。
 
 ## 4.3 Plan Review Gate（計画書Grilling）
 
-計画書の存在と、実装開始できるほど重要判断が確定していることは別です。Plan Review Gateの正本は [docs/plan-review-gate.md](plan-review-gate.md) とし、計画書からIssue化する前に参照します。
-
-- PASS: 親Issue / 子Issue化へ進む
-- NEEDS_DECISION: Issue化・実装開始を止め、既存のDesign Decisionへ戻す
-- NOT_APPLICABLE: 軽微な変更等。省略理由を記録する
-
-Plan Reviewは子Issue品質チェックを置き換えません。Issue化後は従来どおり docs/issue-quality-check.md を使い、1 Issue / 1 PR、CI、Codex Code Review、人間Mergeの流れを維持します。Deployment設計、実利用検証、Issue #30の状態設計原則は各正本文書を参照し、同じ詳細を重複記載しません。
-
-## 4.4 計画書の作り方（会話）
-
-方針は会話で固め、テンプレへ転記する。未決欄は推測で埋めず確認する。手順・依頼文・READMEに全文を置かない理由は [計画書の作り方](plan-authoring.md) を正本とする。記入例は [Web Todo 計画書サンプル](../templates/planning/web-todo-app-plan.sample.md)。Plan Review の判定は [Plan Review Gate](plan-review-gate.md) のままとする。
+計画書から Issue 化する前の重要な未決の確認は [docs/plan-review-gate.md](plan-review-gate.md) を、計画書の作り方は [plan-authoring](plan-authoring.md) を参照します。軽量構成では、Codex が `plan-to-issues` の手順で確かめます。
 
 ## 5. 子Issueテンプレート
 
 ファイル: `.github/ISSUE_TEMPLATE/child-issue.md`
 
-子IssueはGoal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependenciesを記入する。Risk Tierと理由、安全境界はScope / Boundaries、独立した完了判定はDoneとVerificationへ置く。6観点から影響に応じた検証を選び、6つの空欄は要求しない。対象SHAはPR / 再開 / 検収など識別が必要な段階で記録する。1子Issue = 1 PRを維持し、MUST不足時は[Issue Quality Check](issue-quality-check.md)に従って停止する。
-
-詳細なDesign Decision Escalation、Security Boundary、Harness、Current Stateのenum、検収とレビュー収束は正本文書を参照する。テンプレートには今回の例外、承認、停止理由、引き継ぎ先だけを記録する。
+Goal / Context / Scope・Boundaries / Non-goals / Done / Verification / Dependencies を記入します。Scope / Boundaries に Risk Tier と理由、人間の承認が必要な操作、扱う情報と送信先（該当するときだけ）を書きます。Done は実装の手順ではなく、確かめられる結果で書きます。
 
 ## 6. 子Issue品質チェック
 
-ファイル: `docs/issue-quality-check.md`
-
-子IssueをGitHubへ正式登録する前に、MUSTを確認する。目的、変更範囲、独立した完了判定とテスト、1 PRでのレビュー可能性、依存関係、安全境界の1つでも欠落した場合は、Scoreにかかわらず登録・実装開始を停止する。
-
-読みやすさ、背景、補足例はSHOULDであり、それだけの不足は改善候補として継続できる。Scoreは補助表示で、各観点0〜2点、合計0〜12点だけを有効値とする。高ScoreでもMUST不足を打ち消さない。
+子Issue を登録する前に、`plan-to-issues` の手順で、目的、変更範囲、独立した完了判定、1 PR でのレビュー可能性、依存関係、安全境界を確かめます。詳しい観点は [Issue Quality Check](issue-quality-check.md) を参照します。Score は補助の表示で、高ScoreでもMUST不足を打ち消さない。
 
 ## 7. Pull Requestテンプレート
 
 ファイル: `.github/pull_request_template.md`
 
-PRには対応Issue、差分、判断、レビュー上の注意点、Risk Tierと安全境界、対象SHA、標準検証・CI・Security・Codex Reviewの結果、残課題だけを記録する。GitHubから確認できる変更ファイル一覧は再掲しない。修正時は既存PR branchと修正後SHAを記録し、詳細なP2分類・Evidence・Safe Auto-Fix条件は正本文書を参照する。検証証跡は正本への参照と、Verified / Not Verified / Blocked・Skipped / Known Remaining Risk / Human Decision Requiredの短い要約をPRへ記録する。
+対応 Issue（`Closes #`）、変更内容、判断と前提（Risk Tier）、検証（対象 head の full SHA、ローカル、CI / Security、正式レビュー、必要なときだけユーザー検収）、未完了と対象外を記録します。未実行、全件 skip、取得できない結果、古い head の結果は成功と書きません。
 
-CI、Security、Reviewは別ゲートであり、最終Mergeは人間が判断する。
+CI、Security、正式レビューは別々に確かめ、最終 Merge は人間が判断します。最終 head の照合は `scripts/check-pr-head.sh <PR番号>` で行います。Auto-Fix / Auto-Merge の例外レーンを採用する場合は [safe-auto-fix-auto-merge.md](safe-auto-fix-auto-merge.md) の Safety Gate に従い、新規採用は別の承認とします。
 
 ## 8. 標準検証入口とGitHub Actions CIテンプレート
 

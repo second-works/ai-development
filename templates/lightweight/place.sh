@@ -306,6 +306,13 @@ decide() { # <rel>: create, unchanged or update for a staged file
   fi
   if [[ ! -e $dst ]]; then add_plan "$rel" create; return; fi
   if cmp -s "$new" "$dst" && { [[ $rel != *.sh ]] || [[ -x $dst ]]; }; then add_plan "$rel" unchanged; return; fi
+  # When every placed file is the same, a newer source commit alone is not a change:
+  # keep the record (and the commit it names) as it is.
+  if [[ $rel == "$STATE_REL" ]] && [[ $(grep -v '^source[[:space:]]' "$new") == "$(grep -v '^source[[:space:]]' "$dst")" ]]; then
+    cp -p -- "$dst" "$new"
+    add_plan "$rel" unchanged
+    return
+  fi
   add_plan "$rel" update
 }
 

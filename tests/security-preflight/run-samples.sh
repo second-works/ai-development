@@ -36,7 +36,8 @@ assert_contains "$repo_root/docs/nine-standard-ai-development-flow.md" 'CIの成
 assert_contains "$repo_root/docs/nine-standard-ai-development-flow.md" 'SECURITY_NOT_APPLICABLE'
 assert_contains "$repo_root/docs/nine-standard-ai-development-flow.md" 'Security Preflight'
 assert_contains "$repo_root/docs/template-guide.md" 'SECURITY_UNAVAILABLE'
-assert_contains "$repo_root/.github/pull_request_template.md" 'Security Preflight判定'
+# The PR and Issue templates and AGENTS.md are now the lightweight ones (#197). Their
+# safety wording is checked in tests/lightweight-template.
 
 python3 "$repo_root/tests/security-preflight/test-bash-version-guard.py"
 
