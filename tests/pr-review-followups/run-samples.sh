@@ -69,6 +69,8 @@ required_ledger_markers=(
   "同じPRのhead branch"
   "検証結果が同じ新しいSHA"
   "人間へ戻す"
+  '標準検証入口 → GitHub Actions CI → 利用可能なsecurity check → `@codex review` を再実行する'
+  '登録前の `EXPECTED_SHA` に対するローカル検証、CI、security、再レビュー結果を新しいSHAの結果として再利用しない'
 )
 
 for marker in "${required_ledger_markers[@]}"; do
