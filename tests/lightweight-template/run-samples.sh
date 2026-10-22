@@ -66,6 +66,13 @@ require_text "$agents" "AGENTS.md" \
   '重大な指摘（P0 / P1、根拠のあるブロッキング指摘）を未解決のままマージを依頼しない' \
   '実装、CI成功、ユーザー検収を区別し' \
   'マージとIssueの完了は人間が判断する'
+# Issue quality (the former tests/issue-quality, #197): a child Issue whose purpose, Done,
+# verification or safety boundary cannot be written down is not registered.
+require_text "$CAND/.agents/skills/plan-to-issues/SKILL.md" "plan-to-issues" \
+  '登録せずに必要な判断だけを示して止まる' \
+  '子Issueの目的（Goal）、完了の判定（Done）、確かめ方（Verification）、安全境界（Risk Tier、人間の承認が必要な操作、扱う情報と送信先）のどれかを、確かめられる形で書けない' \
+  '子Issueは1つにつき1 PRとする' \
+  '依存関係が分からず、順番を決められない'
 require_text "$steward" "steward" \
   'CIとSecurityのcheckを別々に確認する' \
   '空commitでの再実行はしない' \
