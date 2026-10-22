@@ -22,6 +22,12 @@ Codexは計画とIssue化（`.agents/skills/plan-to-issues/`）、Claude Codeは
 - 重大な指摘（P0 / P1、根拠のあるブロッキング指摘）を未解決のままマージを依頼しない。
 - 実装、CI成功、ユーザー検収を区別し、未確認のものを完了と報告しない。
 
+## Cursor Cloud specific instructions
+
+- Cursorのクラウドエージェントも、このファイルのルールに従う。実装からレビュー指摘対応までの順序は `.claude/skills/steward/SKILL.md` を読んで同じように進める。Claude Code専用の機能（フック、Skillの呼び出し）は、同じ結果になる手作業で代える。
+- Issueごとのfeature branchで作業し、PR本文に `Closes #<番号>` を書く。
+- マージを依頼する前に `scripts/check-pr-head.sh <PR番号>` で最終headを確認する。READYでもマージせず、結果を添えて人間に依頼する。`gh` が使えず確認できないときは、その状態を報告する。
+
 ## 必要なときに読むもの
 
 - UI、Deploy、データ移行、外部送信など専門の判断がある案件では、Issueが指す資料を読む。
