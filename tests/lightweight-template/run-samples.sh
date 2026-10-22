@@ -110,9 +110,12 @@ git -C "$SRC" add -A
 git -C "$SRC" -c user.name=t -c user.email=t@example.invalid commit -q -m candidate
 SRC_SHA="$(git -C "$SRC" rev-parse HEAD)"
 PLACE="$SRC/templates/lightweight/place.sh"
-# This repository runs on the template itself (#197): its own copies must match it.
+# This repository runs on the template itself (#197): its own copies must match the
+# committed template. Comparing with HEAD (not the working tree) lets a template change
+# be verified and committed first, then placed with place.sh . and verified again.
 if [[ -d $ROOT/.git && -f $ROOT/.ai/lightweight-placement.tsv ]]; then
-  "$PLACE" --check "$ROOT" >"$WORK/self-check" 2>&1 || { cat "$WORK/self-check" >&2; fail "the repository's own files differ from the template"; }
+  "$ROOT/templates/lightweight/place.sh" --check --ref HEAD "$ROOT" >"$WORK/self-check" 2>&1 ||
+    { cat "$WORK/self-check" >&2; fail "the repository's own files differ from the committed template; run templates/lightweight/place.sh ."; }
 fi
 STEWARD=templates/lightweight/.claude/skills/steward/SKILL.md
 

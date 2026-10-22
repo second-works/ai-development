@@ -157,7 +157,11 @@ section=(root/'docs/template-guide.md').read_text().split('### 最小AGENTSと�
 commands=re.search(r'```bash\n(.*?)\n```',section,re.S).group(1)
 with tempfile.TemporaryDirectory(prefix='lightweight-placement-') as temp:
     project=Path(temp)/'project'
-    env=dict(os.environ,template_source_root=str(root),project_output_root=str(project))
+    # place.sh reads the committed candidate, so run it from a clone of HEAD: uncommitted
+    # template edits (checked by tests/lightweight-template) do not stop this example.
+    source=Path(temp)/'source'
+    subprocess.run(['git','clone','--quiet','--no-hardlinks',str(root),str(source)],check=True,capture_output=True)
+    env=dict(os.environ,template_source_root=str(source),project_output_root=str(project))
     subprocess.run(['bash','-c',commands],check=True,env=env,capture_output=True,text=True)
     agents=(project/'AGENTS.md').read_text()
     assert '<!-- lightweight:begin' in agents
