@@ -156,13 +156,17 @@ stewardへ移植しないもの: P2四分類表と定型出力、3ラウンド�
 
 残課題（解決扱いにしない）:
 
-- Slack の失敗通知は hosted runner のままで、届かない状態が続いている（#191 の残り）。
-- Cursor 向けの追記（PR #190）、テンプレート還元の検討（#188）は未着手。
-- 標準 flow、最小契約、template-change-evaluator は参照用に残した。参照されていない節の削除は後続で判断する。
+- 配布済みの各 project（hermes など）では、bootstrap の `upgrade`（新しい `.ai/GIT_RULES.md`）と `place.sh` の再実行（Cursor 向けの節）をまだ行っていない。
+- `~/openclaw/git-guide.md`（openclaw-ops）に、main への直接コミットを認める記述が残っている。
+- hermes に残る JEV / Local Judge の資産の削除は、second-works/hermes-self-improvement#24 で対応中（merge は所有者の確認待ち）。
 
-解決済み（2026-10-22）:
+解決済み（2026-10-22〜23）:
 
 - Cloudflare の Workers Builds（Worker `ai-development`）が、JEV の PoC（`templates/review-comment-auto-triage/wrangler.jsonc`）を build していた。この Worker は 2026-09-20 に Issue #125 / PR #126 の作業で Git とつながったもの。所有者は「もう利用していないので解消してよい」と判断し、PR B（#209）を merge したあと、Worker を削除した。
 - JEV / Local Judge 用の repo の変数 `JEV_TRIAGE_URL`、Secret `JEV_TRIAGE_TOKEN`、Environment `local-judge-shadow`（Local Judge の変数と Secret を含む）は削除済み。
 - main の保護（#163）: 所有者が repo を public に変更し、main に branch protection を設定した（2026-10-22）。PR 必須（承認数0）、required checks は `verification` と `Security Preflight`（GitHub Actions）、未解決の会話があると merge できない、force push とブランチ削除は禁止、管理者にも適用。self-hosted runner は Mac のまま使い、外部の人の PR の workflow は所有者の承認が要る設定にする。
 - bootstrap の GIT_RULES の矛盾（#202）: ai-project-bootstrap の `templates/GIT_RULES.md` から main への直接コミットの例外を削除した（NineDragon00/ai-project-bootstrap#2、merge `0e0dec8`、2026-10-23）。配布済みの各 project の `.ai/GIT_RULES.md` は、bootstrap の `upgrade` を実行するまで古いままで、`place.sh` は引き続き警告する。`~/openclaw/git-guide.md`（openclaw-ops）に同じ例外が残っている（範囲外）。
+- 参照用 docs の整理（2026-10-23）: 標準 flow（54,080 B → 約20 KB）と最小契約（40,423 B → 約8 KB）から、エージェントの入口から参照されず、テストも内容を確かめていない節を削除した。削除前の全文は commit `0e8523a`。template-change-evaluator は、必要なときに使う任意の Skill として残した（8 KB）。
+- Slack の失敗通知: 所有者の判断で対応しない（2026-10-23）。届かなかった原因は hosted runner の課金で、repo を public にしたので無料で動く見込み。次に CI が失敗するまで、届くかは確かめられない。
+- Cursor 向けの指示（#189）: 軽量テンプレートの AGENTS.md に「Cursor Cloud specific instructions」の節を足した（PR #214）。PR #190 は閉じた。
+- テンプレート還元の検討（#188）: ハーネスプロジェクトの作業が止まっているため、一旦閉じた。再開するときは新しい Issue で現行の軽量構成を基準にする。
