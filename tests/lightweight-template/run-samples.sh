@@ -30,6 +30,9 @@ done
 for kept in 'mainへ直接pushしない' 'force pushしない' 'Secrets' '全件skip' '古い結果を使わない' '人間の承認' '未確認のものを完了と報告しない'; do
   grep -q "$kept" "$agents" || fail "AGENTS.md lost the rule: $kept"
 done
+# Cursor reads this heading (#189); its agents follow the same rules and never merge.
+grep -qx '## Cursor Cloud specific instructions' "$agents" || fail "AGENTS.md lost the Cursor Cloud section"
+grep -q 'READYでもマージせず' "$agents" || fail "the Cursor Cloud section no longer keeps the human merge"
 steward="$CAND/.claude/skills/steward/SKILL.md"
 # steward must not merge on its own: the parent #192 keeps the human merge.
 for banned in pr-review-fix JEV 'IN-SCOPE FIX' 'Local Judge' 'gh pr merge'; do
