@@ -1,6 +1,6 @@
 # Written by templates/lightweight/place.sh. It uses this file to update and check the placement.
-source	1a4fb71797b9ab02023ab24024cc6755de35a870
-block	AGENTS.md	d821964fa349b78afe4543d839467c5105a7c1effeb76eb1e8290abcfbb380da
+source	442c368120928d3734cd03202622dc32234d9f6e
+block	AGENTS.md	b4cae91644290778c4fdd98ee4624c5389e96d707ca59d147cb6ea451bebf75e
 block	CLAUDE.md	53a90d7965497b9fea2f018e20ba44427aac3d3c7bcf698c352f4990eb0b2a52
 file	.agents/skills/plan-to-issues/SKILL.md	7ce0f879269fd383d827b228b61403280fa7e326e3efca1d295c5acd3a223f36
 file	.claude/skills/steward/SKILL.md	daa7595cb325b8a5f0eb5d6683c6d7293a9a52225a4de55e1a08287b4cfd9efc

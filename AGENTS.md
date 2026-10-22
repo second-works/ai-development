@@ -4,7 +4,7 @@
 
 ## ai-development 固有の境界
 
-- このrepoは軽量構成の配布元。正本は `templates/lightweight/`。repo直下の軽量ブロック、`CLAUDE.md`、`.claude/`、`.agents/skills/plan-to-issues/`、Issue / PR テンプレート、`scripts/check-pr-head.sh`、`scripts/security-preflight.sh` は、`templates/lightweight/place.sh` でこのrepo自身に配置したもの。直下を直接編集せず、テンプレートを直してから `templates/lightweight/place.sh .` で反映する（`scripts/verify.sh` はこのrepoの版を残す設定が記録されている）。CI の `place.sh --check .` がずれを検出する。
+- このrepoは軽量構成の配布元。正本は `templates/lightweight/`。repo直下の軽量ブロック、`CLAUDE.md`、`.claude/`、`.agents/skills/plan-to-issues/`、Issue / PR テンプレート、`scripts/check-pr-head.sh`、`scripts/security-preflight.sh` は、`templates/lightweight/place.sh` でこのrepo自身に配置したもの。直下を直接編集しない。テンプレートを直したら、`./scripts/verify.sh` → commit → `templates/lightweight/place.sh .` で直下に反映 → `./scripts/verify.sh` → commit の順に進める（直下との一致は commit 済みのテンプレートと比べるので、どの commit も検証してから作れる）。`scripts/verify.sh` はこのrepoの版を残す設定が記録されている。CI の `place.sh --check .` がずれを検出する。
 - 標準検証は `./scripts/verify.sh`（全 `tests/*/run-samples.sh` を Bash 5 で実行する）。
 - 正式レビューの FOLLOW-UP は `docs/review-followups.md` に記録する。手順は `docs/code-review-contract.md`。
 - UI、Deploy、検収、Security境界、テスト設計などの資料は `docs/` にある。必読ではなく、Issue が指したときに読む。
@@ -29,6 +29,7 @@ Codexは計画とIssue化（`.agents/skills/plan-to-issues/`）、Claude Codeは
 
 - commitとPRの前に、標準検証（`./scripts/verify.sh`）と差分全体の自己レビューを行う。失敗、実行不能、全件skipは成功にせず、原因を直すか人間の判断を得るまで次へ進まない。
 - テストを無効化して通さない。検証を減らすときは、守っていた結果と代わりの保証を先に確認する。
+- Risk Tierは、範囲・依存・権限・実行動作が変わったら判定し直す。検証や承認を避けるためにTierを下げない。
 - PR後は最終headでCI、Security、正式レビューを別々に確認する。headが変わったら古い結果を使わない。結果を取得できないときは、その状態を報告して判断を求める。
 - 重大な指摘（P0 / P1、根拠のあるブロッキング指摘）を未解決のままマージを依頼しない。
 - 実装、CI成功、ユーザー検収を区別し、未確認のものを完了と報告しない。
