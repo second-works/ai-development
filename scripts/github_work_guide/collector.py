@@ -221,19 +221,19 @@ class Collector:
         for path in SETTING_FILES:
             texts[path] = self.call(self.transport.content, path, branch)
         try:
-            return self.parse_settings(branch, texts)
+            listed = names(setting_lines(texts['.github/pr-gate-checks']), exact=True) \
+                if texts['.github/pr-gate-checks'] is not None and setting_lines(texts['.github/pr-gate-checks']) else []
+            kinds = names(setting_lines(texts['.github/pr-gate-review'], strip=True)) \
+                if texts['.github/pr-gate-review'] is not None and setting_lines(texts['.github/pr-gate-review'], strip=True) else []
         except (Invalid, TypeError, AttributeError):
             raise SettingFileError('setting file') from None
-
-    def parse_settings(self, branch, texts):
-        listed = setting_lines(texts['.github/pr-gate-checks']) if texts['.github/pr-gate-checks'] is not None else []
-        kinds = setting_lines(texts['.github/pr-gate-review'], strip=True) if texts['.github/pr-gate-review'] is not None else []
         checks, checks_source = list(DEFAULT_CHECKS), 'default'
         if self.required_checks is not None:
             checks, checks_source = self.required_checks, 'config'
         elif listed:
             checks, checks_source = listed, 'repository'
         review, review_source = (kinds, 'repository') if kinds else (list(DEFAULT_REVIEW), 'default')
+        # The default branch name comes from the repository metadata: a bad one is not a setting-file problem.
         return validate_settings({'default_branch': branch, 'required_checks': checks, 'checks_source': checks_source,
                                   'review': review, 'review_source': review_source})
 

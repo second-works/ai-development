@@ -11,7 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from github_work_guide.collector import Collector, Limits  # noqa: E402
 from github_work_guide.config import CONFIG, entry, load_config  # noqa: E402
-from github_work_guide.core import (OLD_PLAN, Invalid, build_plan, diff, excerpt, load_run, markdown,  # noqa: E402
+from github_work_guide.core import (OLD_PLAN, Invalid, build_plan, check_output, diff, excerpt, load_run, markdown,  # noqa: E402
                                    read_json, recheck, require, save_run, validate_plan)
 
 
@@ -52,10 +52,9 @@ def main(argv=None):
             save_run(args.out, {'excerpt.md': text})
             print(f'excerpt={len(text)} chars target={args.target} out={args.out}')
             return 0
-        # The output is checked before any network read, so a reused or misplaced --out loses no collection.
-        out = args.out.resolve() if args.out.is_absolute() else args.out
-        require(not out.exists() and (out.parent.name == 'runs' or out.parent.parent.name == 'runs'),
-                'output must be a new runs child')
+        # The output is checked (same rule as save_run) before any network read, so a reused or misplaced
+        # --out loses no collection.
+        check_output(args.out, new=True)
         result = None
         if args.mode == 'collect':
             snapshot = collector(args.config, repo).collect()
@@ -85,9 +84,10 @@ def main(argv=None):
         print(f'repo={snapshot["repo"]} coverage={snapshot["coverage"]["status"]}{skipped} items={len(snapshot["items"])} out={args.out}')
         if result:
             print(f'dry_run={result["status"]}')
-        # SKIPPED (a private repository) is reported, not failed.
-        return 0 if snapshot['coverage']['status'] in ('COMPLETE', 'SKIPPED') and (
-            not result or result['status'] == 'CONFIRMED') else 2
+        # A private repository is reported, not failed. A 404 is not: with the owner's gh, a listed repository
+        # that cannot be seen at all is most likely a misspelled entry in the config.
+        reported = snapshot['coverage']['status'] == 'COMPLETE' or snapshot['coverage'].get('skipped') == 'private'
+        return 0 if reported and (not result or result['status'] == 'CONFIRMED') else 2
     except (Invalid, OSError, KeyError, TypeError, AttributeError, ValueError) as error:
         # Only fixed messages are printed; raw errors may carry remote text or auth diagnostics.
         if isinstance(error, Invalid) and str(error) == OLD_PLAN:

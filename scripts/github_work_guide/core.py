@@ -301,8 +301,8 @@ def gate(item, settings):
         if any(c.get('head_sha') != head or c.get('status') != 'completed'
                or c.get('conclusion') not in ('success', 'skipped', 'neutral') for c in providers.values()):
             failures.append(f'{safe_text(name)}: 未成功/旧head')
-        elif providers and latest_status != 'success' and not any(
-                c.get('conclusion') == 'success' for c in providers.values()):
+        elif providers and not any(c.get('conclusion') == 'success' for c in providers.values()):
+            # Only skipped/neutral runs: check-pr-head.sh stops here even when a same-named status succeeded.
             failures.append(f'{safe_text(name)}: 未成功/旧head')
         if states and latest_status != 'success':
             failures.append(f'{safe_text(name)}: 未成功status')
@@ -976,13 +976,20 @@ def excerpt(snapshot, plan, target, run_name):
     return text
 
 
-def save_run(path, documents):
-    """Exclusive new directory; manifest is written last. Partial runs cannot be loaded."""
+def check_output(path, new=False):
+    """runs/<name> or runs/<owner>--<repo>/<name>, without symlinks. new: also refuse an existing path (the CLI
+    checks this before collecting; save_run relies on mkdir(exist_ok=False) instead)."""
     path = Path(path)
-    # runs/<name>, or runs/<owner>--<repo>/<name> for one repository among several.
     require(path.name not in ('', '.', '..') and (path.parent.name == 'runs' or (
         path.parent.parent.name == 'runs' and path.parent.name not in ('', '.', '..'))), 'output must be a new runs child')
     require(not any(p.is_symlink() for p in (path, *path.parents)), 'symlink output')
+    require(not new or not path.exists(), 'output exists')
+    return path
+
+
+def save_run(path, documents):
+    """Exclusive new directory; manifest is written last. Partial runs cannot be loaded."""
+    path = check_output(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.mkdir(exist_ok=False)
     manifest = {}

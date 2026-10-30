@@ -388,6 +388,8 @@ class ReviewFollowUpTests(unittest.TestCase):
         self.assertEqual(core.gate(pr, SETTINGS), [])
         pr['raw']['checks'] = others + [dict(base, id=101, conclusion='skipped', check_suite={'id': 2})]
         self.assertEqual(core.gate(pr, SETTINGS), ['"ci": 未成功/旧head'])  # skipped alone is not success
+        pr['raw']['statuses'] = [{'id': 1, 'context': 'ci', 'state': 'success'}]
+        self.assertEqual(core.gate(pr, SETTINGS), ['"ci": 未成功/旧head'])  # a successful status does not lift it
 
     def test_out_is_checked_before_collecting(self):
         import importlib.util
@@ -398,12 +400,40 @@ class ReviewFollowUpTests(unittest.TestCase):
             config = write_config(tmp, base_config())
             used = Path(tmp).resolve() / 'runs' / 'used'
             used.mkdir(parents=True)
-            for out in (used, Path(tmp).resolve() / 'elsewhere' / 'x'):
+            link = Path(tmp).resolve() / 'link'
+            link.symlink_to(Path(tmp).resolve())
+            for out in (used, Path(tmp).resolve() / 'elsewhere' / 'x', Path(tmp).resolve() / 'runs' / 'x' / '..',
+                        link / 'runs' / 'new'):
                 with patch.object(cli, 'collector', side_effect=AssertionError('network')) as made:
                     code = cli.main(['collect', '--config', str(config), '--repo', 'second-works/ai-development',
                                      '--out', str(out)])
                 self.assertEqual(code, 2)
                 made.assert_not_called()
+
+    def test_bad_default_branch_is_not_blamed_on_the_setting_files(self):
+        fake = OtherFake(branch=' trunk')
+        snap = Collector(OTHER, fake).collect()
+        self.assertEqual(snap['coverage']['status'], 'INCOMPLETE')
+        self.assertNotIn('.github/pr-gate-checks', snap['coverage']['errors'][0])
+
+    def test_exit_codes_for_private_and_not_found(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('report_cli', CLI)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        with tempfile.TemporaryDirectory() as tmp:
+            config = write_config(tmp, base_config(repositories=[{'name': 'other-repo'}]))
+            for change, expected in (({'private': True}, 0), (None, 2)):
+                fake = OtherFake()
+                if change is None:
+                    fake.get = lambda path, page, timeout: None
+                else:
+                    fake.meta.update(change)
+                out = Path(tmp).resolve() / 'runs' / f'x{expected}'
+                with patch.object(cli, 'collector', return_value=Collector(OTHER, fake)):
+                    code = cli.main(['collect', '--config', str(config), '--repo', OTHER, '--out', str(out)])
+                self.assertEqual(code, expected)
+                self.assertEqual(load_run(out)['coverage']['status'], 'SKIPPED')
 
     def test_unusable_setting_file_is_named_in_the_error(self):
         fake = OtherFake()
