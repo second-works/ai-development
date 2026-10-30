@@ -257,7 +257,7 @@ def claude_review(raw, head):
     """Latest <!-- claude-code-review:v1 {...} --> from a trusted author (anyone can comment on a public repo)."""
     found = None
     for comment in raw['comments']:
-        if comment.get('author_association') not in TRUSTED:
+        if comment.get('author_association') not in TRUSTED or not isinstance(comment.get('body'), str):
             continue
         matches = CLAUDE_REVIEW.findall(comment['body'])
         if matches:
@@ -268,9 +268,12 @@ def claude_review(raw, head):
         value = strict_json(found)
     except Invalid:
         return 'invalid'
-    if not isinstance(value, dict) or value.get('commit_sha') != head:
+    # Same meaning as scripts/check-pr-head.sh: a record without a string commit_sha / status is broken, not pending.
+    if not isinstance(value, dict) or not isinstance(value.get('commit_sha'), str) or not isinstance(value.get('status'), str):
+        return 'invalid'
+    if value['commit_sha'] != head:
         return 'stale'
-    if value.get('status') != 'completed':
+    if value['status'] != 'completed':
         return 'pending'
     if type(value.get('has_unresolved_findings')) is not bool:
         return 'invalid'

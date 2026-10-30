@@ -893,6 +893,9 @@ PR_GATE_REVIEW='codex, claude-code' check_gate READY "PR_GATE_REVIEW names claud
 set_data "$head_sha" "$ok_checks" "" completed false 0
 set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false)"
 PR_GATE_REVIEW='codex' check_gate REVIEW_UNAVAILABLE "PR_GATE_REVIEW names codex only"
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'codex' "$(claude_comment "$head_sha" '"completed"' false)"
+PR_GATE_REVIEW='claude-code,, ' check_gate READY "empty elements of PR_GATE_REVIEW are skipped"
 # Findings in Codex stop it even when claude-code, listed second, has passed.
 set_data "$head_sha" "$ok_checks" "$head_sha" completed true 0
 jq --argjson c "$(claude_comment "$head_sha" '"completed"' false)" '.comments += [$c]' "$fake/data/comments.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/comments.json"

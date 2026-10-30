@@ -143,6 +143,7 @@ comments="$(gh pr view "$pr" --json comments 2>/dev/null)" || report REVIEW_UNAV
 passed='' pending='' waiting=()
 for kind in "${kinds[@]}"; do
   kind="${kind//[[:space:]]/}"
+  [[ -n $kind ]] || continue  # an empty element of PR_GATE_REVIEW (",," or only spaces)
   case "$kind" in
     codex)
       review="$(jq -r --arg who "$reviewer" '
