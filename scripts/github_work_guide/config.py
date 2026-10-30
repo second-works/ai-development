@@ -13,9 +13,8 @@ ENTRY_KEYS = {'name', 'required_checks', 'limits'}
 
 
 def limits_value(value):
+    """Only the keys are checked here; Limits checks each value and its maximum."""
     require(isinstance(value, dict) and set(value) <= set(LIMIT_KEYS), 'limits keys')
-    for key, number in value.items():
-        require(type(number) is int and number > 0, 'limits value')
     return value
 
 
@@ -28,6 +27,7 @@ def load_config(path=CONFIG):
     # One organisation: the config cannot widen the reads to another owner.
     require(value['owner'] == OWNER, 'config owner')
     defaults = limits_value(value.get('limits', {}))
+    Limits(**defaults)
     rows = value['repositories']
     require(isinstance(rows, list) and rows, 'config repositories')
     repositories = {}

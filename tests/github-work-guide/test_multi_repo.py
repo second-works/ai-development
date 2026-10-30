@@ -367,15 +367,53 @@ class ReviewFollowUpTests(unittest.TestCase):
         self.assertIn(message, failures)
         self.assertEqual(core.gate(pr_with(), dict(SETTINGS, review=['codex', 'claude'])), [message])
 
-    def test_latest_run_of_one_app_decides_like_check_pr_head(self):
-        # check-pr-head.sh reads check runs with filter=latest; the guide keeps the newest run per app the same way.
+    def test_same_named_checks_of_two_workflows_do_not_hide_a_failure(self):
+        # check-pr-head.sh (filter=latest) keeps the latest run of each check suite and fails on any failure.
         pr = pr_with()
         base = {'name': 'ci', 'head_sha': SHA, 'status': 'completed', 'app': {'id': 15368}}
         pr['raw']['checks'] = [c for c in pr['raw']['checks'] if c['name'] != 'ci'] + [
-            dict(base, id=100, conclusion='failure'), dict(base, id=101, conclusion='success')]
-        self.assertEqual(core.gate(pr, SETTINGS), [])
-        pr['raw']['checks'][-1]['app'] = {'id': 1}  # another app cannot hide the failure
+            dict(base, id=100, conclusion='failure', check_suite={'id': 1}),
+            dict(base, id=101, conclusion='success', check_suite={'id': 2})]
         self.assertIn('"ci": 未成功/旧head', core.gate(pr, SETTINGS))
+        pr['raw']['checks'][-1]['check_suite'] = {'id': 1}  # a re-run in the same suite replaces the old attempt
+        self.assertEqual(core.gate(pr, SETTINGS), [])
+
+    def test_unusable_setting_file_is_named_in_the_error(self):
+        fake = OtherFake()
+        fake.contents['.github/pr-gate-checks'] = 'x' * 201 + '\n'
+        snap = Collector(OTHER, fake).collect()
+        self.assertEqual(snap['coverage']['status'], 'INCOMPLETE')
+        self.assertIn('.github/pr-gate-checks', snap['coverage']['errors'][0])
+        fake = OtherFake()
+        fake.fail_at = 2
+        self.assertNotIn('.github/pr-gate-checks', Collector(OTHER, fake).collect()['coverage']['errors'][0])
+
+    def test_skipped_recheck_keeps_the_result_in_the_report(self):
+        fake = Fake()
+        fake.meta['private'] = True
+        fresh = Collector(REPO, fake).collect()
+        snap = snapshot(item(7))
+        result = recheck(snap, build_plan(snap), 'issue:7', fresh)
+        text = markdown(fresh, diff(fresh), None, result)
+        self.assertIn('## 再確認', text)
+        self.assertIn('BLOCKED', text)
+
+    def test_recheck_previous_of_another_repository_stops_before_collecting(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('report_cli', CLI)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        snap = snapshot(item(7))
+        other = seal({}, dict(snap['coverage']), repo=OTHER)
+        with tempfile.TemporaryDirectory() as tmp:
+            run, prev = Path(tmp).resolve() / 'runs' / 'run', Path(tmp).resolve() / 'runs' / 'prev'
+            save_run(run, {'snapshot.json': snap, 'plan.json': build_plan(snap)})
+            save_run(prev, {'snapshot.json': other})
+            with patch.object(cli, 'collector', side_effect=AssertionError('network')) as made:
+                code = cli.main(['recheck', '--run', str(run), '--previous', str(prev), '--target', 'issue:7',
+                                 '--out', str(Path(tmp).resolve() / 'runs' / 'new')])
+            self.assertEqual(code, 2)
+            made.assert_not_called()
 
     def test_repository_text_in_steps_is_escaped(self):
         hostile = ['[承認済み](https://evil.example) <img src=x>']

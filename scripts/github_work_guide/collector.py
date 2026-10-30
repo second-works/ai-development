@@ -144,6 +144,7 @@ class Collector:
         self.limits = limits or Limits()
         # Set in config/github-work-guide.json; otherwise .github/pr-gate-checks of the repository decides.
         self.required_checks = None if required_checks is None else names(list(required_checks))
+        self.setting_error = False
         self.started = time.monotonic()
         self.calls = 0
         self.nodes = 0
@@ -216,6 +217,13 @@ class Collector:
         texts = {}
         for path in SETTING_FILES:
             texts[path] = self.call(self.transport.content, path, branch)
+        try:
+            return self.parse_settings(branch, texts)
+        except (Invalid, TypeError, AttributeError):
+            self.setting_error = True
+            raise
+
+    def parse_settings(self, branch, texts):
         listed = setting_lines(texts['.github/pr-gate-checks']) if texts['.github/pr-gate-checks'] is not None else []
         kinds = setting_lines(texts['.github/pr-gate-review'], strip=True) if texts['.github/pr-gate-review'] is not None else []
         checks, checks_source = list(DEFAULT_CHECKS), 'default'
@@ -283,7 +291,12 @@ class Collector:
             require(inventory(listing) == inventory(final), 'inventory changed during collection')
         except (Invalid, KeyError, TypeError, ValueError, AttributeError):
             # Raw error messages may contain remote text or auth diagnostics: never persist them.
-            errors.append('取得不完全: schema/権限/rate limit/network/上限/収集中の変化を確認してください。')
+            if self.setting_error:
+                # The files were read, but their lines are not usable names (too long, too many, control characters).
+                errors.append('取得不完全: 既定ブランチの .github/pr-gate-checks / .github/pr-gate-review を読めません。'
+                              '行の長さ（200文字まで）・行数（50まで）・制御文字を確認してください。')
+            else:
+                errors.append('取得不完全: schema/権限/rate limit/network/上限/収集中の変化を確認してください。')
         coverage = {'status': 'INCOMPLETE' if errors else 'COMPLETE', 'errors': errors,
                     'calls': self.calls, 'limits': asdict(self.limits), 'connections': self.connections,
                     'returned_nodes': self.nodes, 'finished_at': now(),

@@ -285,11 +285,15 @@ def gate(item, settings):
     for name in settings['required_checks']:
         matches = [c for c in raw['checks'] if c.get('name') == name]
         states = [c for c in raw['statuses'] if c.get('context') == name]
-        # Keep each check provider independent; another provider cannot hide failure.
+        # Keep each check provider independent; another provider cannot hide failure. A provider is one app's
+        # check suite (one workflow run): two workflows with a same-named job are two providers, as in
+        # scripts/check-pr-head.sh, whose filter=latest keeps the latest run of each suite. A re-run stays in
+        # its suite, so the newest attempt there replaces the old one.
         providers = {}
         for check in matches:
             app = check.get('app') or {}
-            provider = app.get('id')
+            suite = check.get('check_suite') or {}
+            provider = (app.get('id'), suite.get('id'))
             if provider not in providers or providers[provider]['id'] < check['id']:
                 providers[provider] = check
         if any(c.get('head_sha') != head or c.get('status') != 'completed'
@@ -893,6 +897,8 @@ def markdown(snapshot, changes, plan=None, result=None):
                      f'{safe(settings["required_checks"])} / 正式レビュー（{settings["review_source"]}）: {safe(settings["review"])}')
     if snapshot['coverage']['status'] == 'SKIPPED':
         lines += ['', f'{SKIP_REASONS[snapshot["coverage"]["skipped"]]}。Issue/PRは読んでいない。']
+        if result:
+            lines += ['', '## 再確認', '', safe(result)]
         return '\n'.join(lines) + '\n'
     lines += ['', '## 今回の変更', '']
     first = [x for x in changes if x['status'] == 'FIRST']

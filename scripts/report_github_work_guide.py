@@ -36,33 +36,33 @@ def main(argv=None):
         require(args.mode != 'collect' or args.repo is not None, '--repo required')
         require(args.mode == 'collect' or args.run is not None, '--run required')
         require(args.mode not in ('recheck', 'excerpt') or args.target is not None, '--target required')
-        if args.repo is not None and args.mode != 'collect':
-            # A saved run names its repository; a different --repo is a mistake, not a filter.
-            require(load_run(args.run)['repo'] == args.repo, 'run is for another repository')
+        # Every saved input is loaded once, and all of them must be of one repository before any network read.
+        saved = load_run(args.run) if args.mode != 'collect' else None
+        repo = args.repo if saved is None else saved['repo']
+        # A saved run names its repository; a different --repo is a mistake, not a filter.
+        require(args.repo is None or args.repo == repo, 'run is for another repository')
+        previous = load_run(args.previous) if args.previous else None
+        require(previous is None or previous['repo'] == repo, '--previous is a run of another repository')
         if args.mode == 'excerpt':
             # Saved-run read only: verified manifest/hash, complete acquisition and a matching saved plan.
             require(args.previous is None and not args.priority, 'excerpt does not take --previous/--priority')
-            snapshot = load_run(args.run)
+            snapshot = saved
             require('plan.json' in read_json(args.run / 'manifest.json')['files'], 'saved plan required')
             text = excerpt(snapshot, read_json(args.run / 'plan.json'), args.target, args.run.name)
             save_run(args.out, {'excerpt.md': text})
             print(f'excerpt={len(text)} chars target={args.target} out={args.out}')
             return 0
-        previous = load_run(args.previous) if args.previous else None
-        if previous is not None and args.mode == 'collect':
-            require(previous['repo'] == args.repo, '--previous is a run of another repository')
         result = None
         if args.mode == 'collect':
-            snapshot = collector(args.config, args.repo).collect()
+            snapshot = collector(args.config, repo).collect()
             plan = build_plan(snapshot, args.priority) if snapshot['coverage']['status'] == 'COMPLETE' else None
         else:
-            snapshot = load_run(args.run)
+            snapshot = saved
             if args.mode == 'recheck':
                 require('plan.json' in read_json(args.run / 'manifest.json')['files'], 'saved plan required')
                 plan = read_json(args.run / 'plan.json')
                 validate_plan(snapshot, plan)
                 require(args.target in plan['candidates'], 'unknown candidate')
-                require(args.repo is None or args.repo == snapshot['repo'], 'run is for another repository')
                 fresh = collector(args.config, snapshot['repo']).collect()
                 result = recheck(snapshot, plan, args.target, fresh)
                 snapshot = fresh

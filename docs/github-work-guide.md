@@ -118,6 +118,7 @@ coverageは取得完了の判定であり、必須checkやレビュー成功の�
 `COMPLETE` でも0件のcheck/レビューは必要条件の未確認となる。
 必須名と正式レビューの種類はリポジトリごとの設定（下の「リポジトリごとの設定」）に従う。
 現head・送信元ごとの最新attemptと同名commit status両方の成功、正式レビューを確認し、skip・古いhead・未解決thread・変更要求は保留する。
+送信元は、アプリとcheck suiteの組。別のワークフローに同じ名前のjobがあれば、それぞれの最新が成功している必要がある（`scripts/check-pr-head.sh` の `filter=latest` と同じ）。同じsuiteでの再実行は、新しいattemptが古いものを置き換える。
 botの👍/要約コメントだけのレビュー完了は自動認定しないため、人の確認が残る。
 この判定はrepoの正式Merge Gateを代替しない。
 
