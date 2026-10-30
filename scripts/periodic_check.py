@@ -6,7 +6,7 @@ API limits, it collects Issues/PRs, compares them with the previous complete run
 the default branch. Repositories that follow the ai-development Issue form (format "full") also get the
 work guide; the others (format "simple") get only the changes, Issues/PRs left OPEN for 14 days or more,
 and the default branch's CI. Everything goes into one report:
-runs/periodic-summaries/<YYYYMMDD-HHMM>.md. Each repository's run is runs/<owner>--<name>/periodic-<stamp>.
+runs/periodic-summaries/<YYYYMMDD-HHMM>.md (UTC). Each repository's run is runs/<owner>--<name>/periodic-<stamp>.
 
 Run it from a dedicated check checkout (a detached git worktree of this repository). With --update it
 first moves that checkout to origin/main; it refuses when the checkout is on a branch or has tracked
@@ -70,8 +70,10 @@ def update_checkout():
         return 'git fetch に失敗した'
     # A commit that is not on main would be left behind by the checkout below.
     code, _, _ = run(['git', 'merge-base', '--is-ancestor', 'HEAD', 'origin/main'])
-    if code != 0:
+    if code == 1:
         return 'checkout に origin/main にないコミットがある'
+    if code != 0:
+        return 'origin/main と比べられない（git merge-base に失敗した）'
     code, _, _ = run(['git', 'checkout', '--quiet', '--detach', 'origin/main'])
     if code != 0:
         return 'git checkout に失敗した'
@@ -162,6 +164,7 @@ def check_repository(target, runs, stamp, now):
     if out.exists():
         result['stop'] = f'{out.name} が既にある。前の結果を今回の結果として読まない'
         return result
+    snapshot = None
     try:
         previous_path, previous = previous_run(directory)
         result['previous'] = previous_path.name if previous_path else None
@@ -202,7 +205,8 @@ def check_repository(target, runs, stamp, now):
             result['analysis'] = analyse(snapshot, plan, changes, seconds, now, collector.limits, previous is not None,
                                          collector.calls)
             if result['format_source'] == FORMAT_FALLBACK:
-                result['analysis']['warnings'].append('形式を判定できず、作業案内（親の検収待ち・完了範囲確認）を作っていない')
+                result['analysis']['warnings'].append('形式を判定できず、作業案内（親の検収待ち・完了範囲確認）を作っていない'
+                                                      '（上限・権限・通信を確認）')
             note = None if plan else '簡易版（Issueの書式を判定しない）'
             documents.update({'diff.json': changes, 'report.md': markdown(snapshot, changes, plan, None, note)})
             if plan is not None:
@@ -213,6 +217,13 @@ def check_repository(target, runs, stamp, now):
         # Only the exception type is kept: its message may carry remote text or auth diagnostics.
         result['stop'] = result['stop'] or (f'この repository の点検中に予期しないエラー（{type(error).__name__}）。'
                                             'ほかの repository は続けた')
+        # A collection that finished is still kept, so the time and calls it took are not lost.
+        if result['run'] is None and snapshot is not None and not out.exists():
+            try:
+                save_run(out, {'snapshot.json': snapshot})
+                result['run'] = out.name
+            except Exception:  # noqa: BLE001
+                pass
     return result
 
 
@@ -220,7 +231,9 @@ def attention(result):
     a = result['analysis']
     count = len(ci_problems(result['ci']))
     if a:
-        count += len(a['acceptance']) + len(a['completion']) + len(a['stale']) + len(a['warnings'])
+        # One Issue that is both a candidate and stale is one thing to look at.
+        keys = {k for k, _ in a['acceptance']} | {k for k, _ in a['completion']} | {k for k, _, _ in a['stale']}
+        count += len(keys) + len(a['warnings'])
     return count
 
 
@@ -338,7 +351,8 @@ def main(argv=None):
     if runs.name != 'runs':
         print('--runs must be a directory named runs', file=sys.stderr)
         return 2
-    stamp = datetime.now().strftime('%Y%m%d-%H%M')
+    # UTC: a local stamp could repeat or go backwards when daylight saving time ends.
+    stamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M')
     summaries = runs / 'periodic-summaries'
     summaries.mkdir(parents=True, exist_ok=True)
     summary_path = summaries / f'{stamp}.md'

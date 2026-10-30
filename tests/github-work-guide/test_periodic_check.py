@@ -387,6 +387,17 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             with patch.object(pc, 'ROOT', work):
                 self.assertIn('git の checkout として読めない', pc.update_checkout())
 
+    def test_error_after_a_complete_collection_keeps_the_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(pc, 'build_plan', side_effect=TypeError('x')):
+            code, text, runs = self.run_check(tmp, [{'name': 'hermes-self-improvement'}], {REPO: Fake})
+            self.assertEqual(code, 1)
+            run = next((runs / 'second-works--hermes-self-improvement').iterdir())
+            self.assertEqual(load_run(run)['coverage']['status'], 'COMPLETE')
+
+    def test_one_issue_counts_once(self):
+        a = {'acceptance': [('issue:1', 'x')], 'completion': [], 'stale': [('issue:1', 't', 'u')], 'warnings': []}
+        self.assertEqual(pc.attention({'analysis': a, 'ci': []}), 1)
+
     def test_format_files_are_never_read_as_content(self):
         from github_work_guide.collector import GhReadOnly
         with self.assertRaises(pc.Invalid):
