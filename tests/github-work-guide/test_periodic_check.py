@@ -217,7 +217,7 @@ class CheckTests(CheckHelper, unittest.TestCase):
     def test_ci_read_failure_is_reported_not_fatal(self):
         class NoRuns(SimpleFake):
             def branch_runs(self, branch, timeout):
-                return {'workflow_runs': [{'name': 'CI', 'status': 'weird'}]}
+                return {'workflow_runs': 'not a list'}
         with tempfile.TemporaryDirectory() as tmp:
             code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: NoRuns})
             self.assertEqual(code, 0)
@@ -314,8 +314,10 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertNotIn('--update', args)
             self.assertTrue(args[3].endswith('scripts/periodic_check.py'))
             # Absolute paths, the commit from before the update, and the notification flag carried over.
-            self.assertEqual(args[4:], ['--config', str(config.resolve()), '--runs', str(runs), '--updated-from', 'a' * 40,
-                                        '--notify'])
+            self.assertEqual(args[4:10], ['--config', str(config.resolve()), '--runs', str(runs), '--updated-from', 'a' * 40])
+            self.assertEqual(args[10], '--stamp')
+            self.assertRegex(args[11], r'\d{8}-\d{4}\Z')
+            self.assertEqual(args[12:], ['--notify'])
             self.assertEqual(kw['timeout'], 600 + pc.AFTER_LIMITS.seconds + pc.CHILD_MARGIN_SECONDS)
 
     def test_a_child_that_fails_to_start_still_leaves_a_report(self):
@@ -350,7 +352,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
                     (runs / 'periodic-summaries' / '20261106-0900.md').write_text('# child report\n', encoding='utf-8')
                     return -1, '', 'Traceback\nTimeoutish'
                 with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
-                        patch.object(pc, 'commit', return_value='a' * 40):
+                        patch.object(pc, 'commit', side_effect=iter(['a' * 40, 'b' * 40, 'b' * 40]).__next__):
                     self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
             text = (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8')
             self.assertTrue(text.startswith('# child report'))
@@ -371,27 +373,59 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertIn('警告: 既定ブランチのCIを確認できていない', text)
             self.assertIn(f'| {OTHER} | 完了 | 簡易版 | 1 | 取得できない |', text)
 
-    def test_child_report_of_a_later_minute_and_a_crash_after_writing(self):
+    def test_child_writes_under_the_parents_name_and_a_crash_after_writing_is_noted(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp).resolve() / 'runs'
+            heads = iter(['a' * 40, 'b' * 40, 'b' * 40])
+            seen = []
             with patch.object(pc, 'datetime', wraps=datetime) as clock:
                 clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
                 def child(args, **kw):
-                    (runs / 'periodic-summaries' / '20261106-0901.md').write_text('# child\n', encoding='utf-8')
+                    seen.append(args)
+                    name = args[args.index('--stamp') + 1]
+                    (runs / 'periodic-summaries' / f'{name}.md').write_text('# child\n', encoding='utf-8')
                     return 1, 'summary=x\n', 'Traceback (most recent call last):\n  boom\n'
                 with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
-                        patch.object(pc, 'commit', return_value='a' * 40):
-                    self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
-            self.assertFalse((runs / 'periodic-summaries' / '20261106-0900.md').exists())
+                        patch.object(pc, 'commit', side_effect=lambda: next(heads)), patch.object(pc, 'notify') as notify:
+                    self.assertEqual(pc.main(['--update', '--notify', '--runs', str(runs)]), 1)
+            self.assertIn('20261106-0900', seen[0])
             self.assertIn('正しく終わらなかった（終了コード 1）',
-                          (runs / 'periodic-summaries' / '20261106-0901.md').read_text(encoding='utf-8'))
+                          (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'))
+            notify.assert_not_called()  # the child that wrote its report has notified already
+
+    def test_no_new_commit_means_no_child(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            make = lambda target: Collector(target['repo'], SimpleFake(), Limits(**target['limits']))
+            with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'commit', return_value='a' * 40), \
+                    patch.object(pc, 'collector_for', make), patch.object(pc, 'run', side_effect=AssertionError('child')):
+                self.assertEqual(pc.main(['--update', '--config', str(config_file(tmp, [{'name': 'other-repo'}])),
+                                          '--runs', str(runs)]), 0)
+            text = next((runs / 'periodic-summaries').glob('*.md')).read_text(encoding='utf-8')
+            self.assertIn(f'点検したコード: {"a" * 40}', text)
+            self.assertNotIn('から更新した', text)
+            self.assertEqual(pc.main(['--runs', str(runs), '--stamp', '../x']), 2)
+
+    def test_half_written_run_keeps_the_snapshot_beside_it(self):
+        real = pc.save_run
+        def flaky(path, documents):
+            if 'report.md' in documents:
+                path.mkdir(parents=True)
+                raise OSError('disk full')
+            return real(path, documents)
+        with tempfile.TemporaryDirectory() as tmp, patch.object(pc, 'save_run', side_effect=flaky):
+            code, text, runs = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: SimpleFake})
+            self.assertEqual(code, 1)
+            kept = [p for p in (runs / 'second-works--other-repo').iterdir() if p.name.endswith('-snapshot')]
+            self.assertEqual(load_run(kept[0])['coverage']['status'], 'COMPLETE')
+            self.assertEqual(pc.previous_run(runs / 'second-works--other-repo')[0], kept[0])
 
     def test_timeout_keeps_partial_output_and_warnings_use_collection_only(self):
-        code, out, err = pc.run([sys.executable, '-c', 'import sys,time; print("started", file=sys.stderr, flush=True); time.sleep(5)'],
-                                timeout=1)
+        code, out, err = pc.run([sys.executable, '-c', 'import sys,time; print("started", file=sys.stderr, flush=True); time.sleep(60)'],
+                                timeout=5)
         self.assertEqual(code, -1)
         self.assertIn('started', err)
-        self.assertIn('timeout after 1s', err)
+        self.assertIn('timeout after 5s', err)
         result = pc.analyse(snapshot([item(1)], calls=398), plan({}), [], 150.0, NOW, LIMITS, calls=401, collect_seconds=100.0)
         self.assertEqual(result['warnings'], [])
         self.assertEqual(result['calls'], 401)
@@ -458,7 +492,8 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Bad})
             self.assertNotIn('injected', text)
-            self.assertIn('取得できない: 既定ブランチの workflow run を読めない', text)
+            # Only the odd run is skipped; the other run of the same workflow is still read.
+            self.assertIn('- "CI": completed/"success" (bbbbbbb)', text)
 
     def test_cancelled_run_does_not_hide_an_earlier_failure_and_no_runs(self):
         class Runs(SimpleFake):

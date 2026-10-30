@@ -35,7 +35,9 @@ from github_work_guide.core import (SKIP_REASONS, Invalid, build_plan, diff, loa
 MARKER = 'runs/.periodic-check-checkout'
 # Time for the updated child beyond the sum of the repositories' own time limits.
 CHILD_MARGIN_SECONDS = 1800
-RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}\Z')
+# -snapshot: the collection alone, kept when writing the full run failed part way.
+RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}(?:-snapshot)?\Z')
+STAMP = re.compile(r'\d{8}-\d{4}\Z')
 WARN_RATIO = 0.8
 STALE_DAYS = 14
 # Cancelled runs are left out of last_completed in branch_ci, so they never hide or raise a failure.
@@ -241,10 +243,12 @@ def check_repository(target, runs, stamp, now):
         result['stop'] = result['stop'] or (f'この repository の点検中に予期しないエラー（{type(error).__name__}）。'
                                             'ほかの repository は続けた')
         # A collection that finished is still kept, so the time and calls it took are not lost.
-        if result['run'] is None and snapshot is not None and not out.exists():
+        if result['run'] is None and snapshot is not None:
+            # A run directory left half written cannot be reused: keep the snapshot next to it.
+            target = out if not out.exists() else out.with_name(out.name + '-snapshot')
             try:
-                save_run(out, {'snapshot.json': snapshot})
-                result['run'] = out.name
+                save_run(target, {'snapshot.json': snapshot})
+                result['run'] = target.name
             except Exception:  # noqa: BLE001
                 pass
     return result
@@ -374,9 +378,13 @@ def main(argv=None):
     parser.add_argument('--runs', type=Path, default=ROOT / 'runs', help='runs directory (default: runs/ of this checkout)')
     # Given only by the process that updated the checkout, to the process it starts (shown in the report).
     parser.add_argument('--updated-from', help=argparse.SUPPRESS)
+    parser.add_argument('--stamp', help=argparse.SUPPRESS)  # the updating parent's report name, for its child
     args = parser.parse_args(argv)
     if args.updated_from is not None and not re.fullmatch(r'[0-9a-f]{40}|unknown', args.updated_from):
         print('invalid --updated-from', file=sys.stderr)
+        return 2
+    if args.stamp is not None and not STAMP.fullmatch(args.stamp):
+        print('invalid --stamp', file=sys.stderr)
         return 2
     # The updated child runs with cwd=ROOT, so every path it gets is absolute.
     args.runs, args.config = args.runs.resolve(), args.config.resolve()
@@ -385,7 +393,7 @@ def main(argv=None):
         print('--runs must be a directory named runs', file=sys.stderr)
         return 2
     # UTC: a local stamp could repeat or go backwards when daylight saving time ends.
-    stamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M')
+    stamp = args.stamp or datetime.now(timezone.utc).strftime('%Y%m%d-%H%M')
     summaries = runs / 'periodic-summaries'
     summaries.mkdir(parents=True, exist_ok=True)
     summary_path = summaries / f'{stamp}.md'
@@ -400,11 +408,14 @@ def main(argv=None):
     # An update problem is reported, but the repositories are still checked with the current code.
     old = commit() if args.update else None
     update_error = update_checkout() if args.update else None
-    if args.update and not update_error:
+    # Nothing new on main: this process already runs the current code, so no child is needed.
+    if args.update and not update_error and commit() != old:
         # The modules loaded above are last week's: the check runs in a new process on the updated checkout.
         # It is a child, not an exec, so a new version that fails to start still leaves a report behind.
+        # The child writes the report under this process's name (--stamp), so a check started by someone
+        # else at the same time is never mistaken for it.
         child = [sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), '--config', str(args.config),
-                 '--runs', str(runs), '--updated-from', old if old != '不明' else 'unknown']
+                 '--runs', str(runs), '--updated-from', old if old != '不明' else 'unknown', '--stamp', stamp]
         if args.notify:
             child.append('--notify')
         # The updated config decides how long the updated code may take (new repositories, raised limits).
@@ -413,10 +424,9 @@ def main(argv=None):
             seconds = sum(t['limits'].get('seconds', Limits().seconds) + AFTER_LIMITS.seconds
                           for t in updated['repositories'].values())
         except (Invalid, OSError, KeyError, TypeError, ValueError):
-            seconds = 24 * 3600  # this (old) code cannot read the new config; the child still has its own limits
-        before = set(summaries.iterdir())
+            seconds = 6 * 3600  # this (old) code cannot read the new config; the child still has its own limits
         code, out, err = run(child, timeout=seconds + CHILD_MARGIN_SECONDS)
-        written = sorted(p for p in set(summaries.iterdir()) - before if p.suffix == '.md')
+        written = summary_path.exists()
         # 1 is also what an uncaught exception exits with: a traceback means the child did not finish cleanly.
         if code in (0, 1) and written and 'Traceback (most recent call last)' not in err:
             print(out, end='')  # the child's summary=<path>
@@ -428,18 +438,15 @@ def main(argv=None):
         failure = (f'更新後の版（{commit()}）が正しく終わらなかった（終了コード {code}）。checkout は更新済み'
                    f'（更新前 {old}）。エラー出力は {log.name}。手で実行して確かめる')
         if written:
-            # The child wrote a report (maybe under a later minute) and then failed: say so in that report.
-            summary_path = written[-1]
-            with summary_path.open('a', encoding='utf-8') as stream:
-                stream.write(f'\n## 停止\n\n- {failure}\n')
-        elif summary_path.exists():
+            # The child wrote its report and then failed (killed by the time limit, a crash): say so in it.
             with summary_path.open('a', encoding='utf-8') as stream:
                 stream.write(f'\n## 停止\n\n- {failure}\n')
         else:
             with summary_path.open('x', encoding='utf-8') as stream:
                 stream.write(render(stamp, [], runs_size(runs), failure))
         print(f'summary={summary_path}')
-        if args.notify:
+        # A child that wrote its report has already notified; one more notice only when there was none.
+        if args.notify and not written:
             notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}')
         return 1
     results = []

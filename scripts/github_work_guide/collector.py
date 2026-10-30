@@ -282,7 +282,8 @@ class Collector:
         """Per workflow (by workflow_id, else name), the latest run on the default branch among the newest
         MAIN_RUNS, plus its latest completed run, sorted by name. Pull request runs are left out: a fork's PR from
         a branch that is also called main would otherwise look like the default branch's CI. A workflow with
-        no run in that page (e.g. a rare schedule) is not seen. Counted in this repository's limits."""
+        no run in that page (e.g. a rare schedule) is not seen. Counted in this collector's limits (the weekly
+        check gives it a small budget of its own). A run that does not have the expected shape is skipped."""
         value = self.call(self.transport.branch_runs, branch)
         require(isinstance(value, dict) and isinstance(value.get('workflow_runs'), list), 'workflow runs schema')
         # One fixed-size page: counted as an API call, not against the items limit of the Issue/PR collection.
@@ -290,12 +291,15 @@ class Collector:
         require(len(rows) <= MAIN_RUNS, 'workflow runs page size')
         latest, completed = {}, {}
         for run in rows:
-            require(isinstance(run, dict) and isinstance(run.get('name'), str)
+            # One odd run (a new status value, a null name) does not hide every other workflow's result.
+            if not (isinstance(run, dict) and isinstance(run.get('name'), str) and 0 < len(run['name']) <= 200
                     and isinstance(run.get('head_sha'), str) and re.fullmatch(r'[0-9a-f]{40}', run['head_sha']) is not None
-                    and run.get('status') in ('queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending', 'action_required')
-                    and (run.get('conclusion') is None or isinstance(run.get('conclusion'), str))
+                    and isinstance(run.get('status'), str) and re.fullmatch(r'[a-z_]{1,40}', run['status']) is not None
+                    and (run.get('conclusion') is None or (isinstance(run.get('conclusion'), str)
+                                                          and re.fullmatch(r'[a-z_]{1,40}', run['conclusion']) is not None))
                     and (run.get('event') is None or isinstance(run.get('event'), str))
-                    and isinstance(run.get('created_at'), str), 'workflow run schema')
+                    and isinstance(run.get('created_at'), str)):
+                continue
             if (run.get('event') or '').startswith('pull_request'):
                 continue
             # A run for code from another repository (a fork's branch named like ours, e.g. via workflow_run).
