@@ -292,17 +292,41 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertIn('予期しないエラー（KeyError）', text)
             self.assertNotIn('secret', text)
 
-    def test_update_restarts_on_the_updated_checkout(self):
+    def test_update_runs_the_updated_checkout_in_a_child(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            calls = []
+            def child(args, **kw):
+                calls.append((args, kw))
+                (runs / 'periodic-summaries' / 'child.md').write_text('x')
+                return 1, '', ''
+            with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
+                    patch.object(pc, 'commit', return_value='a' * 40):
+                self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
+            args, kw = calls[0]
+            self.assertNotIn('--update', args)
+            self.assertEqual(args[-2:], ['--runs', str(runs)])
+            self.assertTrue(args[3].endswith('scripts/periodic_check.py'))
+            self.assertEqual(kw['env'][pc.UPDATED_ENV], 'a' * 40)
+
+    def test_a_child_that_fails_to_start_still_leaves_a_report(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp).resolve() / 'runs'
             with patch.object(pc, 'update_checkout', return_value=None), \
-                    patch.object(pc.os, 'execv', side_effect=SystemExit(0)) as execv:
-                with self.assertRaises(SystemExit):
-                    pc.main(['--update', '--runs', str(runs)])
-            args = execv.call_args.args[1]
-            self.assertNotIn('--update', args)
-            self.assertEqual(args[-2:], ['--runs', str(runs)])
-            self.assertTrue(args[-3].endswith('scripts/periodic_check.py'))
+                    patch.object(pc, 'run', return_value=(1, '', 'Traceback')), patch.object(pc, 'commit', return_value='不明'):
+                self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
+            text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
+            self.assertIn('更新後の版が正しく終わらなかった（終了コード 1）', text)
+
+    def test_report_names_the_code_and_where_it_was_updated_from(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(pc.os.environ, {pc.UPDATED_ENV: 'b' * 40}), \
+                patch.object(pc, 'commit', return_value='c' * 40):
+            text = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: SimpleFake})[1]
+            self.assertIn(f'点検したコード: {"c" * 40}（{"b" * 40} から更新した）', text)
+
+    def test_stale_and_unknown_conclusions_are_not_failures(self):
+        rows = [{'last_completed': {'conclusion': c}} for c in ('stale', None, 'failure', 'timed_out')]
+        self.assertEqual([r['conclusion'] for r in pc.ci_problems(rows)], ['failure', 'timed_out'])
 
     def test_update_failure_still_checks_and_abbreviations_are_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -317,12 +341,6 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertIn(f'| {OTHER} | 完了 |', text)
             with self.assertRaises(SystemExit):
                 pc.main(['--upd', '--runs', str(runs)])
-            with patch.object(pc, 'update_checkout', return_value=None), \
-                    patch.object(pc.os, 'execv', side_effect=OSError('moved')), patch.object(pc, 'collector_for', make), \
-                    patch.object(pc, 'datetime', wraps=datetime) as clock:
-                clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
-                self.assertEqual(pc.main(['--update', '--config', str(config), '--runs', str(runs)]), 1)
-            self.assertIn('起動し直せない（OSError）', (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'))
 
     def test_ci_runs_of_other_repositories_cancelled_and_format_fallback_warning(self):
         class Runs(SimpleFake):

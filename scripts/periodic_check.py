@@ -33,23 +33,32 @@ from github_work_guide.core import (SKIP_REASONS, Invalid, build_plan, diff, loa
 
 # Present only in the dedicated check checkout (runs/ is not tracked). --update refuses without it.
 MARKER = 'runs/.periodic-check-checkout'
+# Set by the process that updated the checkout, for the report of the process it starts.
+UPDATED_ENV = 'PERIODIC_CHECK_UPDATED_FROM'
+CHILD_SECONDS = 4 * 3600
 RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}\Z')
 WARN_RATIO = 0.8
 STALE_DAYS = 14
 # Cancelled runs are left out of last_completed in branch_ci, so they never hide or raise a failure.
-OK_CONCLUSIONS = ('success', 'skipped', 'neutral')
+OK_CONCLUSIONS = ('success', 'skipped', 'neutral', 'stale')  # stale: GitHub retired an old run, no code failed
 FORMAT_FALLBACK = '判定できないため簡易版'
 
 
-def run(args, cwd=None, timeout=300):
+def run(args, cwd=None, timeout=300, env=None):
     """Never raises: a timeout or a missing command is a failed result, so the report is still written."""
     try:
-        proc = subprocess.run(args, cwd=cwd or ROOT, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(args, cwd=cwd or ROOT, capture_output=True, text=True, timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         return -1, '', f'timeout after {timeout}s'
     except OSError as error:
         return -1, '', type(error).__name__
     return proc.returncode, proc.stdout, proc.stderr
+
+
+def commit():
+    """The commit of the code that runs the check (shown in the report)."""
+    code, out, _ = run(['git', 'rev-parse', 'HEAD'], timeout=30)
+    return out.strip() if code == 0 and re.fullmatch(r'[0-9a-f]{40}', out.strip()) else '不明'
 
 
 def update_checkout():
@@ -146,7 +155,8 @@ def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False, c
 def ci_problems(ci):
     """Workflows whose last finished run on the default branch did not succeed."""
     return [r['last_completed'] for r in ci or []
-            if r.get('last_completed') and r['last_completed']['conclusion'] not in OK_CONCLUSIONS]
+            if r.get('last_completed') and r['last_completed']['conclusion'] is not None
+            and r['last_completed']['conclusion'] not in OK_CONCLUSIONS]
 
 
 def collector_for(target):
@@ -309,10 +319,12 @@ def runs_size(runs):
     return total
 
 
-def render(stamp, results, size, stop=None, update_error=None):
-    lines = [f'# 定期点検 {stamp}', '',
+def render(stamp, results, size, stop=None, update_error=None, commit=None, updated_from=None):
+    lines = [f'# 定期点検 {stamp}（UTC）', '',
              '設定ファイル（config/github-work-guide.json）の全リポジトリを読み、報告するだけ（#220）。'
              'GitHubへの書き込み・削除・モデルの使用はしていない。', '']
+    if commit:
+        lines += [f'点検したコード: {commit}' + (f'（{updated_from} から更新した）' if updated_from else ''), '']
     if stop:
         lines += ['## 停止', '', f'- {stop}', '']
     if update_error:
@@ -363,12 +375,25 @@ def main(argv=None):
     # An update problem is reported, but the repositories are still checked with the current code.
     update_error = update_checkout() if args.update else None
     if args.update and not update_error:
-        # The modules loaded above are last week's: start again on the updated checkout, without --update.
+        # The modules loaded above are last week's: the check runs in a new process on the updated checkout.
+        # It is a child, not an exec, so a new version that fails to start still leaves a report behind.
         rest = [a for a in (argv if argv is not None else sys.argv[1:]) if a != '--update']
-        try:
-            os.execv(sys.executable, [sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), *rest])
-        except OSError as error:
-            update_error = f'更新後の版で起動し直せない（{type(error).__name__}）。今の版のまま点検した'
+        before = set(summaries.iterdir())
+        code, _, _ = run([sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), *rest],
+                         timeout=CHILD_SECONDS, env={**os.environ, UPDATED_ENV: commit()})
+        written = set(summaries.iterdir()) - before
+        if code in (0, 1) and written:
+            return code
+        text = render(stamp, [], runs_size(runs),
+                      f'更新後の版が正しく終わらなかった（終了コード {code}）。checkout は更新済み。手で実行して確かめる',
+                      commit=commit())
+        if not summary_path.exists():
+            with summary_path.open('x', encoding='utf-8') as stream:
+                stream.write(text)
+        print(f'summary={summary_path}')
+        if args.notify:
+            notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}')
+        return 1
     results = []
     if not stop:
         try:
@@ -379,7 +404,9 @@ def main(argv=None):
         now = datetime.now(timezone.utc)
         for target in config['repositories'].values():
             results.append(check_repository(target, runs, stamp, now))
-    text = render(stamp, results, runs_size(runs), stop, update_error)
+    updated_from = os.environ.get(UPDATED_ENV)
+    updated_from = updated_from if updated_from and re.fullmatch(r'[0-9a-f]{40}|不明', updated_from) else None
+    text = render(stamp, results, runs_size(runs), stop, update_error, commit(), updated_from)
     with summary_path.open('x', encoding='utf-8') as stream:
         stream.write(text)
     print(f'summary={summary_path}')

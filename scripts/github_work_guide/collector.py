@@ -300,7 +300,8 @@ class Collector:
                 continue
             # A run for code from another repository (a fork's branch named like ours, e.g. via workflow_run).
             head_repo = run.get('head_repository')
-            if isinstance(head_repo, dict) and head_repo.get('full_name') not in (None, self.repo):
+            if isinstance(head_repo, dict) and isinstance(head_repo.get('full_name'), str) \
+                    and head_repo['full_name'].lower() != self.repo.lower():  # GitHub names ignore case
                 continue
             key = run.get('workflow_id') if type(run.get('workflow_id')) is int else run['name']
             row = {k: run.get(k) for k in ('name', 'status', 'conclusion', 'head_sha', 'event', 'created_at')}
