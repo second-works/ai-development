@@ -2,5 +2,5 @@
 __pycache__/
 *.pyc
 
-# GitHub work guide runs and reports (scripts/report_github_work_guide.py, scripts/periodic_check.py)
+# GitHub work guide runs and reports (scripts/report_github_work_guide.py)
 /runs/

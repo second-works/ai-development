@@ -175,7 +175,7 @@ class SettingsTests(unittest.TestCase):
         self.assertTrue(all(i['url'].startswith(f'https://github.com/{OTHER}/') for i in snap['items'].values()))
         text = markdown(snap, diff(snap), build_plan(snap))
         self.assertIn(f'リポジトリ: {OTHER}', text)
-        self.assertIn('verification, Security Preflight', text)
+        self.assertIn('&#91;"verification", "Security Preflight"&#93;', text)
 
     def test_config_required_checks_override_the_repository_file(self):
         fake = OtherFake()
@@ -245,7 +245,7 @@ class ReviewGateTests(unittest.TestCase):
         for name, comments in cases.items():
             with self.subTest(name):
                 failures = core.gate(pr_with(comments, reviews=[]), self.CLAUDE)
-                self.assertIn('現headの正式レビュー未確認（claude-code）', failures)
+                self.assertIn('現headの正式レビュー未確認（&#91;"claude-code"&#93;）', failures)
 
     def test_findings_stop_even_when_another_kind_passed(self):
         both = dict(SETTINGS, review=['codex', 'claude-code'])
@@ -255,16 +255,16 @@ class ReviewGateTests(unittest.TestCase):
 
     def test_codex_setting_does_not_accept_claude_comment(self):
         failures = core.gate(pr_with([claude(self.ok())], reviews=[]), SETTINGS)
-        self.assertIn('現headの正式レビュー未確認（codex）', failures)
+        self.assertIn('現headの正式レビュー未確認（&#91;"codex"&#93;）', failures)
 
     def test_unknown_kind_never_passes(self):
         failures = core.gate(pr_with([claude(self.ok())]), dict(SETTINGS, review=['someone']))
-        self.assertIn('現headの正式レビュー未確認（someone）', failures)
+        self.assertIn('現headの正式レビュー未確認（&#91;"someone"&#93;）', failures)
 
     def test_required_checks_come_from_settings(self):
         pr = pr_with()
         self.assertEqual(core.gate(pr, SETTINGS), [])
-        self.assertEqual(core.gate(pr, dict(SETTINGS, required_checks=['verification'])), ['verification: 未取得'])
+        self.assertEqual(core.gate(pr, dict(SETTINGS, required_checks=['verification'])), ['"verification": 未取得'])
         plan = build_plan(seal({'pr:25': pr}, snapshot(item(7))['coverage'], settings=dict(SETTINGS, required_checks=['build'])))
         self.assertIn('build', plan['candidates']['pr:25']['steps'][0])
 
@@ -359,25 +359,65 @@ class ReviewFollowUpTests(unittest.TestCase):
         settings = Collector(OTHER, fake).collect()['settings']
         self.assertEqual(settings['required_checks'], ['build '])
         pr = pr_with()
-        self.assertEqual(core.gate(pr, dict(SETTINGS, required_checks=['ci '])), ['ci : 未取得'])
+        self.assertEqual(core.gate(pr, dict(SETTINGS, required_checks=['ci '])), ['"ci ": 未取得'])
 
     def test_unknown_review_kind_points_at_the_setting(self):
         failures = core.gate(pr_with(), dict(SETTINGS, review=['claude']))
-        self.assertIn('正式レビューの種類を読めない（claude）: main の .github/pr-gate-review を確認', failures)
-        self.assertEqual(core.gate(pr_with(), dict(SETTINGS, review=['codex', 'claude'])),
-                         ['正式レビューの種類を読めない（claude）: main の .github/pr-gate-review を確認'])
+        message = '正式レビューの種類を読めない（&#91;"claude"&#93;）: "main" の .github/pr-gate-review を確認'
+        self.assertIn(message, failures)
+        self.assertEqual(core.gate(pr_with(), dict(SETTINGS, review=['codex', 'claude'])), [message])
 
-    def test_same_named_checks_of_two_workflows_do_not_hide_a_failure(self):
+    def test_latest_run_of_one_app_decides_like_check_pr_head(self):
+        # check-pr-head.sh reads check runs with filter=latest; the guide keeps the newest run per app the same way.
         pr = pr_with()
-        app = {'id': 15368}
-        base = {'name': 'ci', 'head_sha': SHA, 'status': 'completed', 'app': app}
+        base = {'name': 'ci', 'head_sha': SHA, 'status': 'completed', 'app': {'id': 15368}}
         pr['raw']['checks'] = [c for c in pr['raw']['checks'] if c['name'] != 'ci'] + [
-            dict(base, id=100, conclusion='failure', check_suite={'id': 1}),
-            dict(base, id=101, conclusion='success', check_suite={'id': 2})]
-        self.assertIn('ci: 未成功/旧head', core.gate(pr, SETTINGS))
-        # A re-run in the same suite replaces the old attempt.
-        pr['raw']['checks'][-1]['check_suite'] = {'id': 1}
+            dict(base, id=100, conclusion='failure'), dict(base, id=101, conclusion='success')]
         self.assertEqual(core.gate(pr, SETTINGS), [])
+        pr['raw']['checks'][-1]['app'] = {'id': 1}  # another app cannot hide the failure
+        self.assertIn('"ci": 未成功/旧head', core.gate(pr, SETTINGS))
+
+    def test_repository_text_in_steps_is_escaped(self):
+        hostile = ['[承認済み](https://evil.example) <img src=x>']
+        plan = build_plan(seal({'pr:25': pr_with()}, snapshot(item(7))['coverage'],
+                               settings=dict(SETTINGS, required_checks=hostile)))
+        text = json.dumps(plan['candidates']['pr:25']['steps'] + plan['candidates']['pr:25']['hold_reasons'], ensure_ascii=False)
+        for raw in ('[承認済み]', '<img', '](https'):
+            self.assertNotIn(raw, text)
+
+    def test_recheck_sees_changed_settings(self):
+        snap = snapshot(item(7))
+        plan = build_plan(snap)
+        fresh = seal(snap['items'], snap['coverage'], settings=dict(SETTINGS, required_checks=['build']))
+        result = recheck(snap, plan, 'issue:7', fresh)
+        self.assertEqual(result['status'], 'STALE')
+        self.assertEqual(recheck(snap, plan, 'issue:7', seal(snap['items'], snap['coverage']))['status'], 'CONFIRMED')
+
+    def test_config_version_must_be_the_integer_one(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for version in (True, 1.0, '1'):
+                with self.subTest(version=version), self.assertRaises(Invalid):
+                    load_config(write_config(tmp, dict(base_config(), version=version)))
+
+    def test_report_and_excerpt_refuse_another_repo(self):
+        snap = snapshot(item(7))
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp).resolve() / 'runs' / 'a'
+            save_run(run, {'snapshot.json': snap, 'plan.json': build_plan(snap)})
+            for mode, extra in (('report', ()), ('excerpt', ('--target', 'issue:7'))):
+                out = Path(tmp).resolve() / 'runs' / f'{mode}-other'
+                proc = subprocess.run([sys.executable, '-I', '-B', str(CLI), mode, '--run', str(run), '--repo', OTHER,
+                                       '--out', str(out), *extra], capture_output=True, text=True, timeout=60)
+                self.assertEqual(proc.returncode, 2, mode)
+                self.assertFalse(out.exists())
+                out = Path(tmp).resolve() / 'runs' / f'{mode}-same'
+                proc = subprocess.run([sys.executable, '-I', '-B', str(CLI), mode, '--run', str(run), '--repo', REPO,
+                                       '--out', str(out), *extra], capture_output=True, text=True, timeout=60)
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_setting_lines_keep_an_inner_cr(self):
+        from github_work_guide.collector import setting_lines
+        self.assertEqual(setting_lines('Sec\rurity\r\nci\r\n'), ['Sec\rurity', 'ci'])
 
     def test_previous_of_another_repository_stops_before_collecting(self):
         import importlib.util

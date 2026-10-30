@@ -36,6 +36,9 @@ def main(argv=None):
         require(args.mode != 'collect' or args.repo is not None, '--repo required')
         require(args.mode == 'collect' or args.run is not None, '--run required')
         require(args.mode not in ('recheck', 'excerpt') or args.target is not None, '--target required')
+        if args.repo is not None and args.mode != 'collect':
+            # A saved run names its repository; a different --repo is a mistake, not a filter.
+            require(load_run(args.run)['repo'] == args.repo, 'run is for another repository')
         if args.mode == 'excerpt':
             # Saved-run read only: verified manifest/hash, complete acquisition and a matching saved plan.
             require(args.previous is None and not args.priority, 'excerpt does not take --previous/--priority')

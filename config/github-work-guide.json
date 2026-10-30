@@ -3,8 +3,8 @@
   "owner": "second-works",
   "limits": {"seconds": 180, "calls": 500},
   "repositories": [
-    {"name": "ai-development"},
-    {"name": "hermes-self-improvement"},
+    {"name": "ai-development", "limits": {"seconds": 900, "calls": 2000, "items": 20000}},
+    {"name": "hermes-self-improvement", "limits": {"seconds": 600, "calls": 1000}},
     {"name": "second-works"},
     {"name": "local-rag-document-assistant"},
     {"name": "facility-ai-assistant"},

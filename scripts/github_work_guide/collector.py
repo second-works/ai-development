@@ -31,11 +31,12 @@ def content_route(repo, path):
 
 
 def setting_lines(text, strip=False):
-    """Lines of a pr-gate-* file, parsed like scripts/check-pr-head.sh: only CR is removed, whitespace-only
-    lines and lines starting with # in the first column are skipped. Check names keep their spaces (the
-    merge gate looks for exactly that name); review kinds lose all whitespace, as in check-pr-head.sh."""
+    """Lines of a pr-gate-* file, parsed like scripts/check-pr-head.sh reads pr-gate-checks: one trailing CR
+    is removed, whitespace-only lines and lines starting with # in the first column are skipped, and check
+    names keep their spaces (the merge gate looks for exactly that name). Review kinds (strip=True) lose all
+    whitespace, as the check-pr-head.sh versions that read pr-gate-review do."""
     require(isinstance(text, str) and len(text) <= 10_000, 'setting file')
-    rows = [line.replace('\r', '') for line in text.split('\n')]
+    rows = [line[:-1] if line.endswith('\r') else line for line in text.split('\n')]
     rows = [line for line in rows if line.strip() and not line.startswith('#')]
     if strip:
         rows = [''.join(line.split()) for line in rows]
@@ -215,14 +216,14 @@ class Collector:
         texts = {}
         for path in SETTING_FILES:
             texts[path] = self.call(self.transport.content, path, branch)
+        listed = setting_lines(texts['.github/pr-gate-checks']) if texts['.github/pr-gate-checks'] is not None else []
+        kinds = setting_lines(texts['.github/pr-gate-review'], strip=True) if texts['.github/pr-gate-review'] is not None else []
         checks, checks_source = list(DEFAULT_CHECKS), 'default'
         if self.required_checks is not None:
             checks, checks_source = self.required_checks, 'config'
-        elif texts['.github/pr-gate-checks'] is not None and setting_lines(texts['.github/pr-gate-checks']):
-            checks, checks_source = setting_lines(texts['.github/pr-gate-checks']), 'repository'
-        review, review_source = list(DEFAULT_REVIEW), 'default'
-        if texts['.github/pr-gate-review'] is not None and setting_lines(texts['.github/pr-gate-review'], strip=True):
-            review, review_source = setting_lines(texts['.github/pr-gate-review'], strip=True), 'repository'
+        elif listed:
+            checks, checks_source = listed, 'repository'
+        review, review_source = (kinds, 'repository') if kinds else (list(DEFAULT_REVIEW), 'default')
         return validate_settings({'default_branch': branch, 'required_checks': checks, 'checks_source': checks_source,
                                   'review': review, 'review_source': review_source})
 

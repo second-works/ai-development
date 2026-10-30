@@ -285,22 +285,20 @@ def gate(item, settings):
     for name in settings['required_checks']:
         matches = [c for c in raw['checks'] if c.get('name') == name]
         states = [c for c in raw['statuses'] if c.get('context') == name]
-        # Keep each check provider independent; another provider cannot hide failure. Within one app, each
-        # check suite (one workflow run) is its own provider too; a re-run stays in its suite and replaces it.
+        # Keep each check provider independent; another provider cannot hide failure.
         providers = {}
         for check in matches:
             app = check.get('app') or {}
-            suite = check.get('check_suite') or {}
-            provider = (app.get('id'), suite.get('id'))
+            provider = app.get('id')
             if provider not in providers or providers[provider]['id'] < check['id']:
                 providers[provider] = check
         if any(c.get('head_sha') != head or c.get('status') != 'completed'
                or c.get('conclusion') != 'success' for c in providers.values()):
-            failures.append(f'{name}: 未成功/旧head')
+            failures.append(f'{safe_text(name)}: 未成功/旧head')
         if states and max(states, key=lambda c: c['id']).get('state') != 'success':
-            failures.append(f'{name}: 未成功status')
+            failures.append(f'{safe_text(name)}: 未成功status')
         if not matches and not states:
-            failures.append(f'{name}: 未取得')
+            failures.append(f'{safe_text(name)}: 未取得')
     passed, findings = [], []
     for kind in settings['review']:
         if kind == 'codex':
@@ -316,12 +314,12 @@ def gate(item, settings):
     # An unknown kind never passes: only codex / claude-code are understood.
     unknown = [kind for kind in settings['review'] if kind not in REVIEW_KINDS]
     if unknown:
-        failures.append('正式レビューの種類を読めない（' + '、'.join(unknown) + '）: '
-                        f'{settings["default_branch"]} の .github/pr-gate-review を確認')
+        failures.append(f'正式レビューの種類を読めない（{safe_text(unknown)}）: '
+                        f'{safe_text(settings["default_branch"])} の .github/pr-gate-review を確認')
     for kind in findings:
         failures.append(f'現headの正式レビュー（{kind}）に未解決の指摘あり')
     if not passed and not findings:
-        failures.append('現headの正式レビュー未確認（' + '、'.join(settings['review']) + '）')
+        failures.append(f'現headの正式レビュー未確認（{safe_text(settings["review"])}）')
     if any(r.get('state') == 'CHANGES_REQUESTED' for r in raw['reviews']):
         failures.append('変更要求レビューあり（人の分類が必要）')
     if any(t['isResolved'] is not True for t in raw['threads']):
@@ -610,7 +608,9 @@ def steps_for(key, kind, item, info, deps, items, settings):
         return [f'{item["state"]}のため再実装を開始しない。']
     if kind == 'review':
         head = item['raw']['detail']['head']['sha']
-        steps = [f'現head {head} で必須check（{", ".join(settings["required_checks"])}）・正式レビュー（{", ".join(settings["review"])}）・threadを確認する。']
+        # Names come from the repository's files: shown only as escaped JSON, like any other source text.
+        steps = [f'現head {head} で必須check {safe_text(settings["required_checks"])}・正式レビュー {safe_text(settings["review"])}'
+                 '・threadを確認する。']
         return steps + [f'保留 gate: {h["reason"]}' for h in info['holds']] + [
             f'scripts/check-pr-head.sh {item["number"]} が PR_GATE_STATUS=READY を返すまでマージを依頼しない。']
     steps = []
@@ -803,6 +803,9 @@ def recheck(snapshot, plan, target, fresh):
     after = {k: fingerprint(v) for k, v in fresh['items'].items()}
     if before != after:
         return {'target': target, 'status': 'STALE', 'reasons': ['取得範囲の状態/根拠が計画時と変化']}
+    if fresh['settings'] != snapshot['settings']:
+        # Required checks, review kinds or the default branch changed: the saved holds are no longer current.
+        return {'target': target, 'status': 'STALE', 'reasons': ['必須check・正式レビュー・既定ブランチの設定が計画時と変化']}
     reasons = plan['candidates'][target]['hold_reasons']
     return {'target': target, 'status': 'BLOCKED' if reasons else 'CONFIRMED', 'reasons': reasons,
             'meaning': '読取dry-runのみ。実行・承認・完了を意味しない。', 'fresh_hash': fresh['hash']}

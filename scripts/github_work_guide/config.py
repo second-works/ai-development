@@ -24,7 +24,7 @@ def load_config(path=CONFIG):
     value = read_json(path)
     require(isinstance(value, dict) and set(value) <= TOP_KEYS and {'version', 'owner', 'repositories'} <= set(value),
             'config keys')
-    require(value['version'] == 1, 'config version')
+    require(type(value['version']) is int and value['version'] == 1, 'config version')
     # One organisation: the config cannot widen the reads to another owner.
     require(value['owner'] == OWNER, 'config owner')
     defaults = limits_value(value.get('limits', {}))
