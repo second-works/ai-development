@@ -441,6 +441,7 @@ class ReviewFollowUpTests(unittest.TestCase):
         snap = Collector(OTHER, fake, required_checks=['build']).collect()
         self.assertEqual(snap['coverage']['status'], 'COMPLETE')
         self.assertEqual(snap['settings']['required_checks'], ['build'])
+        self.assertNotIn(('CONTENT', '.github/pr-gate-checks', 'trunk'), fake.routes)  # not even fetched
 
     def test_priority_problems_do_not_lose_the_collection(self):
         import importlib.util

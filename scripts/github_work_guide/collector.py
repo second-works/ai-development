@@ -219,10 +219,11 @@ class Collector:
         same files from each PR's base branch, so a PR to another branch can be judged differently there."""
         texts = {}
         for path in SETTING_FILES:
-            texts[path] = self.call(self.transport.content, path, branch)
+            # A file whose names are overridden by the config is not fetched, so it cannot fail the run.
+            overridden = path == '.github/pr-gate-checks' and self.required_checks is not None
+            texts[path] = None if overridden else self.call(self.transport.content, path, branch)
         def parsed(path, strip, exact):
-            # A file whose names are overridden by the config is not read at all, so it cannot fail the run.
-            if texts[path] is None or (path == '.github/pr-gate-checks' and self.required_checks is not None):
+            if texts[path] is None:
                 return []
             try:
                 lines = setting_lines(texts[path], strip=strip)

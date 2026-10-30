@@ -73,7 +73,57 @@
 
 ## 登録済み項目
 
-現在、登録済みのFOLLOW-UPはない。
+### FU-221-1
+
+- 発生元Issue / PR: #219 / #221
+- 対象領域: GitHub作業指針（githubスクリプト）の依存循環の判定
+- 内容: 依存循環を見つけたとき、探索中の経路全体（循環に入っていない祖先を含む）に「依存循環」の保留を付ける。
+- 後回し可能とした根拠: hermes-self-improvement から移した判定のままで、#219 は読み取りの規則を変えない移植。保留が増える側（安全側）の誤りで、独立に直せる。
+- 想定症状: issue:1 → #2、#2 → #3、#3 → #2 のとき、循環にない issue:1 にも「依存循環」の保留と手順が出て、recheck が BLOCKED になる。
+- 関連ファイル / 機能: `scripts/github_work_guide/core.py` の `build_plan`（DFS の `visiting`）
+- 優先度: P3
+- 状態: `open`
+- 解決Issue / PR: なし
+- 置換理由: なし
+
+### FU-221-2
+
+- 発生元Issue / PR: #219 / #221
+- 対象領域: GitHub作業指針の gate 判定と `scripts/check-pr-head.sh` の違い
+- 内容: `codex` の正式レビューは、Codex bot の APPROVED / COMMENTED レビューがあれば確認済みとし、`codex-review-state:v1` の `has_unresolved_findings` を読まない。また、過去に一度でも CHANGES_REQUESTED があれば保留にし、レビュアーごとの最新の判断だけを見る check-pr-head.sh と違う。
+- 後回し可能とした根拠: hermes-self-improvement から移した判定のまま。案内は最後に check-pr-head.sh の READY を求めるので、マージ前の照合は check-pr-head.sh が行う。資料（docs/github-work-guide.md）に違いを書いた。
+- 想定症状: レビュー本文に指摘がある Codex の COMMENTED レビューで、案内に保留が出ない。変更要求の後に承認されたPRで、案内に「変更要求レビューあり」が残り続ける。
+- 関連ファイル / 機能: `scripts/github_work_guide/core.py` の `gate`
+- 優先度: P2
+- 状態: `open`
+- 解決Issue / PR: なし
+- 置換理由: なし
+
+### FU-221-3
+
+- 発生元Issue / PR: #219 / #221
+- 対象領域: GitHub作業指針の本文の読み取り
+- 内容: 本文の行 `depends-on: #N`（見出しなし）を依存の記載として認識しない。同じリポジトリへの参照の owner/name を大文字小文字を区別して比べるので、`Second-Works/ai-development#12` のような書き方は別リポジトリ扱いになる。
+- 後回し可能とした根拠: hermes-self-improvement から移した読み取りの規則のまま。依存欄の見出しや `- depends-on:` を依存欄の中に書く形式は読めている。保留が増える側の誤り。
+- 想定症状: 依存欄の見出しがなく `- depends-on: #5` だけの Issue に「依存欄がない」の保留が出る。大文字を混ぜた参照の子一覧の行が「確認できない」になる。
+- 関連ファイル / 機能: `scripts/github_work_guide/guide.py` の `LABEL`、`references`、`reference_count`
+- 優先度: P3
+- 状態: `open`
+- 解決Issue / PR: なし
+- 置換理由: なし
+
+### FU-221-4
+
+- 発生元Issue / PR: #219 / #221
+- 対象領域: GitHub作業指針の取得の上限
+- 内容: Issue/PR の一覧は100件×10ページで、ちょうど1000件以上あるリポジトリは取得が終わらない（INCOMPLETE）。設定ファイルの `items` / `calls` を上げても変わらない。
+- 後回し可能とした根拠: 2026-10-30 時点で対象リポジトリの最大は ai-development の約220件。`page limit reached` で INCOMPLETE になるだけで、誤った案内は出ない。
+- 想定症状: 1000件に近づいたリポジトリで、毎回 `取得不完全` になり plan が作られない。
+- 関連ファイル / 機能: `scripts/github_work_guide/collector.py` の `rest_request`、`Collector.pages`、`MAXIMUM`
+- 優先度: P3
+- 状態: `open`
+- 解決Issue / PR: なし
+- 置換理由: なし
 
 ## 新規登録テンプレート
 
