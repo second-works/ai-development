@@ -74,7 +74,7 @@ macOSの `/tmp` / `/var` などsymlinkを含む絶対pathは実体path（`/priva
 
 ## 週1回の点検（scripts/periodic_check.py）
 
-設定ファイルの全リポジトリを1回ずつ読み、結果を1通の報告 `runs/periodic-summaries/<YYYYMMDD-HHMM>.md`（日時はUTC。夏時間の切り替えで名前が重ならないため）にまとめる（#220）。取得が完了したあとに予期しないエラーが出ても、取得結果（snapshot）は保存する。モデルは使わず、GitHubへの書き込み・削除もしない。
+設定ファイルの全リポジトリを1回ずつ読み、結果を1通の報告 `runs/periodic-summaries/<YYYYMMDD-HHMM>.md`（日時はUTC。夏時間の切り替えで名前が重ならないため）にまとめる（#220）。取得が完了したあとに予期しないエラーが出ても、取得結果（snapshot）を `periodic-<日時>-snapshot` に保存する。ただし、その週の変化は報告していないので、次回の比較の基準にはしない。API呼出数は、取得の分と、別枠の形式の判定・CIの分を分けて出す。モデルは使わず、GitHubへの書き込み・削除もしない。
 
 ```sh
 python3 -I -B scripts/periodic_check.py            # 点検だけ

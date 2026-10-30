@@ -281,7 +281,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             code, text, runs = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: SimpleFake})
             saved = load_run(next((runs / 'second-works--other-repo').iterdir()))
             # simple: 1 presence check (stops at the first missing file) + 1 CI read
-            self.assertIn(f'API呼出 {saved["coverage"]["calls"] + 2}回', text)
+            self.assertIn(f'API呼出 {saved["coverage"]["calls"]}回（上限 500回）＋形式の判定とCIで2回（別枠）', text)
 
     def test_unexpected_error_names_only_its_type(self):
         class Broken(SimpleFake):
@@ -349,7 +349,8 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             with patch.object(pc, 'datetime', wraps=datetime) as clock:
                 clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
                 def child(args, **kw):
-                    (runs / 'periodic-summaries' / '20261106-0900.md').write_text('# child report\n', encoding='utf-8')
+                    (runs / 'periodic-summaries' / '20261106-0900.md').write_text(
+                        f'# child report\n（{"a" * 40} から更新した）\n', encoding='utf-8')
                     return -1, '', 'Traceback\nTimeoutish'
                 with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
                         patch.object(pc, 'commit', side_effect=iter(['a' * 40, 'b' * 40, 'b' * 40]).__next__):
@@ -383,7 +384,8 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
                 def child(args, **kw):
                     seen.append(args)
                     name = args[args.index('--stamp') + 1]
-                    (runs / 'periodic-summaries' / f'{name}.md').write_text('# child\n', encoding='utf-8')
+                    (runs / 'periodic-summaries' / f'{name}.md').write_text(
+                        f'# child\n点検したコード: {"b" * 40}（{"a" * 40} から更新した）\n', encoding='utf-8')
                     return 1, 'summary=x\n', 'Traceback (most recent call last):\n  boom\n'
                 with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
                         patch.object(pc, 'commit', side_effect=lambda: next(heads)), patch.object(pc, 'notify') as notify:
@@ -391,7 +393,32 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertIn('20261106-0900', seen[0])
             self.assertIn('正しく終わらなかった（終了コード 1）',
                           (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'))
-            notify.assert_not_called()  # the child that wrote its report has notified already
+            notify.assert_called_once()  # the child may have stopped before its own notice
+
+    def test_another_checks_report_of_the_same_minute_is_left_alone(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            heads = iter(['a' * 40, 'b' * 40, 'b' * 40])
+            with patch.object(pc, 'datetime', wraps=datetime) as clock:
+                clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
+                def child(args, **kw):
+                    (runs / 'periodic-summaries' / '20261106-0900.md').write_text('# a manual check\n', encoding='utf-8')
+                    return 2, '', 'summary already exists'
+                with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
+                        patch.object(pc, 'commit', side_effect=lambda: next(heads)):
+                    self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
+            self.assertEqual((runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'), '# a manual check\n')
+            self.assertIn('正しく終わらなかった（終了コード 2）',
+                          (runs / 'periodic-summaries' / '20261106-0900-update-failure.md').read_text(encoding='utf-8'))
+
+    def test_unreadable_commit_still_starts_the_child(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            calls = []
+            with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'commit', return_value='不明'), \
+                    patch.object(pc, 'run', side_effect=lambda args, **kw: calls.append(args) or (2, '', '')):
+                pc.main(['--update', '--runs', str(runs)])
+            self.assertEqual(calls[0][calls[0].index('--updated-from') + 1], 'unknown')
 
     def test_no_new_commit_means_no_child(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -418,7 +445,8 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertEqual(code, 1)
             kept = [p for p in (runs / 'second-works--other-repo').iterdir() if p.name.endswith('-snapshot')]
             self.assertEqual(load_run(kept[0])['coverage']['status'], 'COMPLETE')
-            self.assertEqual(pc.previous_run(runs / 'second-works--other-repo')[0], kept[0])
+            # Its changes were never reported, so it is not next week's baseline.
+            self.assertEqual(pc.previous_run(runs / 'second-works--other-repo'), (None, None))
 
     def test_timeout_keeps_partial_output_and_warnings_use_collection_only(self):
         code, out, err = pc.run([sys.executable, '-c', 'import sys,time; print("started", file=sys.stderr, flush=True); time.sleep(60)'],
@@ -530,6 +558,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             code, text, runs = self.run_check(tmp, [{'name': 'hermes-self-improvement'}], {REPO: Fake})
             self.assertEqual(code, 1)
             run = next((runs / 'second-works--hermes-self-improvement').iterdir())
+            self.assertTrue(run.name.endswith('-snapshot'))
             self.assertEqual(load_run(run)['coverage']['status'], 'COMPLETE')
 
     def test_one_issue_counts_once(self):

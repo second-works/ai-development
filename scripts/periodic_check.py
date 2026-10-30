@@ -35,8 +35,9 @@ from github_work_guide.core import (SKIP_REASONS, Invalid, build_plan, diff, loa
 MARKER = 'runs/.periodic-check-checkout'
 # Time for the updated child beyond the sum of the repositories' own time limits.
 CHILD_MARGIN_SECONDS = 1800
-# -snapshot: the collection alone, kept when writing the full run failed part way.
-RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}(?:-snapshot)?\Z')
+# Weekly runs. A check that failed after collecting keeps its snapshot as periodic-<stamp>-snapshot for
+# inspection; it is never the next baseline, because its changes were not reported.
+RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}\Z')
 STAMP = re.compile(r'\d{8}-\d{4}\Z')
 WARN_RATIO = 0.8
 STALE_DAYS = 14
@@ -227,6 +228,7 @@ def check_repository(target, runs, stamp, now):
             seconds = time.monotonic() - started
             result['analysis'] = analyse(snapshot, plan, changes, seconds, now, collector.limits, previous is not None,
                                          collector.calls + after.calls, collect_seconds)
+            result['analysis']['after_calls'] = after.calls
             if result['ci_error']:
                 result['analysis']['warnings'].append('既定ブランチのCIを確認できていない')
             if result['format_source'] == FORMAT_FALLBACK:
@@ -240,15 +242,15 @@ def check_repository(target, runs, stamp, now):
         result['run'] = out.name
     except Exception as error:  # noqa: BLE001 - one repository never stops the others; raw text may hold remote data
         # Only the exception type is kept: its message may carry remote text or auth diagnostics.
-        result['stop'] = result['stop'] or (f'この repository の点検中に予期しないエラー（{type(error).__name__}）。'
-                                            'ほかの repository は続けた')
+        unexpected = f'この repository の点検中に予期しないエラー（{type(error).__name__}）。ほかの repository は続けた'
+        result['stop'] = f'{result["stop"]}。{unexpected}' if result['stop'] else unexpected
         # A collection that finished is still kept, so the time and calls it took are not lost.
         if result['run'] is None and snapshot is not None:
-            # A run directory left half written cannot be reused: keep the snapshot next to it.
-            target = out if not out.exists() else out.with_name(out.name + '-snapshot')
+            # Kept for inspection under its own name (not a baseline: its changes were not reported).
+            kept = out.with_name(out.name + '-snapshot')
             try:
-                save_run(target, {'snapshot.json': snapshot})
-                result['run'] = target.name
+                save_run(kept, {'snapshot.json': snapshot})
+                result['run'] = kept.name
             except Exception:  # noqa: BLE001
                 pass
     return result
@@ -292,8 +294,9 @@ def render_repository(result):
         return lines + ['']
     limits = Limits(**result['limits'])
     lines += [f'- 形式: {"完全版（作業案内あり）" if result["format"] == "full" else "簡易版"}（{result["format_source"]}）',
-              f'- 取得: {a["status"]} / {a["items"]}件 / API呼出 {a["calls"]}回 / {a["seconds"]:.0f}秒'
-              f'（上限 {limits.seconds}秒・{limits.calls}回）',
+              f'- 取得: {a["status"]} / {a["items"]}件 / API呼出 {a["calls"] - a.get("after_calls", 0)}回'
+              f'（上限 {limits.calls}回）＋形式の判定とCIで{a.get("after_calls", 0)}回（別枠） / 全体 {a["seconds"]:.0f}秒'
+              f'（取得の上限 {limits.seconds}秒）',
               f'- 前回のrun: {result["previous"] or "なし（初回）"} / 今回のrun: {result["run"]}', '',
               '### 前回からの変化', '']
     if a['first']:
@@ -408,8 +411,10 @@ def main(argv=None):
     # An update problem is reported, but the repositories are still checked with the current code.
     old = commit() if args.update else None
     update_error = update_checkout() if args.update else None
-    # Nothing new on main: this process already runs the current code, so no child is needed.
-    if args.update and not update_error and commit() != old:
+    # Nothing new on main: this process already runs the current code, so no child is needed. When the
+    # commit cannot be read, a child is started anyway (it may be new code).
+    new = commit() if args.update and not update_error else None
+    if args.update and not update_error and (new != old or new == '不明'):
         # The modules loaded above are last week's: the check runs in a new process on the updated checkout.
         # It is a child, not an exec, so a new version that fails to start still leaves a report behind.
         # The child writes the report under this process's name (--stamp), so a check started by someone
@@ -426,9 +431,8 @@ def main(argv=None):
         except (Invalid, OSError, KeyError, TypeError, ValueError):
             seconds = 6 * 3600  # this (old) code cannot read the new config; the child still has its own limits
         code, out, err = run(child, timeout=seconds + CHILD_MARGIN_SECONDS)
-        written = summary_path.exists()
         # 1 is also what an uncaught exception exits with: a traceback means the child did not finish cleanly.
-        if code in (0, 1) and written and 'Traceback (most recent call last)' not in err:
+        if code in (0, 1) and summary_path.exists() and 'Traceback (most recent call last)' not in err:
             print(out, end='')  # the child's summary=<path>
             return code
         # Kept for diagnosis next to the report (runs/ is not tracked). It is local output of this program.
@@ -437,16 +441,21 @@ def main(argv=None):
             log.write_text('\n'.join(err.splitlines()[-50:]) + '\n', encoding='utf-8')
         failure = (f'更新後の版（{commit()}）が正しく終わらなかった（終了コード {code}）。checkout は更新済み'
                    f'（更新前 {old}）。エラー出力は {log.name}。手で実行して確かめる')
+        # Only a report naming the commit this check was updated from is the child's; a report of the same
+        # minute without it was written by another check and is left alone.
+        written = summary_path.exists() and old in summary_path.read_text(encoding='utf-8', errors='replace')
         if written:
             # The child wrote its report and then failed (killed by the time limit, a crash): say so in it.
             with summary_path.open('a', encoding='utf-8') as stream:
                 stream.write(f'\n## 停止\n\n- {failure}\n')
         else:
+            if summary_path.exists():  # another check's report of the same minute: leave it alone
+                summary_path = summaries / f'{stamp}-update-failure.md'
             with summary_path.open('x', encoding='utf-8') as stream:
                 stream.write(render(stamp, [], runs_size(runs), failure))
         print(f'summary={summary_path}')
-        # A child that wrote its report has already notified; one more notice only when there was none.
-        if args.notify and not written:
+        # A failed child may have stopped before its own notice, so this one is always sent.
+        if args.notify:
             notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}')
         return 1
     results = []
