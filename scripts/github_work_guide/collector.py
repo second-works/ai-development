@@ -29,9 +29,19 @@ def rest_route(repo):
                       r'|/commits/[0-9a-f]{40}/(?:check-runs|statuses))\Z')
 
 
+# Files whose presence on the default branch marks a repository placed with the lightweight template
+# (templates/lightweight/place.sh): its Issues follow the Goal / Done / Dependencies form (#220).
+FORMAT_FILES = ('.claude/skills/steward/SKILL.md', '.agents/skills/plan-to-issues/SKILL.md')
+MAIN_RUNS = 30  # newest workflow runs read for the default branch's CI
+
+
 def content_route(repo, path):
-    require(path in SETTING_FILES, 'content path not allowlisted')
+    require(path in SETTING_FILES or path in FORMAT_FILES, 'content path not allowlisted')
     return f'{prefix(repo)}/contents/{path}'
+
+
+def runs_route(repo):
+    return f'{prefix(repo)}/actions/runs'
 
 
 def setting_lines(text, strip=False):
@@ -130,6 +140,19 @@ class GhReadOnly:
             return base64.b64decode(value['content'], validate=False).decode('utf-8')
         except (ValueError, UnicodeError):
             raise SettingFileError('invalid content encoding') from None
+
+    def exists(self, path, ref, timeout):
+        """Whether an allowlisted file exists on `ref`. Only presence is used; the content is not read."""
+        require(path in FORMAT_FILES and isinstance(ref, str) and 0 < len(ref) <= 255, 'invalid presence check')
+        value = self._run(['--method', 'GET', '--raw-field', f'ref={ref}', content_route(self.repo, path)],
+                          timeout, missing_ok=True)
+        return value is not None
+
+    def branch_runs(self, branch, timeout):
+        """The newest workflow runs on one branch (one page)."""
+        require(isinstance(branch, str) and 0 < len(branch) <= 255, 'invalid branch')
+        return self._run(['--method', 'GET', '--raw-field', f'branch={branch}', '--raw-field', f'per_page={MAIN_RUNS}',
+                          runs_route(self.repo)], timeout)
 
     def connection(self, kind, n, cursor, timeout):
         number(n)
@@ -243,6 +266,28 @@ class Collector:
         # The default branch name comes from the repository metadata: a bad one is not a setting-file problem.
         return validate_settings({'default_branch': branch, 'required_checks': checks, 'checks_source': checks_source,
                                   'review': review, 'review_source': review_source})
+
+    def repository_format(self, branch):
+        """'full' when the default branch has both lightweight-template skills, else 'simple'."""
+        found = [self.call(self.transport.exists, path, branch) for path in FORMAT_FILES]
+        require(all(type(x) is bool for x in found), 'presence result')
+        return 'full' if all(found) else 'simple'
+
+    def branch_ci(self, branch):
+        """Latest run of each workflow on the default branch, newest first. Counted in this repository's limits."""
+        value = self.call(self.transport.branch_runs, branch)
+        require(isinstance(value, dict) and isinstance(value.get('workflow_runs'), list), 'workflow runs schema')
+        rows = value['workflow_runs']
+        self.count(rows)
+        latest = {}
+        for run in rows:
+            require(isinstance(run, dict) and isinstance(run.get('name'), str) and isinstance(run.get('head_sha'), str)
+                    and run.get('status') in ('queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending')
+                    and (run.get('conclusion') is None or isinstance(run.get('conclusion'), str))
+                    and isinstance(run.get('created_at'), str), 'workflow run schema')
+            if run['name'] not in latest or latest[run['name']]['created_at'] < run['created_at']:
+                latest[run['name']] = {k: run.get(k) for k in ('name', 'status', 'conclusion', 'head_sha', 'event', 'created_at')}
+        return sorted(latest.values(), key=lambda r: r['name'])
 
     def skipped(self, reason):
         coverage = {'status': 'SKIPPED', 'skipped': reason, 'errors': [], 'calls': self.calls,

@@ -330,7 +330,7 @@ class RepositoryIndependenceTests(unittest.TestCase):
 
 class NoFixedRepositoryTests(unittest.TestCase):
     def test_code_names_no_repository(self):
-        for path in [*(ROOT / 'scripts/github_work_guide').glob('*.py'), CLI]:
+        for path in [*(ROOT / 'scripts/github_work_guide').glob('*.py'), CLI, ROOT / 'scripts/periodic_check.py']:
             text = path.read_text(encoding='utf-8')
             with self.subTest(path.name):
                 self.assertNotIn('hermes-self-improvement', text)

@@ -73,6 +73,10 @@ class Fake:
         self.contents = {'.github/pr-gate-checks': '# required\nci\nSecurity Preflight\nAnalyze (python)\n',
                          '.github/pr-gate-review': None}
         self.meta = {'full_name': REPO, 'private': False, 'visibility': 'public', 'default_branch': 'main'}
+        # Files present on the default branch (#220 format detection) and its workflow runs.
+        self.present = {'.claude/skills/steward/SKILL.md', '.agents/skills/plan-to-issues/SKILL.md'}
+        self.workflow_runs = [{'name': 'Template CI', 'status': 'completed', 'conclusion': 'success', 'head_sha': SHA,
+                               'event': 'push', 'created_at': '2026-10-29T00:00:00Z'}]
 
     def get(self, path, page, timeout):
         rest_request(REPO, path, page)
@@ -103,6 +107,14 @@ class Fake:
         if self.fail_at == len(self.routes):
             raise Invalid('synthetic permission/rate/network failure')
         return self.contents[path]
+
+    def exists(self, path, ref, timeout):
+        self.routes.append(('EXISTS', path, ref))
+        return path in self.present
+
+    def branch_runs(self, branch, timeout):
+        self.routes.append(('RUNS', branch))
+        return {'total_count': len(self.workflow_runs), 'workflow_runs': copy.deepcopy(self.workflow_runs)}
 
     def connection(self, kind, n, cursor, timeout):
         self.routes.append(('QUERY', kind, n))
