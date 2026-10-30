@@ -9,7 +9,8 @@ CONFIG = ROOT / 'config/github-work-guide.json'
 OWNER = 'second-works'
 LIMIT_KEYS = ('pages', 'items', 'calls', 'seconds')
 TOP_KEYS = {'version', 'owner', 'limits', 'repositories'}
-ENTRY_KEYS = {'name', 'required_checks', 'limits'}
+ENTRY_KEYS = {'name', 'required_checks', 'limits', 'format'}
+FORMATS = ('auto', 'full', 'simple')
 
 
 def limits_value(value):
@@ -39,7 +40,9 @@ def load_config(path=CONFIG):
         seen.add(full.lower())
         limits = {**defaults, **limits_value(row.get('limits', {}))}
         Limits(**limits)  # over the maximum: refused here, not at the first collect
-        entry = {'repo': full, 'limits': limits,
+        # format: how the weekly check reads this repository. auto decides from the default branch (#220).
+        require(row.get('format', 'auto') in FORMATS, 'repository format')
+        entry = {'repo': full, 'limits': limits, 'format': row.get('format', 'auto'),
                  'required_checks': names(row['required_checks']) if 'required_checks' in row else None}
         repositories[full] = entry
     return {'owner': OWNER, 'limits': defaults, 'repositories': repositories}

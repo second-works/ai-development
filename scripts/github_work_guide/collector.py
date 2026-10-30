@@ -29,9 +29,20 @@ def rest_route(repo):
                       r'|/commits/[0-9a-f]{40}/(?:check-runs|statuses))\Z')
 
 
-def content_route(repo, path):
-    require(path in SETTING_FILES, 'content path not allowlisted')
+# Files whose presence on the default branch marks a repository placed with the lightweight template
+# (templates/lightweight/place.sh): its Issues follow the Goal / Done / Dependencies form (#220).
+FORMAT_FILES = ('.claude/skills/steward/SKILL.md', '.agents/skills/plan-to-issues/SKILL.md')
+MAIN_RUNS = 30  # newest workflow runs read for the default branch's CI
+
+
+def content_route(repo, path, presence=False):
+    """Setting files are read; format files are only checked for presence (exists), never decoded."""
+    require(path in (FORMAT_FILES if presence else SETTING_FILES), 'content path not allowlisted')
     return f'{prefix(repo)}/contents/{path}'
+
+
+def runs_route(repo):
+    return f'{prefix(repo)}/actions/runs'
 
 
 def setting_lines(text, strip=False):
@@ -130,6 +141,20 @@ class GhReadOnly:
             return base64.b64decode(value['content'], validate=False).decode('utf-8')
         except (ValueError, UnicodeError):
             raise SettingFileError('invalid content encoding') from None
+
+    def exists(self, path, ref, timeout):
+        """Whether an allowlisted file exists on `ref`. Only presence is used; the content is not read."""
+        require(path in FORMAT_FILES and isinstance(ref, str) and 0 < len(ref) <= 255, 'invalid presence check')
+        value = self._run(['--method', 'GET', '--raw-field', f'ref={ref}', content_route(self.repo, path, presence=True)],
+                          timeout, missing_ok=True)
+        # A directory or submodule at that path is not the skill file.
+        return isinstance(value, dict) and value.get('type') == 'file'
+
+    def branch_runs(self, branch, timeout):
+        """The newest workflow runs on one branch (one page)."""
+        require(isinstance(branch, str) and 0 < len(branch) <= 255, 'invalid branch')
+        return self._run(['--method', 'GET', '--raw-field', f'branch={branch}', '--raw-field', f'per_page={MAIN_RUNS}',
+                          runs_route(self.repo)], timeout)
 
     def connection(self, kind, n, cursor, timeout):
         number(n)
@@ -243,6 +268,56 @@ class Collector:
         # The default branch name comes from the repository metadata: a bad one is not a setting-file problem.
         return validate_settings({'default_branch': branch, 'required_checks': checks, 'checks_source': checks_source,
                                   'review': review, 'review_source': review_source})
+
+    def repository_format(self, branch):
+        """'full' when the default branch has both lightweight-template skills, else 'simple'."""
+        for path in FORMAT_FILES:  # stops at the first missing file, so a simple repository costs one call
+            found = self.call(self.transport.exists, path, branch)
+            require(type(found) is bool, 'presence result')
+            if not found:
+                return 'simple'
+        return 'full'
+
+    def branch_ci(self, branch):
+        """Per workflow (by workflow_id, else name), the latest run on the default branch among the newest
+        MAIN_RUNS, plus its latest completed run, sorted by name. Pull request runs are left out: a fork's PR from
+        a branch that is also called main would otherwise look like the default branch's CI. A workflow with
+        no run in that page (e.g. a rare schedule) is not seen. Counted in this collector's limits (the weekly
+        check gives it a small budget of its own). A run that does not have the expected shape is skipped."""
+        value = self.call(self.transport.branch_runs, branch)
+        require(isinstance(value, dict) and isinstance(value.get('workflow_runs'), list), 'workflow runs schema')
+        # One fixed-size page: counted as an API call, not against the items limit of the Issue/PR collection.
+        rows = value['workflow_runs']
+        require(len(rows) <= MAIN_RUNS, 'workflow runs page size')
+        latest, completed = {}, {}
+        for run in rows:
+            # One odd run (a new status value, a null name) does not hide every other workflow's result.
+            if not (isinstance(run, dict) and isinstance(run.get('name'), str) and 0 < len(run['name']) <= 200
+                    and isinstance(run.get('head_sha'), str) and re.fullmatch(r'[0-9a-f]{40}', run['head_sha']) is not None
+                    and isinstance(run.get('status'), str) and re.fullmatch(r'[a-z_]{1,40}', run['status']) is not None
+                    and (run.get('conclusion') is None or (isinstance(run.get('conclusion'), str)
+                                                          and re.fullmatch(r'[a-z_]{1,40}', run['conclusion']) is not None))
+                    and (run.get('event') is None or isinstance(run.get('event'), str))
+                    and isinstance(run.get('created_at'), str)):
+                continue
+            if (run.get('event') or '').startswith('pull_request'):
+                continue
+            # A run for code from another repository (a fork's branch named like ours, e.g. via workflow_run).
+            head_repo = run.get('head_repository')
+            if isinstance(head_repo, dict) and isinstance(head_repo.get('full_name'), str) \
+                    and head_repo['full_name'].lower() != self.repo.lower():  # GitHub names ignore case
+                continue
+            key = run.get('workflow_id') if type(run.get('workflow_id')) is int else run['name']
+            row = {k: run.get(k) for k in ('name', 'status', 'conclusion', 'head_sha', 'event', 'created_at')}
+            if key not in latest or latest[key]['created_at'] < run['created_at']:
+                latest[key] = row
+            # A cancelled run says nothing about the code, so it neither hides nor reports a failure.
+            if run['status'] == 'completed' and run.get('conclusion') != 'cancelled' and (
+                    key not in completed or completed[key]['created_at'] < run['created_at']):
+                completed[key] = row
+        # A newer run still in progress (or cancelled) does not hide the result of the last finished one.
+        return sorted(({**row, 'last_completed': completed.get(key)} for key, row in latest.items()),
+                      key=lambda r: (r['name'], r['created_at']))
 
     def skipped(self, reason):
         coverage = {'status': 'SKIPPED', 'skipped': reason, 'errors': [], 'calls': self.calls,

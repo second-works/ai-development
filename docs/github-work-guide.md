@@ -33,6 +33,7 @@ Risk Tier: MEDIUM。公開情報の読取とローカル新規成果物だけを
 - `owner` は `second-works` だけを受け付ける。`name` はリポジトリ名だけ（`/` を含めない）。
 - `limits`（`pages` / `items` / `calls` / `seconds`）は全体の既定と、リポジトリごとの上書き。最大は `pages` 10、`items` 20000、`calls` 2000、`seconds` 900。超える値は設定ファイルを読む時点で拒否する。
 - `required_checks` を書くと、そのリポジトリの `.github/pr-gate-checks` より優先する。
+- `format`（`auto` / `full` / `simple`）は週1回の点検の読み方（下の「週1回の点検」）。既定は `auto`。
 - 未知のキーは拒否する。ここにないリポジトリは、CLIが通信の前に止める。
 - 非公開のリポジトリ名は、公開に切り替えてから追加する（このrepoは公開のため、非公開の名前をここに書かない）。
 - ai-development（Issue/PRが約220件）と hermes-self-improvement は、既定の上限では取得が終わらないため、設定ファイルで上限を上げてある。
@@ -70,6 +71,42 @@ JSONは `snapshot.json`、`diff.json`、`plan.json`、必要時の `recheck.json
 `manifest.json` は最後に作り、保存済みファイルのhashを持つ。途中出力・改変済み・symlinkは読出しを拒否する。
 既存出力先を再利用しない。原本や以前のrunを上書きしない。runのraw API応答・実行ログはGitへ追加しない。
 macOSの `/tmp` / `/var` などsymlinkを含む絶対pathは実体path（`/private/tmp` など）を使う。
+
+## 週1回の点検（scripts/periodic_check.py）
+
+設定ファイルの全リポジトリを1回ずつ読み、結果を1通の報告 `runs/periodic-summaries/<YYYYMMDD-HHMM>.md`（日時はUTC。夏時間の切り替えで名前が重ならないため）にまとめる（#220）。取得が完了したあとに予期しないエラーが出ても、取得結果（snapshot）を `periodic-<日時>-snapshot` に保存する。ただし、その週の変化は報告していないので、次回の比較の基準にはしない。同じ理由で、報告（`runs/periodic-summaries/<日時>.md`）が書かれなかった週の run も基準にしない。点検中の例外で終わったときの終了コードは3。API呼出数は、取得の分と、別枠の形式の判定・CIの分を分けて出す。モデルは使わず、GitHubへの書き込み・削除もしない。
+
+```sh
+python3 -I -B scripts/periodic_check.py            # 点検だけ
+python3 -I -B scripts/periodic_check.py --update   # 点検専用の checkout を origin/main に進めてから点検
+```
+
+リポジトリごとに行うこと:
+
+1. 取得する（そのリポジトリの上限の中で）。非公開なら「非公開のため対象外」として飛ばし、失敗にしない。見つからない（404）ときは、設定の名前の誤りとして「停止」にする。
+2. 形式を決める（判定のための読み取りに失敗したら、取得結果は保存したまま簡易版で読む）。設定ファイルの `format` が `full` / `simple` ならそれに従う。`auto` なら、既定ブランチに `.claude/skills/steward/SKILL.md` と `.agents/skills/plan-to-issues/SKILL.md` の両方がある（軽量構成を `place.sh` で置いた）リポジトリを `full`、それ以外を `simple` にする。Issue本文の見出しを数えて判定しないのは、古いIssueに引きずられて週ごとに結果が揺れるため。ファイルは有無だけを見て、中身は読まない。
+3. 前回の完全なrun（`runs/<owner>--<name>/periodic-*` のうち、検証を通る、いちばん新しい COMPLETE のもの）と比べる。
+4. 既定ブランチの workflow run を新しい順に30件読み、workflow（workflow_id）ごとに最新の結果を出す（形式の判定と合わせて、取得とは別の小さな枠で読む）。形の合わない run はその run だけ飛ばす。PR の run は除く（フォークの `main` ブランチからのPRを、既定ブランチのCIと取り違えないため）。最新が実行中でも、最後に終わった run（cancelled は除く）が成功・skipped・neutral・stale（GitHub が古い run を打ち切ったもの）以外なら警告にする。新しい30件がすべて PR の run だと、既定ブランチのCIは「runなし」になる。cancelled はコードの結果を表さないので、失敗を隠しも報告もしない。run が1つもないリポジトリは一覧に「runなし」と出す。別リポジトリのコードの run（フォークの同名ブランチ）も除く。30件の中に run がない workflow（まれにしか動かない schedule など）は見えない。
+5. `full` なら作業案内（plan）も作り、親の検収待ち・完了範囲確認・案内の対象を出す。`simple` は作業案内を作らず、前回からの変化、14日以上動いていないOPEN、既定ブランチのCIだけを出す。
+
+どちらの形式でも、取得時間とAPI呼出数がそのリポジトリの上限の8割以上なら警告する。形式の判定とCIの読み取りは、取得とは別の小さな枠（5回・120秒）で行うので、取得が上限ぎりぎりでも落ちない。CIを読めなかったときは警告にし、要対応に数える。正式レビューの設定（`.github/pr-gate-review` の有無と中身）と必須checkもリポジトリごとに出す。
+報告の冒頭に、全リポジトリの状態・形式・要対応の件数・CIの一覧を置く。1つのリポジトリが失敗・上限到達しても、次のリポジトリは自分の上限で読む。
+
+`--update` で checkout を進めたときは、新しい版のスクリプトを別のプロセスで動かして点検する（古いコードで新しい設定ファイルを読まないため）。新しい版が正しく終わらなかったときは、更新した側がその旨を報告に書き（新しい版が報告を書いた後に止まったときは追記する）、エラー出力を `runs/periodic-summaries/<日時>.child-stderr.txt` に残す。子プロセスの制限時間は、更新後の設定の時間の上限の合計に余裕を足した値。報告の冒頭に、点検したコードのコミットと、更新したときは更新前のコミットを書く。更新できなかったときは、その理由を報告に書き、今の版のまま点検する（終了コード1）。`--update` は、このスクリプトがある checkout の `runs/.periodic-check-checkout` を目印にする（`--runs` の場所ではない）ので、点検専用の checkout の中で動かす。報告の API 呼出数は、取得の分と、別枠の形式の判定・CIの分を分けて出す。上限の8割の警告は取得の分で判定する。
+
+終了コード: 全リポジトリを点検できた（非公開による対象外を含む）なら0、どれかが停止したら1、既存の報告があるなど使い方の誤りは2、点検自体が例外で終わったら3。`--notify` で macOS の通知を出す。runs/ は自動で削除しない。
+
+### 自動実行への移行（未実施）
+
+hermes-self-improvement 側の週1回の点検（利用者の Mac の launchd と、hermes の点検専用 worktree。設定は hermes-self-improvement の `.claude/skills/periodic-check/SKILL.md`）は、移行が終わるまでそのまま動かす。切り替えと旧コードの削除は、別の作業として人が判断する。
+
+切り替えるときの手順の例（利用者の Mac で、人が行う）:
+
+1. ai-development の点検専用 worktree を作る（例: `git -C <ai-development の checkout> worktree add --detach <点検専用 worktree> origin/main`）。
+2. その worktree に `runs/` を作り、空のファイル `runs/.periodic-check-checkout` を置く（`--update` はこの目印がある checkout だけを動かす）。
+3. 手で1回 `python3 -I -B scripts/periodic_check.py --update` を実行し、報告を確かめる。
+4. launchd の plist を、hermes 側の例（`.claude/skills/periodic-check/SKILL.md`）と同じ形で、ProgramArguments を新しい worktree の `scripts/periodic_check.py --update --notify` に、WorkingDirectory を新しい worktree にして置く。
+5. 新しい点検が動くのを確かめてから、hermes 側の plist を外す。
 
 ## 非公開のリポジトリ
 
