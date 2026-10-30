@@ -19,7 +19,7 @@ DEFAULT_REVIEW = ('codex',)
 REVIEW_KINDS = ('codex', 'claude-code')
 CODEX_BOT = 'chatgpt-codex-connector[bot]'
 TRUSTED = ('OWNER', 'MEMBER', 'COLLABORATOR')
-CLAUDE_REVIEW = re.compile(r'claude-code-review:v1 (\{[^\n]*?\}) -->')
+CLAUDE_REVIEW = re.compile(r'<!-- claude-code-review:v1 (\{[^\n]*?\}) -->')
 SKIP_REASONS = {'private': '非公開のため対象外', 'not_found': '見つからないため対象外（非公開で読む権限がないか、名前の誤り）'}
 # Review-gate sources read only for OPEN PRs (#49). Closed/merged PRs keep body, comments, head and closing links.
 GATE_FIELDS = ('checks', 'statuses', 'reviews', 'review_comments', 'threads')

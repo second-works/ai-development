@@ -140,38 +140,45 @@ fi
 [[ ${#kinds[@]} -gt 0 ]] || kinds=("$default_review")
 
 comments="$(gh pr view "$pr" --json comments 2>/dev/null)" || report REVIEW_UNAVAILABLE "could not read PR comments"
-passed='' waiting=()
+passed='' pending='' waiting=()
 for kind in "${kinds[@]}"; do
   kind="${kind//[[:space:]]/}"
   case "$kind" in
     codex)
       review="$(jq -r --arg who "$reviewer" '
-        [.comments[] | select(.author.login == $who) | .body
+        [.comments[] | select(.author.login == $who and (.body | type) == "string") | .body
          | ([capture("codex-review-state:v1 (?<s>\\{.*?\\}) -->"; "g") | .s] | last) // empty] | last // empty' <<<"$comments" 2>/dev/null)"
       sha_path='.code_review.commit_sha' status_path='.code_review.status' open_path='.code_review.has_unresolved_findings' ;;
     claude-code)
-      # Anyone can comment on a public repository, so only trusted authors count.
+      # Anyone can comment on a public repository, so only trusted authors count. The record must be an
+      # HTML comment (<!-- ... -->), so visible text that merely mentions the marker is not read.
       review="$(jq -r '
-        [.comments[] | select(.authorAssociation == "OWNER" or .authorAssociation == "MEMBER" or .authorAssociation == "COLLABORATOR")
-         | .body | ([capture("claude-code-review:v1 (?<s>\\{[^\\n]*?\\}) -->"; "g") | .s] | last) // empty] | last // empty' <<<"$comments" 2>/dev/null)"
+        [.comments[] | select((.authorAssociation == "OWNER" or .authorAssociation == "MEMBER" or .authorAssociation == "COLLABORATOR")
+           and (.body | type) == "string")
+         | .body | ([capture("<!-- claude-code-review:v1 (?<s>\\{[^\\n]*?\\}) -->"; "g") | .s] | last) // empty] | last // empty' <<<"$comments" 2>/dev/null)"
       sha_path='.commit_sha' status_path='.status' open_path='.has_unresolved_findings' ;;
     *) report REVIEW_UNAVAILABLE "unknown review kind '$kind' in the review setting" ;;
   esac
   if [[ -z $review ]]; then waiting+=("no $kind review"); continue; fi
+  # A record that is not a JSON object is broken, not pending: waiting would never end.
+  if ! jq -e 'type == "object"' <<<"$review" >/dev/null 2>&1; then waiting+=("$kind review record is not valid JSON"); continue; fi
   # Types are checked too: the string "false" or "completed" in the wrong field is not accepted.
   r_sha="$(jq -r "$sha_path | if type == \"string\" then . else empty end" <<<"$review" 2>/dev/null)"
   r_status="$(jq -r "$status_path | if type == \"string\" then . else empty end" <<<"$review" 2>/dev/null)"
   r_open="$(jq -r "$open_path | if type == \"boolean\" then tostring else \"invalid\" end" <<<"$review" 2>/dev/null)"
   [[ -n $r_open ]] || r_open=invalid
-  if [[ $r_sha != "$head" ]]; then waiting+=("latest $kind review is for ${r_sha:-unknown}"); continue; fi
-  if [[ $r_status != completed ]]; then waiting+=("$kind review on $head is ${r_status:-unknown}"); continue; fi
+  if [[ -z $r_sha ]]; then waiting+=("$kind review record has no commit_sha"); continue; fi
+  if [[ $r_sha != "$head" ]]; then waiting+=("latest $kind review is for $r_sha"); pending=1; continue; fi
+  if [[ -z $r_status ]]; then waiting+=("$kind review record has no status"); continue; fi
+  if [[ $r_status != completed ]]; then waiting+=("$kind review on $head is $r_status"); pending=1; continue; fi
   if [[ $r_open == invalid ]]; then waiting+=("$kind review on $head has no boolean has_unresolved_findings"); continue; fi
   [[ $r_open == false ]] || report REVIEW_FINDINGS "$kind review on $head has unresolved findings"
   passed="$kind"
 done
 if [[ -z $passed ]]; then
   reason="$(IFS=';'; printf '%s' "${waiting[*]}")"
-  if [[ $reason == *"review on $head is"* || $reason == *"review is for"* ]]; then report REVIEW_PENDING "$reason"; fi
+  # Pending: a record for an older head or one still running. Anything else cannot become READY by waiting.
+  [[ -z $pending ]] || report REVIEW_PENDING "$reason"
   report REVIEW_UNAVAILABLE "$reason"
 fi
 

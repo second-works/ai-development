@@ -862,11 +862,42 @@ set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false)" "$(
 check_gate REVIEW_PENDING "a newer claude-code record for an older head"
 # Two records in one comment: the last one in the body counts.
 set_data "$head_sha" "$ok_checks" "" completed false 0
-set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' true "OWNER" "<!-- claude-code-review:v1 {\"commit_sha\":\"$head_sha\",\"status\":\"completed\",\"has_unresolved_findings\":false} -->\n")"
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' true "OWNER" "<!-- claude-code-review:v1 {\"commit_sha\":\"$head_sha\",\"status\":\"completed\",\"has_unresolved_findings\":false} -->"$'\n')"
 check_gate REVIEW_FINDINGS "the last claude-code record in one comment counts"
 set_data "$head_sha" "$ok_checks" "" completed false 0
 set_claude 'claude' "$(claude_comment "$head_sha" '"completed"' false)"
 check_gate REVIEW_UNAVAILABLE "unknown review kind"
+# A broken record cannot become READY by waiting, so it is not REVIEW_PENDING.
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' '{"authorAssociation": "OWNER", "body": "<!-- claude-code-review:v1 {\"commit_sha\": } -->"}'
+check_gate REVIEW_UNAVAILABLE "claude-code record that is not JSON"
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' '{"authorAssociation": "OWNER", "body": "<!-- claude-code-review:v1 {\"status\":\"completed\",\"has_unresolved_findings\":false} -->"}'
+check_gate REVIEW_UNAVAILABLE "claude-code record without commit_sha"
+# Only an HTML comment is a record; visible text that mentions the marker is not.
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(jq -n --arg h "$head_sha" '{authorAssociation: "OWNER",
+  body: ("`claude-code-review:v1 " + ({commit_sha: $h, status: "completed", has_unresolved_findings: false} | tojson) + " -->`")}')"
+check_gate REVIEW_UNAVAILABLE "claude-code marker outside an HTML comment"
+# A comment without a text body does not hide a valid record.
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' '{"authorAssociation": "OWNER", "body": null}' "$(claude_comment "$head_sha" '"completed"' false)"
+check_gate READY "a comment with a null body next to a claude-code record"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq '.comments += [{author: {login: "chatgpt-codex-connector"}, body: null}]' "$fake/data/comments.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/comments.json"
+check_gate READY "a codex comment with a null body"
+# PR_GATE_REVIEW (comma separated, spaces allowed) overrides the base branch file.
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'codex' "$(claude_comment "$head_sha" '"completed"' false)"
+PR_GATE_REVIEW='codex, claude-code' check_gate READY "PR_GATE_REVIEW names claude-code"
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false)"
+PR_GATE_REVIEW='codex' check_gate REVIEW_UNAVAILABLE "PR_GATE_REVIEW names codex only"
+# Findings in Codex stop it even when claude-code, listed second, has passed.
+set_data "$head_sha" "$ok_checks" "$head_sha" completed true 0
+jq --argjson c "$(claude_comment "$head_sha" '"completed"' false)" '.comments += [$c]' "$fake/data/comments.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/comments.json"
+printf 'codex\nclaude-code\n' >"$fake/data/gate-review"
+check_gate REVIEW_FINDINGS "codex has findings, claude-code passed"
 # Both kinds: one finished review passes, findings in either stop it.
 set_data "$head_sha" "$ok_checks" "$old_sha" completed false 0
 jq --argjson c "$(claude_comment "$head_sha" '"completed"' false)" '.comments += [$c]' "$fake/data/comments.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/comments.json"
