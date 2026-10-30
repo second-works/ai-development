@@ -338,7 +338,7 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(Collector(REPO, fake, Limits(pages=1)).collect()['coverage']['status'], 'INCOMPLETE')
         self.assertEqual(Collector(REPO, Fake(), Limits(items=1)).collect()['coverage']['status'], 'INCOMPLETE')
         self.assertEqual(Collector(REPO, Fake(), Limits(calls=2)).collect()['coverage']['status'], 'INCOMPLETE')
-        for kwargs in ({'pages': 11}, {'seconds': 181}, {'calls': True}, {'items': 0}):
+        for kwargs in ({'pages': 11}, {'seconds': 901}, {'calls': 2001}, {'calls': True}, {'items': 0}):
             with self.assertRaises(Invalid):
                 Limits(**kwargs)
 

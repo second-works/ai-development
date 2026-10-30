@@ -46,6 +46,8 @@ def main(argv=None):
             print(f'excerpt={len(text)} chars target={args.target} out={args.out}')
             return 0
         previous = load_run(args.previous) if args.previous else None
+        if previous is not None and args.mode == 'collect':
+            require(previous['repo'] == args.repo, '--previous is a run of another repository')
         result = None
         if args.mode == 'collect':
             snapshot = collector(args.config, args.repo).collect()

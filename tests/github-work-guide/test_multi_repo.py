@@ -337,5 +337,63 @@ class NoFixedRepositoryTests(unittest.TestCase):
                 self.assertNotRegex(text, r"repository\(owner:\"")
 
 
+class ReviewFollowUpTests(unittest.TestCase):
+    """Findings of the Claude Code review of PR #221."""
+
+    def test_limits_can_be_raised_up_to_the_maximum(self):
+        ok = base_config(repositories=[{'name': 'big', 'limits': {'seconds': 900, 'calls': 2000, 'items': 20000}}])
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_config(write_config(tmp, ok))
+            self.assertEqual(Limits(**entry(config, 'second-works/big')['limits']).seconds, 900)
+            for over in ({'seconds': 901}, {'calls': 2001}, {'pages': 11}, {'items': 20001}):
+                with self.subTest(over=over), self.assertRaises(Invalid):
+                    load_config(write_config(tmp, base_config(repositories=[{'name': 'a', 'limits': over}])))
+
+    def test_setting_lines_match_check_pr_head(self):
+        from github_work_guide.collector import setting_lines
+        text = '# comment\r\n  # not a comment\nbuild \n\n   \nci\nci\n'
+        self.assertEqual(setting_lines(text), ['  # not a comment', 'build ', 'ci'])
+        self.assertEqual(setting_lines(' claude-code \n# codex\n', strip=True), ['claude-code'])
+        fake = OtherFake()
+        fake.contents['.github/pr-gate-checks'] = 'build \n'
+        settings = Collector(OTHER, fake).collect()['settings']
+        self.assertEqual(settings['required_checks'], ['build '])
+        pr = pr_with()
+        self.assertEqual(core.gate(pr, dict(SETTINGS, required_checks=['ci '])), ['ci : 未取得'])
+
+    def test_unknown_review_kind_points_at_the_setting(self):
+        failures = core.gate(pr_with(), dict(SETTINGS, review=['claude']))
+        self.assertIn('正式レビューの種類を読めない（claude）: main の .github/pr-gate-review を確認', failures)
+        self.assertEqual(core.gate(pr_with(), dict(SETTINGS, review=['codex', 'claude'])),
+                         ['正式レビューの種類を読めない（claude）: main の .github/pr-gate-review を確認'])
+
+    def test_same_named_checks_of_two_workflows_do_not_hide_a_failure(self):
+        pr = pr_with()
+        app = {'id': 15368}
+        base = {'name': 'ci', 'head_sha': SHA, 'status': 'completed', 'app': app}
+        pr['raw']['checks'] = [c for c in pr['raw']['checks'] if c['name'] != 'ci'] + [
+            dict(base, id=100, conclusion='failure', check_suite={'id': 1}),
+            dict(base, id=101, conclusion='success', check_suite={'id': 2})]
+        self.assertIn('ci: 未成功/旧head', core.gate(pr, SETTINGS))
+        # A re-run in the same suite replaces the old attempt.
+        pr['raw']['checks'][-1]['check_suite'] = {'id': 1}
+        self.assertEqual(core.gate(pr, SETTINGS), [])
+
+    def test_previous_of_another_repository_stops_before_collecting(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('report_cli', CLI)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        snap = snapshot(item(7))
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp).resolve() / 'runs' / 'previous'
+            save_run(run, {'snapshot.json': snap})
+            config = write_config(tmp, base_config())
+            with patch.object(cli, 'collector', side_effect=AssertionError('network')) as made:
+                code = cli.main(['collect', '--config', str(config), '--repo', 'second-works/ai-development',
+                                 '--previous', str(run), '--out', str(Path(tmp).resolve() / 'runs' / 'new')])
+            self.assertEqual(code, 2)
+            made.assert_not_called()
+
 if __name__ == '__main__':
     unittest.main()

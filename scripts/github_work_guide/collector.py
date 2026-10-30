@@ -30,16 +30,24 @@ def content_route(repo, path):
     return f'{prefix(repo)}/contents/{path}'
 
 
-def setting_lines(text):
-    """Lines of a pr-gate-* file: blank lines and # comments are ignored (same as scripts/check-pr-head.sh)."""
+def setting_lines(text, strip=False):
+    """Lines of a pr-gate-* file, parsed like scripts/check-pr-head.sh: only CR is removed, whitespace-only
+    lines and lines starting with # in the first column are skipped. Check names keep their spaces (the
+    merge gate looks for exactly that name); review kinds lose all whitespace, as in check-pr-head.sh."""
     require(isinstance(text, str) and len(text) <= 10_000, 'setting file')
-    rows = [line.strip() for line in text.replace('\r', '').split('\n')]
-    rows = [line for line in rows if line and not line.startswith('#')]
+    rows = [line.replace('\r', '') for line in text.split('\n')]
+    rows = [line for line in rows if line.strip() and not line.startswith('#')]
+    if strip:
+        rows = [''.join(line.split()) for line in rows]
     return list(dict.fromkeys(rows))
 CONNECTIONS = {
     'threads': ('reviewThreads', 'id isResolved isOutdated'),
     'closing': ('closingIssuesReferences', 'number repository { nameWithOwner }'),
 }
+
+
+# Highest value config/github-work-guide.json may set per repository. pages is fixed by rest_request (10).
+MAXIMUM = {'pages': 10, 'items': 20000, 'calls': 2000, 'seconds': 900}
 
 
 @dataclass(frozen=True)
@@ -50,7 +58,7 @@ class Limits:
     seconds: int = 180
 
     def __post_init__(self):
-        for field, maximum in (('pages', 10), ('items', 5000), ('calls', 500), ('seconds', 180)):
+        for field, maximum in MAXIMUM.items():
             require(type(getattr(self, field)) is int and 0 < getattr(self, field) <= maximum, 'invalid limit')
 
 
@@ -202,7 +210,8 @@ class Collector:
         raise Invalid('GraphQL page limit reached')
 
     def settings(self, branch):
-        """Per-repository gate settings, read from the default branch (like scripts/check-pr-head.sh)."""
+        """Per-repository gate settings, read from the default branch. scripts/check-pr-head.sh reads the
+        same files from each PR's base branch, so a PR to another branch can be judged differently there."""
         texts = {}
         for path in SETTING_FILES:
             texts[path] = self.call(self.transport.content, path, branch)
@@ -212,8 +221,8 @@ class Collector:
         elif texts['.github/pr-gate-checks'] is not None and setting_lines(texts['.github/pr-gate-checks']):
             checks, checks_source = setting_lines(texts['.github/pr-gate-checks']), 'repository'
         review, review_source = list(DEFAULT_REVIEW), 'default'
-        if texts['.github/pr-gate-review'] is not None and setting_lines(texts['.github/pr-gate-review']):
-            review, review_source = setting_lines(texts['.github/pr-gate-review']), 'repository'
+        if texts['.github/pr-gate-review'] is not None and setting_lines(texts['.github/pr-gate-review'], strip=True):
+            review, review_source = setting_lines(texts['.github/pr-gate-review'], strip=True), 'repository'
         return validate_settings({'default_branch': branch, 'required_checks': checks, 'checks_source': checks_source,
                                   'review': review, 'review_source': review_source})
 

@@ -90,13 +90,13 @@ def source_url(repo, kind, n):
     return f'https://github.com/{repo_name(repo)}/{"issues" if kind == "issue" else "pull"}/{n}'
 
 
-def names(value, allowed=None):
-    """A non-empty list of distinct one-line names (check names, review kinds)."""
+def names(value, exact=False):
+    """A non-empty list of distinct one-line names. exact keeps surrounding spaces (check names in
+    .github/pr-gate-checks are matched exactly, as scripts/check-pr-head.sh does)."""
     require(isinstance(value, list) and value and len(value) <= 50, 'name list')
     for name in value:
-        require(isinstance(name, str) and 0 < len(name) <= 200 and name == name.strip()
+        require(isinstance(name, str) and 0 < len(name) <= 200 and name.strip() and (exact or name == name.strip())
                 and '\n' not in name and '\r' not in name, 'name value')
-        require(allowed is None or name in allowed, 'unknown name')
     require(len(set(value)) == len(value), 'duplicate name')
     return value
 
@@ -107,7 +107,7 @@ def validate_settings(settings):
     branch = settings['default_branch']
     require(isinstance(branch, str) and 0 < len(branch) <= 255 and branch.strip() == branch
             and not any(c in branch for c in '\n\r\x00'), 'default branch')
-    names(settings['required_checks'])
+    names(settings['required_checks'], exact=True)
     names(settings['review'])
     require(settings['checks_source'] in ('config', 'repository', 'default'), 'checks source')
     require(settings['review_source'] in ('repository', 'default'), 'review source')
@@ -285,11 +285,13 @@ def gate(item, settings):
     for name in settings['required_checks']:
         matches = [c for c in raw['checks'] if c.get('name') == name]
         states = [c for c in raw['statuses'] if c.get('context') == name]
-        # Keep each check provider independent; another provider cannot hide failure.
+        # Keep each check provider independent; another provider cannot hide failure. Within one app, each
+        # check suite (one workflow run) is its own provider too; a re-run stays in its suite and replaces it.
         providers = {}
         for check in matches:
             app = check.get('app') or {}
-            provider = app.get('id')
+            suite = check.get('check_suite') or {}
+            provider = (app.get('id'), suite.get('id'))
             if provider not in providers or providers[provider]['id'] < check['id']:
                 providers[provider] = check
         if any(c.get('head_sha') != head or c.get('status') != 'completed'
@@ -311,7 +313,11 @@ def gate(item, settings):
                 passed.append(kind)
             elif state == 'findings':
                 findings.append(kind)
-        # An unknown kind never passes: only codex / claude-code are understood.
+    # An unknown kind never passes: only codex / claude-code are understood.
+    unknown = [kind for kind in settings['review'] if kind not in REVIEW_KINDS]
+    if unknown:
+        failures.append('正式レビューの種類を読めない（' + '、'.join(unknown) + '）: '
+                        f'{settings["default_branch"]} の .github/pr-gate-review を確認')
     for kind in findings:
         failures.append(f'現headの正式レビュー（{kind}）に未解決の指摘あり')
     if not passed and not findings:

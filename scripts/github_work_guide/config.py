@@ -1,6 +1,7 @@
 """Target repositories for the work guide: config/github-work-guide.json (the only allowlist)."""
 from pathlib import Path
 
+from .collector import Limits
 from .core import Invalid, names, read_json, repo_name, require
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,7 +35,9 @@ def load_config(path=CONFIG):
         require(isinstance(row, dict) and set(row) <= ENTRY_KEYS and 'name' in row, 'repository entry keys')
         full = repo_name(f'{OWNER}/{row["name"]}') if isinstance(row['name'], str) and '/' not in row['name'] else None
         require(full is not None and full not in repositories, 'repository entry name')
-        entry = {'repo': full, 'limits': {**defaults, **limits_value(row.get('limits', {}))},
+        limits = {**defaults, **limits_value(row.get('limits', {}))}
+        Limits(**limits)  # over the maximum: refused here, not at the first collect
+        entry = {'repo': full, 'limits': limits,
                  'required_checks': names(row['required_checks']) if 'required_checks' in row else None}
         repositories[full] = entry
     return {'owner': OWNER, 'limits': defaults, 'repositories': repositories}

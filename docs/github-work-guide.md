@@ -31,7 +31,7 @@ Risk Tier: MEDIUM。公開情報の読取とローカル新規成果物だけを
 ```
 
 - `owner` は `second-works` だけを受け付ける。`name` はリポジトリ名だけ（`/` を含めない）。
-- `limits`（`pages` / `items` / `calls` / `seconds`）は全体の既定と、リポジトリごとの上書き。
+- `limits`（`pages` / `items` / `calls` / `seconds`）は全体の既定と、リポジトリごとの上書き。最大は `pages` 10、`items` 20000、`calls` 2000、`seconds` 900。超える値は設定ファイルを読む時点で拒否する。
 - `required_checks` を書くと、そのリポジトリの `.github/pr-gate-checks` より優先する。
 - 未知のキーは拒否する。ここにないリポジトリは、CLIが通信の前に止める。
 - 非公開のリポジトリ名は、公開に切り替えてから追加する（このrepoは公開のため、非公開の名前をここに書かない）。
@@ -75,7 +75,8 @@ macOSの `/tmp` / `/var` などsymlinkを含む絶対pathは実体path（`/priva
 
 ## リポジトリごとの設定
 
-取得のはじめに、リポジトリ情報の既定ブランチ（`main` 以外でもよい）を読み、その既定ブランチから次の2ファイルを読む（`scripts/check-pr-head.sh` と同じ読み方。空行と `#` で始まる行は無視）。
+取得のはじめに、リポジトリ情報の既定ブランチ（`main` 以外でもよい）を読み、その既定ブランチから次の2ファイルを読む。読み方は `scripts/check-pr-head.sh` と同じで、空白だけの行と1文字目が `#` の行を無視し、check名は前後の空白も含めてそのまま使う（レビューの種類は空白を除く）。
+`scripts/check-pr-head.sh` はこの2ファイルをPRのbaseブランチから読むので、既定ブランチ以外へのPRは、案内とマージ前の照合で必須checkが違うことがある。
 
 | 項目 | 読む元 | ないとき |
 | --- | --- | --- |
@@ -88,7 +89,9 @@ macOSの `/tmp` / `/var` などsymlinkを含む絶対pathは実体path（`/priva
 
 - `codex`: `chatgpt-codex-connector[bot]` の、現headに対する APPROVED / COMMENTED のレビュー。
 - `claude-code`: OWNER / MEMBER / COLLABORATOR が書いたPRコメントの `<!-- claude-code-review:v1 {"commit_sha":"<full sha>","status":"completed","has_unresolved_findings":false} -->`。そのうち最後のものが、現head・`completed`・`has_unresolved_findings` が真偽値の `false` のとき認める。公開repoには誰でもコメントできるので、ほかの作者のコメントは読まない。
-- 認める種類のどれかで通れば、正式レビューは確認済み。どれかが現headで未解決の指摘ありなら保留する。知らない種類は通らない。
+- 認める種類のどれかで通れば、正式レビューは確認済み。どれかが現headで未解決の指摘ありなら保留する。知らない種類は通らず、`.github/pr-gate-review` を確認するよう保留に出す。
+- `codex` は、レビューの本文に指摘があっても APPROVED / COMMENTED なら確認済みとする（hermes-self-improvement での判定のまま）。指摘の有無は、未解決threadの保留と `scripts/check-pr-head.sh`（`codex-review-state:v1` の `has_unresolved_findings`）で確かめる。
+- OPEN PRの案内は、最後に `scripts/check-pr-head.sh <番号>` が READY を返すことを求める。ai-development の版は今は `claude-code` を読まないので、`claude-code` のリポジトリでは、そのリポジトリにある版で照合する。
 
 
 ## 取得範囲と限界
@@ -101,7 +104,7 @@ RESTは、設定ファイルにあるリポジトリ1つに結び付いた固定
 書込API・操作実行・通知・予定変更・モデル・本番・Dockerの入口はない。
 
 - 1系列あたり最大10ページ、1ページ100件。
-- 全系列合計5000 list node、500 API呼出、全体180秒（1呼出最大30秒）。どれもリポジトリごとの上限で、設定ファイルで変えられる（`pages` は10、`items` は5000、`calls` は500、`seconds` は180が最大）。
+- 全系列合計5000 list node、500 API呼出、全体180秒（1呼出最大30秒）。これは既定の値で、どれもリポジトリごとの上限。設定ファイルで最大 `items` 20000、`calls` 2000、`seconds` 900 まで上げられる（`pages` は10のまま）。
 - API応答は1呼出10MB、保存JSONの読出しは1ファイル32MBまで。
 - 再試行0。空の短い最終ページ/GraphQL pageInfoまで追い、check total_countも照合する。
 - 認証不足、rate limit、欠落、不正schema、上限、時間切れ、途中失敗は `INCOMPLETE`。手順を生成しない。
@@ -178,7 +181,7 @@ CLOSED/MERGEDや本文チェックを成功・採用の認定に使わず、実�
 各候補は対象、原文の抜粋（1件300文字まで。切った場合は「抜粋」）、source hash、リンク、確認手順、保留、開始条件、成功判定、停止条件を持つ。
 抜粋は原文の完全な部分文字列で、識別子は行番号（`issue:7:L34-L39`、コメントは `issue:4:c1:L3:53`）。
 保存planはsnapshotからの再生成と全体一致が必要。種別変更、未知ID、捏造引用、余分な完了主張、順序改変を拒否する。
-planの形式はversion 7、snapshotの形式はversion 2（ai-development への移植で、リポジトリ名とリポジトリごとの設定をsnapshotに入れた）。旧versionのplanを持つrunは、再確認の取得前に「旧versionのplanです。新しくcollectし直してから再確認してください。」で止まる。hermes-self-improvement で作った version 1 のsnapshotは読み込まないので、新しくcollectし直す。
+planの形式はversion 7、snapshotの形式はversion 2（ai-development への移植で、リポジトリ名とリポジトリごとの設定をsnapshotに入れた）。旧versionのplanを持つrunは、再確認の取得前に「旧versionのplanです。新しくcollectし直してから再確認してください。」で止まる。hermes-self-improvement で作った run（manifest と snapshot が version 1）は、「旧versionのplan」ではなく読めないrunとして拒否するので、新しくcollectし直す。
 hashはローカル破損/改変の検知でありGitHub署名や発行元の証明ではない。snapshotを信頼できない人から受け取って実行根拠にしない。
 MERGEDからIssue Close、本番適用、検収済みを推定しない。本文中の完了主張も引用された未検証データであり、ハーネスの結論ではない。
 確認手順は固定の文型と、番号・head・日時・件数・根拠IDだけで作る。原文の文章は引用（JSON文字列として無害化）でだけ表示する。Issue番号ごとの判断文はコードにない。
