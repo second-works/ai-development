@@ -714,13 +714,14 @@ case "$*" in
   "pr view 7 --json comments") f=comments.json ;;
   api\ repos/*/check-runs*) f=checks.json ;;
   api\ repos/*/status*) f=statuses.json ;;
-  *contents/.github/pr-gate-checks*)
+  *contents/.github/pr-gate-checks*|*contents/.github/pr-gate-review*)
     # The base branch copy: the file, a server error, or 404 when there is none.
     # The branch must arrive as a raw field, unchanged.
+    case "$*" in *pr-gate-checks*) name=gate-checks ;; *) name=gate-review ;; esac
     want="--raw-field ref=$(cat "$FAKE_GH/base" 2>/dev/null || echo main) "
     [[ "$* " == *"$want"* ]] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; }
-    if [[ -f "$FAKE_GH/gate-checks-error" ]]; then echo 'gh: Server Error (HTTP 500)' >&2; exit 1; fi
-    if [[ -f "$FAKE_GH/gate-checks" && $1 == api && $2 == -H ]]; then cat "$FAKE_GH/gate-checks"; exit 0; fi
+    if [[ -f "$FAKE_GH/$name-error" ]]; then echo 'gh: Server Error (HTTP 500)' >&2; exit 1; fi
+    if [[ -f "$FAKE_GH/$name" && $1 == api && $2 == -H ]]; then cat "$FAKE_GH/$name"; exit 0; fi
     echo 'gh: Not Found (HTTP 404)' >&2; exit 1 ;;
   api\ graphql*) f=threads.json ;;
   *) exit 1 ;;
@@ -820,6 +821,70 @@ set_data "$head_sha" "$ok_checks" "$head_sha" completed true 0
 check_gate REVIEW_FINDINGS "review has findings"
 set_data "$head_sha" "$ok_checks" "" completed false 0
 check_gate REVIEW_UNAVAILABLE "no review state"
+# Claude Code reviews: .github/pr-gate-review on the base branch chooses the accepted kinds.
+claude_comment() { # <sha> <status-json> <unresolved-json> [association] [extra-body-before]
+  jq -n --arg s "$1" --argjson st "$2" --argjson u "$3" --arg a "${4:-OWNER}" --arg pre "${5:-}" \
+    '{author: {login: "someone"}, authorAssociation: $a,
+      body: ($pre + "review notes\n<!-- claude-code-review:v1 " + ({commit_sha: $s, status: $st, has_unresolved_findings: $u} | tojson) + " -->")}'
+}
+set_claude() { # <kinds> <comment-json>... : no Codex comment unless one is given
+  printf '%s' "$1" >"$fake/data/gate-review"; shift
+  jq -n '{comments: $ARGS.positional}' --jsonargs "$@" >"$fake/data/comments.json"
+}
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false)"
+check_gate READY "claude-code review on the head"
+for a in MEMBER COLLABORATOR; do
+  set_data "$head_sha" "$ok_checks" "" completed false 0
+  set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false "$a")"
+  check_gate READY "claude-code review by $a"
+done
+for a in NONE CONTRIBUTOR FIRST_TIME_CONTRIBUTOR; do
+  set_data "$head_sha" "$ok_checks" "" completed false 0
+  set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false "$a")"
+  check_gate REVIEW_UNAVAILABLE "claude-code record by an untrusted author ($a)"
+done
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$old_sha" '"completed"' false)"
+check_gate REVIEW_PENDING "claude-code review only for an older head"
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"in_progress"' false)"
+check_gate REVIEW_PENDING "claude-code review not finished"
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' true)"
+check_gate REVIEW_FINDINGS "claude-code review has findings"
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' '"false"')"
+check_gate REVIEW_UNAVAILABLE "claude-code has_unresolved_findings as a string"
+# The newest record counts: a later comment for an older head is not READY.
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false)" "$(claude_comment "$old_sha" '"completed"' false)"
+check_gate REVIEW_PENDING "a newer claude-code record for an older head"
+# Two records in one comment: the last one in the body counts.
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' true "OWNER" "<!-- claude-code-review:v1 {\"commit_sha\":\"$head_sha\",\"status\":\"completed\",\"has_unresolved_findings\":false} -->\n")"
+check_gate REVIEW_FINDINGS "the last claude-code record in one comment counts"
+set_data "$head_sha" "$ok_checks" "" completed false 0
+set_claude 'claude' "$(claude_comment "$head_sha" '"completed"' false)"
+check_gate REVIEW_UNAVAILABLE "unknown review kind"
+# Both kinds: one finished review passes, findings in either stop it.
+set_data "$head_sha" "$ok_checks" "$old_sha" completed false 0
+jq --argjson c "$(claude_comment "$head_sha" '"completed"' false)" '.comments += [$c]' "$fake/data/comments.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/comments.json"
+printf '# both\ncodex\n claude-code \n' >"$fake/data/gate-review"
+check_gate READY "codex and claude-code: claude-code finished on the head"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+jq --argjson c "$(claude_comment "$head_sha" '"completed"' true)" '.comments += [$c]' "$fake/data/comments.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/comments.json"
+printf 'codex\nclaude-code\n' >"$fake/data/gate-review"
+check_gate REVIEW_FINDINGS "codex and claude-code: claude-code has findings"
+# Without the file only Codex counts, and a working tree copy is not read.
+set_data "$head_sha" "$ok_checks" "" completed false 0
+jq -n --argjson c "$(claude_comment "$head_sha" '"completed"' false)" '{comments: [$c]}' >"$fake/data/comments.json"
+mkdir -p "$proj/.github" && printf 'claude-code\n' >"$proj/.github/pr-gate-review"
+check_gate REVIEW_UNAVAILABLE "no .github/pr-gate-review on the base branch means codex"
+rm -f "$proj/.github/pr-gate-review"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+touch "$fake/data/gate-review-error"
+check_gate REVIEW_UNAVAILABLE ".github/pr-gate-review cannot be read"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 2
 check_gate UNRESOLVED_THREADS "unresolved threads"
 set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
@@ -857,6 +922,9 @@ if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   printf 'ci\nSecurity Preflight\n' >"$fake/data/gate-checks"
   jq -n '{statuses: [{context: "Security Preflight", state: "success"}]}' >"$fake/data/statuses.json"
   check_gate READY "checks file and a commit status under Bash 3.2" /bin/bash
+  set_data "$head_sha" "$ok_checks" "" completed false 0
+  set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false)"
+  check_gate READY "claude-code review under Bash 3.2" /bin/bash
 fi
 rm -f "$fake/data/pr.json"
 check_gate UNAVAILABLE "PR cannot be read"
