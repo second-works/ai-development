@@ -315,7 +315,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             # Absolute paths, the commit from before the update, and the notification flag carried over.
             self.assertEqual(args[4:], ['--config', str(config.resolve()), '--runs', str(runs), '--updated-from', 'a' * 40,
                                         '--notify'])
-            self.assertEqual(kw['timeout'], 600 + pc.CHILD_MARGIN_SECONDS)
+            self.assertEqual(kw['timeout'], 600 + pc.AFTER_LIMITS.seconds + pc.CHILD_MARGIN_SECONDS)
 
     def test_a_child_that_fails_to_start_still_leaves_a_report(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -339,6 +339,36 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
             self.assertIn(f'点検したコード: {"c" * 40}（{"b" * 40} から更新した）', text)
             self.assertEqual(pc.main(['--runs', str(runs), '--updated-from', 'x; rm -rf']), 2)
+
+    def test_child_failure_after_its_report_is_appended_and_stderr_kept(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            with patch.object(pc, 'datetime', wraps=datetime) as clock:
+                clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
+                def child(args, **kw):
+                    (runs / 'periodic-summaries' / '20261106-0900.md').write_text('# child report\n', encoding='utf-8')
+                    return -1, '', 'Traceback\nTimeoutish'
+                with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
+                        patch.object(pc, 'commit', return_value='a' * 40):
+                    self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
+            text = (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8')
+            self.assertTrue(text.startswith('# child report'))
+            self.assertIn('正しく終わらなかった（終了コード -1）', text)
+            self.assertIn('Timeoutish', (runs / 'periodic-summaries' / '20261106-0900.child-stderr.txt').read_text())
+
+    def test_format_and_ci_have_their_own_budget_and_unread_ci_counts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # 2 calls let the collection finish only just; the format check and CI still run.
+            code, text, _ = self.run_check(tmp, [{'name': 'other-repo', 'limits': {'calls': 15}}], {OTHER: SimpleFake})
+            self.assertIn(f'| {OTHER} | 完了 | 簡易版 |', text)
+            self.assertIn('"CI": completed', text)
+        class NoRuns(SimpleFake):
+            def branch_runs(self, branch, timeout):
+                raise pc.Invalid('403')
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: NoRuns})
+            self.assertIn('警告: 既定ブランチのCIを確認できていない', text)
+            self.assertIn(f'| {OTHER} | 完了 | 簡易版 | 1 | 取得できない |', text)
 
     def test_stale_and_unknown_conclusions_are_not_failures(self):
         rows = [{'last_completed': {'conclusion': c}} for c in ('stale', None, 'failure', 'timed_out')]

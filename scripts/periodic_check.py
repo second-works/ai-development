@@ -41,6 +41,8 @@ STALE_DAYS = 14
 # Cancelled runs are left out of last_completed in branch_ci, so they never hide or raise a failure.
 OK_CONCLUSIONS = ('success', 'skipped', 'neutral', 'stale')  # stale: GitHub retired an old run, no code failed
 FORMAT_FALLBACK = '判定できないため簡易版'
+# Budget for the format check (up to 2 calls) and the CI read (1 call) after the collection.
+AFTER_LIMITS = Limits(calls=5, seconds=120)
 
 
 def run(args, cwd=None, timeout=300, env=None):
@@ -195,9 +197,12 @@ def check_repository(target, runs, stamp, now):
             result['stop'] = '取得が不完全（' + safe_text(snapshot['coverage']['errors']) + '）。再試行はしない'
         else:
             branch = snapshot['settings']['default_branch']
+            # The format check and the CI read have their own small budget, so a collection that used its
+            # limits to the end still gets them.
+            after = Collector(repo, collector.transport, AFTER_LIMITS)
             if target['format'] == 'auto':
                 try:
-                    result['format'], result['format_source'] = collector.repository_format(branch), 'repository'
+                    result['format'], result['format_source'] = after.repository_format(branch), 'repository'
                 except (Invalid, KeyError, TypeError, ValueError, AttributeError):
                     # The collection is complete and kept; without the format it is read the simple way.
                     result['format'], result['format_source'] = 'simple', FORMAT_FALLBACK
@@ -207,12 +212,14 @@ def check_repository(target, runs, stamp, now):
             plan = build_plan(snapshot) if result['format'] == 'full' else None
             changes = diff(snapshot, previous)
             try:
-                result['ci'] = collector.branch_ci(branch)
+                result['ci'] = after.branch_ci(branch)
             except (Invalid, KeyError, TypeError, ValueError, AttributeError):
                 result['ci_error'] = '既定ブランチの workflow run を読めない（権限・上限・通信を確認）'
             seconds = time.monotonic() - started
             result['analysis'] = analyse(snapshot, plan, changes, seconds, now, collector.limits, previous is not None,
-                                         collector.calls)
+                                         collector.calls + after.calls)
+            if result['ci_error']:
+                result['analysis']['warnings'].append('既定ブランチのCIを確認できていない')
             if result['format_source'] == FORMAT_FALLBACK:
                 result['analysis']['warnings'].append('形式を判定できず、作業案内（親の検収待ち・完了範囲確認）を作っていない'
                                                       '（上限・権限・通信を確認）')
@@ -237,6 +244,7 @@ def check_repository(target, runs, stamp, now):
 
 
 def attention(result):
+    """Things to look at. A CI that could not be read is one (its warning is in the analysis)."""
     a = result['analysis']
     count = len(ci_problems(result['ci']))
     if a:
@@ -392,19 +400,32 @@ def main(argv=None):
                  '--runs', str(runs), '--updated-from', old if old != '不明' else 'unknown']
         if args.notify:
             child.append('--notify')
-        seconds = sum(t['limits'].get('seconds', 180) for t in config['repositories'].values()) if config else 4 * 3600
+        # The updated config decides how long the updated code may take (new repositories, raised limits).
+        try:
+            updated = load_config(args.config)
+            seconds = sum(t['limits'].get('seconds', Limits().seconds) + AFTER_LIMITS.seconds
+                          for t in updated['repositories'].values())
+        except (Invalid, OSError, KeyError, TypeError, ValueError):
+            seconds = 24 * 3600  # this (old) code cannot read the new config; the child still has its own limits
         before = set(summaries.iterdir())
-        code, out, _ = run(child, timeout=seconds + CHILD_MARGIN_SECONDS)
+        code, out, err = run(child, timeout=seconds + CHILD_MARGIN_SECONDS)
         written = set(summaries.iterdir()) - before
         if code in (0, 1) and written:
             print(out, end='')  # the child's summary=<path>
             return code
-        text = render(stamp, [], runs_size(runs),
-                      f'更新後の版（{commit()}）が正しく終わらなかった（終了コード {code}）。checkout は更新済み'
-                      f'（更新前 {old}）。手で実行して確かめる')
-        if not summary_path.exists():
+        # Kept for diagnosis next to the report (runs/ is not tracked). It is local output of this program.
+        log = summaries / f'{stamp}.child-stderr.txt'
+        if not log.exists():
+            log.write_text('\n'.join(err.splitlines()[-50:]) + '\n', encoding='utf-8')
+        failure = (f'更新後の版（{commit()}）が正しく終わらなかった（終了コード {code}）。checkout は更新済み'
+                   f'（更新前 {old}）。エラー出力は {log.name}。手で実行して確かめる')
+        if summary_path.exists():
+            # The child wrote a report and then failed (e.g. killed by the time limit): say so in it.
+            with summary_path.open('a', encoding='utf-8') as stream:
+                stream.write(f'\n## 停止\n\n- {failure}\n')
+        else:
             with summary_path.open('x', encoding='utf-8') as stream:
-                stream.write(text)
+                stream.write(render(stamp, [], runs_size(runs), failure))
         print(f'summary={summary_path}')
         if args.notify:
             notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}')
