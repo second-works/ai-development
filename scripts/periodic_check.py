@@ -12,7 +12,8 @@ Run it from a dedicated check checkout (a detached git worktree of this reposito
 first moves that checkout to origin/main; it refuses when the checkout is on a branch or has tracked
 changes, so it never moves someone's working branch.
 Exit 0 when every repository was checked or is private, 1 when any repository stopped (incomplete,
-not found, or an error) or --update could not update the checkout (see the report), 2 for usage errors.
+not found, or an error) or --update could not update the checkout (see the report), 2 for usage errors,
+3 when the check itself crashed (traceback on stderr).
 """
 import argparse
 import os
@@ -455,8 +456,9 @@ def main(argv=None):
             with summary_path.open('a', encoding='utf-8') as stream:
                 stream.write(f'\n## 停止\n\n- {failure}\n')
         else:
-            if summary_path.exists():  # another check's report of the same minute: leave it alone
-                summary_path = summaries / f'{stamp}-update-failure.md'
+            # Never under <stamp>.md: that name would make the child's unreported runs next week's baseline,
+            # and it may be another check's report of the same minute.
+            summary_path = summaries / f'{stamp}-update-failure.md'
             with summary_path.open('x', encoding='utf-8') as stream:
                 stream.write(render(stamp, [], runs_size(runs), failure))
         print(f'summary={summary_path}')
@@ -470,11 +472,19 @@ def main(argv=None):
         for target in config['repositories'].values():
             results.append(check_repository(target, runs, stamp, now))
     updated_from = {'unknown': '不明'}.get(args.updated_from, args.updated_from)
-    text = render(stamp, results, runs_size(runs), stop, update_error, commit(), updated_from)
-    with summary_path.open('x', encoding='utf-8') as stream:
-        stream.write(text)
-    print(f'summary={summary_path}')
     stopped = [r['repo'] for r in results if r['stop']]
+    text = render(stamp, results, runs_size(runs), stop, update_error, commit(), updated_from)
+    try:
+        with summary_path.open('x', encoding='utf-8') as stream:
+            stream.write(text)
+    except FileExistsError:
+        # Another check wrote this minute's report meanwhile. Keep both; this week's runs are then not a
+        # baseline (their <stamp>.md is the other check's), which is the safe side.
+        summary_path = summaries / f'{stamp}-conflict.md'
+        with summary_path.open('x', encoding='utf-8') as stream:
+            stream.write(text)
+        stopped.append('report name')
+    print(f'summary={summary_path}')
     if args.notify:
         count = sum(attention(r) for r in results)
         notify(f'停止: {stop}' if stop else

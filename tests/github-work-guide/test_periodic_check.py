@@ -338,7 +338,9 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             with patch.object(pc, 'update_checkout', return_value=None), \
                     patch.object(pc, 'run', return_value=(1, '', 'Traceback')), patch.object(pc, 'commit', side_effect=lambda: next(heads)):
                 self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
-            text = next((runs / 'periodic-summaries').glob('*.md')).read_text(encoding='utf-8')
+            names = [p.name for p in (runs / 'periodic-summaries').iterdir()]
+            self.assertFalse([n for n in names if pc.STAMP.fullmatch(n[:-3])])  # no <stamp>.md: not a baseline
+            text = next((runs / 'periodic-summaries').glob('*-update-failure.md')).read_text(encoding='utf-8')
             self.assertIn(f'更新後の版（{"b" * 40}）が正しく終わらなかった（終了コード 1）', text)
             self.assertIn(f'更新前 {"a" * 40}', text)
             self.assertNotIn('点検したコード', text)
