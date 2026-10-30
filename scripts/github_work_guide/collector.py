@@ -35,8 +35,9 @@ FORMAT_FILES = ('.claude/skills/steward/SKILL.md', '.agents/skills/plan-to-issue
 MAIN_RUNS = 30  # newest workflow runs read for the default branch's CI
 
 
-def content_route(repo, path):
-    require(path in SETTING_FILES or path in FORMAT_FILES, 'content path not allowlisted')
+def content_route(repo, path, presence=False):
+    """Setting files are read; format files are only checked for presence (exists), never decoded."""
+    require(path in (FORMAT_FILES if presence else SETTING_FILES), 'content path not allowlisted')
     return f'{prefix(repo)}/contents/{path}'
 
 
@@ -144,7 +145,7 @@ class GhReadOnly:
     def exists(self, path, ref, timeout):
         """Whether an allowlisted file exists on `ref`. Only presence is used; the content is not read."""
         require(path in FORMAT_FILES and isinstance(ref, str) and 0 < len(ref) <= 255, 'invalid presence check')
-        value = self._run(['--method', 'GET', '--raw-field', f'ref={ref}', content_route(self.repo, path)],
+        value = self._run(['--method', 'GET', '--raw-field', f'ref={ref}', content_route(self.repo, path, presence=True)],
                           timeout, missing_ok=True)
         return value is not None
 
@@ -274,20 +275,32 @@ class Collector:
         return 'full' if all(found) else 'simple'
 
     def branch_ci(self, branch):
-        """Latest run of each workflow on the default branch, newest first. Counted in this repository's limits."""
+        """Per workflow (by workflow_id, else name), the latest run on the default branch among the newest
+        MAIN_RUNS, plus its latest completed run, sorted by name. Pull request runs are left out: a fork's PR from
+        a branch that is also called main would otherwise look like the default branch's CI. A workflow with
+        no run in that page (e.g. a rare schedule) is not seen. Counted in this repository's limits."""
         value = self.call(self.transport.branch_runs, branch)
         require(isinstance(value, dict) and isinstance(value.get('workflow_runs'), list), 'workflow runs schema')
         rows = value['workflow_runs']
         self.count(rows)
-        latest = {}
+        latest, completed = {}, {}
         for run in rows:
             require(isinstance(run, dict) and isinstance(run.get('name'), str) and isinstance(run.get('head_sha'), str)
-                    and run.get('status') in ('queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending')
+                    and run.get('status') in ('queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending', 'action_required')
                     and (run.get('conclusion') is None or isinstance(run.get('conclusion'), str))
+                    and (run.get('event') is None or isinstance(run.get('event'), str))
                     and isinstance(run.get('created_at'), str), 'workflow run schema')
-            if run['name'] not in latest or latest[run['name']]['created_at'] < run['created_at']:
-                latest[run['name']] = {k: run.get(k) for k in ('name', 'status', 'conclusion', 'head_sha', 'event', 'created_at')}
-        return sorted(latest.values(), key=lambda r: r['name'])
+            if (run.get('event') or '').startswith('pull_request'):
+                continue
+            key = run.get('workflow_id') if type(run.get('workflow_id')) is int else run['name']
+            row = {k: run.get(k) for k in ('name', 'status', 'conclusion', 'head_sha', 'event', 'created_at')}
+            if key not in latest or latest[key]['created_at'] < run['created_at']:
+                latest[key] = row
+            if run['status'] == 'completed' and (key not in completed or completed[key]['created_at'] < run['created_at']):
+                completed[key] = row
+        # A newer run still in progress does not hide the result of the last finished one.
+        return sorted(({**row, 'last_completed': completed.get(key)} for key, row in latest.items()),
+                      key=lambda r: (r['name'], r['created_at']))
 
     def skipped(self, reason):
         coverage = {'status': 'SKIPPED', 'skipped': reason, 'errors': [], 'calls': self.calls,

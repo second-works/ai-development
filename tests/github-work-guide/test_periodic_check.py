@@ -125,7 +125,7 @@ def config_file(tmp, rows):
     return path
 
 
-class CheckTests(unittest.TestCase):
+class CheckHelper:
     """The whole run over several repositories, with each repository's own synthetic GitHub."""
 
     def run_check(self, tmp, rows, fakes):
@@ -137,6 +137,8 @@ class CheckTests(unittest.TestCase):
         summaries = sorted((runs / 'periodic-summaries').iterdir())
         return code, summaries[-1].read_text(encoding='utf-8'), runs
 
+
+class CheckTests(CheckHelper, unittest.TestCase):
     def test_full_simple_and_private_in_one_report(self):
         rows = [{'name': 'hermes-self-improvement'}, {'name': 'other-repo'}, {'name': 'private-repo'}]
         fakes = {REPO: Fake, OTHER: SimpleFake, PRIVATE: PrivateFake}
@@ -233,6 +235,78 @@ class CheckTests(unittest.TestCase):
                 pc.main(['--config', str(bad), '--runs', str(runs)])
                 self.assertEqual(pc.main(['--config', str(bad), '--runs', str(runs)]), 2)
             self.assertEqual(pc.main(['--runs', str(Path(tmp) / 'elsewhere')]), 2)
+
+
+class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
+    """Findings of the Claude Code review of PR #224."""
+
+    def test_format_detection_failure_keeps_the_run(self):
+        class NoPresence(SimpleFake):
+            def exists(self, path, ref, timeout):
+                raise pc.Invalid('synthetic rate limit')
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text, runs = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: NoPresence})
+            self.assertEqual(code, 0)
+            self.assertIn('簡易版（判定できないため簡易版）', text)
+            self.assertEqual(len(list((runs / 'second-works--other-repo').iterdir())), 1)
+
+    def test_pull_request_runs_and_running_runs(self):
+        class Runs(SimpleFake):
+            def __init__(self):
+                super().__init__()
+                base = {'head_sha': SHA, 'event': 'push'}
+                self.workflow_runs = [
+                    # A fork PR from a branch named like the default branch: not the default branch's CI.
+                    dict(base, name='Fork CI', workflow_id=1, status='completed', conclusion='failure', event='pull_request',
+                         created_at='2026-10-29T03:00:00Z'),
+                    # A run in progress does not hide the failure just before it.
+                    dict(base, name='Template CI', workflow_id=2, status='in_progress', conclusion=None,
+                         created_at='2026-10-29T02:00:00Z'),
+                    dict(base, name='Template CI', workflow_id=2, status='completed', conclusion='failure',
+                         created_at='2026-10-29T01:00:00Z'),
+                    # Two workflow files with the same name are two workflows.
+                    dict(base, name='CI', workflow_id=3, status='completed', conclusion='failure', created_at='2026-10-28T00:00:00Z'),
+                    dict(base, name='CI', workflow_id=4, status='completed', conclusion='success', created_at='2026-10-29T00:00:00Z')]
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Runs})
+            self.assertNotIn('Fork CI', text)
+            self.assertIn('最後に終わったrun: "failure"', text)
+            self.assertIn('警告: 既定ブランチの "Template CI" が "failure"', text)
+            self.assertIn('警告: 既定ブランチの "CI" が "failure"', text)
+            self.assertIn('失敗 2件', text)
+
+    def test_calls_include_format_and_ci(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text, runs = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: SimpleFake})
+            saved = load_run(next((runs / 'second-works--other-repo').iterdir()))
+            self.assertIn(f'API呼出 {saved["coverage"]["calls"] + 3}回', text)  # 2 presence checks + 1 CI read
+
+    def test_unexpected_error_names_only_its_type(self):
+        class Broken(SimpleFake):
+            def branch_runs(self, branch, timeout):
+                return {'workflow_runs': []}
+        with tempfile.TemporaryDirectory() as tmp, patch.object(pc, 'stale_open', side_effect=KeyError('secret')):
+            code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Broken})
+            self.assertEqual(code, 1)
+            self.assertIn('予期しないエラー（KeyError）', text)
+            self.assertNotIn('secret', text)
+
+    def test_update_restarts_on_the_updated_checkout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            with patch.object(pc, 'update_checkout', return_value=None), \
+                    patch.object(pc.os, 'execv', side_effect=SystemExit(0)) as execv:
+                with self.assertRaises(SystemExit):
+                    pc.main(['--update', '--runs', str(runs)])
+            args = execv.call_args.args[1]
+            self.assertNotIn('--update', args)
+            self.assertEqual(args[-2:], ['--runs', str(runs)])
+            self.assertTrue(args[-3].endswith('scripts/periodic_check.py'))
+
+    def test_format_files_are_never_read_as_content(self):
+        from github_work_guide.collector import GhReadOnly
+        with self.assertRaises(pc.Invalid):
+            GhReadOnly(OTHER).content('.claude/skills/steward/SKILL.md', 'main', 1)
 
 
 class RunTests(unittest.TestCase):

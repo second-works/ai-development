@@ -15,6 +15,7 @@ Exit 0 when every repository was checked or is private, 1 when any repository st
 not found, or an error; see the report), 2 for usage errors.
 """
 import argparse
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import re
@@ -119,9 +120,11 @@ def warnings_for(coverage, seconds, limits):
     return warnings
 
 
-def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False):
-    """Pure summary of one repository's collection (all values come from the saved data)."""
-    coverage = snapshot['coverage']
+def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False, calls=None):
+    """Pure summary of one repository's check. calls: every API call of the check (collection, format, CI)."""
+    coverage = dict(snapshot['coverage'])
+    if calls is not None:
+        coverage['calls'] = calls
     candidates = plan['candidates'] if plan else {}
     by_kind = {}
     for key, c in sorted(candidates.items()):
@@ -135,7 +138,9 @@ def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False):
 
 
 def ci_problems(ci):
-    return [r for r in ci or [] if r['status'] == 'completed' and r['conclusion'] not in OK_CONCLUSIONS]
+    """Workflows whose last finished run on the default branch did not succeed."""
+    return [r['last_completed'] for r in ci or []
+            if r.get('last_completed') and r['last_completed']['conclusion'] not in OK_CONCLUSIONS]
 
 
 def collector_for(target):
@@ -175,7 +180,11 @@ def check_repository(target, runs, stamp, now):
         else:
             branch = snapshot['settings']['default_branch']
             if target['format'] == 'auto':
-                result['format'], result['format_source'] = collector.repository_format(branch), 'repository'
+                try:
+                    result['format'], result['format_source'] = collector.repository_format(branch), 'repository'
+                except (Invalid, KeyError, TypeError, ValueError, AttributeError):
+                    # The collection is complete and kept; without the format it is read the simple way.
+                    result['format'], result['format_source'] = 'simple', '判定できないため簡易版'
             else:
                 result['format'], result['format_source'] = target['format'], 'config'
             # Simple: the Issue form is not judged, so no work guide is made.
@@ -186,16 +195,18 @@ def check_repository(target, runs, stamp, now):
             except (Invalid, KeyError, TypeError, ValueError, AttributeError):
                 result['ci_error'] = '既定ブランチの workflow run を読めない（権限・上限・通信を確認）'
             seconds = time.monotonic() - started
-            limits = Limits(**target['limits'])
-            result['analysis'] = analyse(snapshot, plan, changes, seconds, now, limits, previous is not None)
+            result['analysis'] = analyse(snapshot, plan, changes, seconds, now, collector.limits, previous is not None,
+                                         collector.calls)
             note = None if plan else '簡易版（Issueの書式を判定しない）'
             documents.update({'diff.json': changes, 'report.md': markdown(snapshot, changes, plan, None, note)})
             if plan is not None:
                 documents['plan.json'] = plan
         save_run(out, documents)
         result['run'] = out.name
-    except Exception:  # noqa: BLE001 - one repository never stops the others; raw text may hold remote data
-        result['stop'] = result['stop'] or 'この repository の点検中に予期しないエラー。ほかの repository は続けた'
+    except Exception as error:  # noqa: BLE001 - one repository never stops the others; raw text may hold remote data
+        # Only the exception type is kept: its message may carry remote text or auth diagnostics.
+        result['stop'] = result['stop'] or (f'この repository の点検中に予期しないエラー（{type(error).__name__}）。'
+                                            'ほかの repository は続けた')
     return result
 
 
@@ -232,10 +243,10 @@ def render_repository(result):
                      f'{safe_text(settings["review"])}')
     if not a:
         return lines + ['']
-    limits = result['limits']
+    limits = Limits(**result['limits'])
     lines += [f'- 形式: {"完全版（作業案内あり）" if result["format"] == "full" else "簡易版"}（{result["format_source"]}）',
               f'- 取得: {a["status"]} / {a["items"]}件 / API呼出 {a["calls"]}回 / {a["seconds"]:.0f}秒'
-              f'（上限 {limits.get("seconds", 180)}秒・{limits.get("calls", 500)}回）',
+              f'（上限 {limits.seconds}秒・{limits.calls}回）',
               f'- 前回のrun: {result["previous"] or "なし（初回）"} / 今回のrun: {result["run"]}', '',
               '### 前回からの変化', '']
     if a['first']:
@@ -262,8 +273,12 @@ def render_repository(result):
     elif not result['ci']:
         lines.append('- workflow run がない')
     else:
-        lines += [f'- {safe_text(r["name"])}: {r["status"]}/{safe_text(r["conclusion"] or "-")} ({str(r["head_sha"])[:7]})'
-                  for r in result['ci']]
+        for r in result['ci']:
+            line = f'- {safe_text(r["name"])}: {r["status"]}/{safe_text(r["conclusion"] or "-")} ({str(r["head_sha"])[:7]})'
+            done = r.get('last_completed')
+            if done and done is not r and done['created_at'] != r['created_at']:
+                line += f' / 最後に終わったrun: {safe_text(done["conclusion"])} ({str(done["head_sha"])[:7]})'
+            lines.append(line)
     return lines + ['']
 
 
@@ -321,6 +336,10 @@ def main(argv=None):
         print(f'summary already exists: {summary_path}', file=sys.stderr)
         return 2
     stop = update_checkout() if args.update else None
+    if args.update and not stop:
+        # The modules loaded above are last week's: start again on the updated checkout, without --update.
+        rest = [a for a in (argv if argv is not None else sys.argv[1:]) if a != '--update']
+        os.execv(sys.executable, [sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), *rest])
     results = []
     if not stop:
         try:
