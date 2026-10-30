@@ -103,7 +103,7 @@
 
 - 発生元Issue / PR: #219 / #221
 - 対象領域: GitHub作業指針の本文の読み取り
-- 内容: 本文の行 `depends-on: #N`（見出しなし）を依存の記載として認識しない。同じリポジトリへの参照の owner/name を大文字小文字を区別して比べるので、`Second-Works/ai-development#12` のような書き方は別リポジトリ扱いになる。
+- 内容: 本文の行 `depends-on: #N`（見出しなし）を依存の記載として認識しない。同じリポジトリへの参照の owner/name を大文字小文字を区別して比べるので、`Second-Works/ai-development#12` のような書き方は別リポジトリ扱いになる。依存欄の `#0` を番号として受け付け、`issue:0: 未取得` の保留になる。
 - 後回し可能とした根拠: hermes-self-improvement から移した読み取りの規則のまま。依存欄の見出しや `- depends-on:` を依存欄の中に書く形式は読めている。保留が増える側の誤り。
 - 想定症状: 依存欄の見出しがなく `- depends-on: #5` だけの Issue に「依存欄がない」の保留が出る。大文字を混ぜた参照の子一覧の行が「確認できない」になる。
 - 関連ファイル / 機能: `scripts/github_work_guide/guide.py` の `LABEL`、`references`、`reference_count`
@@ -120,6 +120,19 @@
 - 後回し可能とした根拠: 2026-10-30 時点で対象リポジトリの最大は ai-development の約220件。`page limit reached` で INCOMPLETE になるだけで、誤った案内は出ない。
 - 想定症状: 1000件に近づいたリポジトリで、毎回 `取得不完全` になり plan が作られない。
 - 関連ファイル / 機能: `scripts/github_work_guide/collector.py` の `rest_request`、`Collector.pages`、`MAXIMUM`
+- 優先度: P3
+- 状態: `open`
+- 解決Issue / PR: なし
+- 置換理由: なし
+
+### FU-221-5
+
+- 発生元Issue / PR: #219 / #221
+- 対象領域: GitHub作業指針のコメントによる保留
+- 内容: Issue のコメントに `Goal` / `目標` / `方針` が出てくると、書いた人（bot や外部の人を含む）にかかわらず `comment_change` の保留を付ける。公開リポジトリでは誰でもコメントできる。
+- 後回し可能とした根拠: hermes-self-improvement から移した規則のまま。保留が増える側の誤りで、案内が誤って「進めてよい」になることはない。
+- 想定症状: bot のコメントや外部の人のコメントで、Issue に「コメントのGoal/方針変更は人の確認が必要」の保留が付き、recheck が BLOCKED になる。
+- 関連ファイル / 機能: `scripts/github_work_guide/core.py` の `analyze`（comment_change）
 - 優先度: P3
 - 状態: `open`
 - 解決Issue / PR: なし
