@@ -52,6 +52,10 @@ def main(argv=None):
             save_run(args.out, {'excerpt.md': text})
             print(f'excerpt={len(text)} chars target={args.target} out={args.out}')
             return 0
+        # The output is checked before any network read, so a reused or misplaced --out loses no collection.
+        out = args.out.resolve() if args.out.is_absolute() else args.out
+        require(not out.exists() and (out.parent.name == 'runs' or out.parent.parent.name == 'runs'),
+                'output must be a new runs child')
         result = None
         if args.mode == 'collect':
             snapshot = collector(args.config, repo).collect()

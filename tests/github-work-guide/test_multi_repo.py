@@ -378,6 +378,33 @@ class ReviewFollowUpTests(unittest.TestCase):
         pr['raw']['checks'][-1]['check_suite'] = {'id': 1}  # a re-run in the same suite replaces the old attempt
         self.assertEqual(core.gate(pr, SETTINGS), [])
 
+    def test_skipped_or_neutral_next_to_a_success_passes_like_check_pr_head(self):
+        pr = pr_with()
+        base = {'name': 'ci', 'head_sha': SHA, 'status': 'completed', 'app': {'id': 15368}}
+        others = [c for c in pr['raw']['checks'] if c['name'] != 'ci']
+        pr['raw']['checks'] = others + [dict(base, id=100, conclusion='success', check_suite={'id': 1}),
+                                        dict(base, id=101, conclusion='skipped', check_suite={'id': 2}),
+                                        dict(base, id=102, conclusion='neutral', check_suite={'id': 3})]
+        self.assertEqual(core.gate(pr, SETTINGS), [])
+        pr['raw']['checks'] = others + [dict(base, id=101, conclusion='skipped', check_suite={'id': 2})]
+        self.assertEqual(core.gate(pr, SETTINGS), ['"ci": 未成功/旧head'])  # skipped alone is not success
+
+    def test_out_is_checked_before_collecting(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('report_cli', CLI)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        with tempfile.TemporaryDirectory() as tmp:
+            config = write_config(tmp, base_config())
+            used = Path(tmp).resolve() / 'runs' / 'used'
+            used.mkdir(parents=True)
+            for out in (used, Path(tmp).resolve() / 'elsewhere' / 'x'):
+                with patch.object(cli, 'collector', side_effect=AssertionError('network')) as made:
+                    code = cli.main(['collect', '--config', str(config), '--repo', 'second-works/ai-development',
+                                     '--out', str(out)])
+                self.assertEqual(code, 2)
+                made.assert_not_called()
+
     def test_unusable_setting_file_is_named_in_the_error(self):
         fake = OtherFake()
         fake.contents['.github/pr-gate-checks'] = 'x' * 201 + '\n'
@@ -397,6 +424,9 @@ class ReviewFollowUpTests(unittest.TestCase):
         text = markdown(fresh, diff(fresh), None, result)
         self.assertIn('## 再確認', text)
         self.assertIn('BLOCKED', text)
+        self.assertIn('再取得で非公開のため対象外', text)
+        previous = snapshot(item(7))
+        self.assertIn('前回のrunにあった1件は、今回は取得できない', markdown(fresh, diff(fresh, dict(previous, repo=REPO))))
 
     def test_recheck_previous_of_another_repository_stops_before_collecting(self):
         import importlib.util

@@ -296,10 +296,15 @@ def gate(item, settings):
             provider = (app.get('id'), suite.get('id'))
             if provider not in providers or providers[provider]['id'] < check['id']:
                 providers[provider] = check
+        latest_status = max(states, key=lambda c: c['id']).get('state') if states else None
+        # Like check-pr-head.sh: skipped/neutral next to a success is fine, but skipped alone is not success.
         if any(c.get('head_sha') != head or c.get('status') != 'completed'
-               or c.get('conclusion') != 'success' for c in providers.values()):
+               or c.get('conclusion') not in ('success', 'skipped', 'neutral') for c in providers.values()):
             failures.append(f'{safe_text(name)}: 未成功/旧head')
-        if states and max(states, key=lambda c: c['id']).get('state') != 'success':
+        elif providers and latest_status != 'success' and not any(
+                c.get('conclusion') == 'success' for c in providers.values()):
+            failures.append(f'{safe_text(name)}: 未成功/旧head')
+        if states and latest_status != 'success':
             failures.append(f'{safe_text(name)}: 未成功status')
         if not matches and not states:
             failures.append(f'{safe_text(name)}: 未取得')
@@ -797,6 +802,8 @@ def recheck(snapshot, plan, target, fresh):
     validate_plan(snapshot, plan)
     require(target in plan['candidates'], 'unknown candidate')
     validate(fresh, snapshot['repo'])
+    if fresh['coverage']['status'] == 'SKIPPED':
+        return {'target': target, 'status': 'BLOCKED', 'reasons': [f'再取得で{SKIP_REASONS[fresh["coverage"]["skipped"]]}']}
     if fresh['coverage']['status'] != 'COMPLETE':
         return {'target': target, 'status': 'BLOCKED', 'reasons': ['再取得が不完全']}
     if target not in fresh['items']:
@@ -897,6 +904,9 @@ def markdown(snapshot, changes, plan=None, result=None):
                      f'{safe(settings["required_checks"])} / 正式レビュー（{settings["review_source"]}）: {safe(settings["review"])}')
     if snapshot['coverage']['status'] == 'SKIPPED':
         lines += ['', f'{SKIP_REASONS[snapshot["coverage"]["skipped"]]}。Issue/PRは読んでいない。']
+        gone = sum(x['status'] == 'UNAVAILABLE' for x in changes)
+        if gone:
+            lines.append(f'前回のrunにあった{gone}件は、今回は取得できない（UNAVAILABLE。削除・解決ではない）。')
         if result:
             lines += ['', '## 再確認', '', safe(result)]
         return '\n'.join(lines) + '\n'
