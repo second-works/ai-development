@@ -36,7 +36,9 @@ MARKER = 'runs/.periodic-check-checkout'
 RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}\Z')
 WARN_RATIO = 0.8
 STALE_DAYS = 14
-OK_CONCLUSIONS = ('success', 'skipped', 'neutral')
+# cancelled: usually a newer push cancelled the run (concurrency); the newer run is shown next to it.
+OK_CONCLUSIONS = ('success', 'skipped', 'neutral', 'cancelled')
+FORMAT_FALLBACK = '判定できないため簡易版'
 
 
 def run(args, cwd=None, timeout=300):
@@ -184,7 +186,7 @@ def check_repository(target, runs, stamp, now):
                     result['format'], result['format_source'] = collector.repository_format(branch), 'repository'
                 except (Invalid, KeyError, TypeError, ValueError, AttributeError):
                     # The collection is complete and kept; without the format it is read the simple way.
-                    result['format'], result['format_source'] = 'simple', '判定できないため簡易版'
+                    result['format'], result['format_source'] = 'simple', FORMAT_FALLBACK
             else:
                 result['format'], result['format_source'] = target['format'], 'config'
             # Simple: the Issue form is not judged, so no work guide is made.
@@ -197,6 +199,8 @@ def check_repository(target, runs, stamp, now):
             seconds = time.monotonic() - started
             result['analysis'] = analyse(snapshot, plan, changes, seconds, now, collector.limits, previous is not None,
                                          collector.calls)
+            if result['format_source'] == FORMAT_FALLBACK:
+                result['analysis']['warnings'].append('形式を判定できず、作業案内（親の検収待ち・完了範囲確認）を作っていない')
             note = None if plan else '簡易版（Issueの書式を判定しない）'
             documents.update({'diff.json': changes, 'report.md': markdown(snapshot, changes, plan, None, note)})
             if plan is not None:
@@ -276,7 +280,7 @@ def render_repository(result):
         for r in result['ci']:
             line = f'- {safe_text(r["name"])}: {r["status"]}/{safe_text(r["conclusion"] or "-")} ({str(r["head_sha"])[:7]})'
             done = r.get('last_completed')
-            if done and done is not r and done['created_at'] != r['created_at']:
+            if done and done['created_at'] != r['created_at']:
                 line += f' / 最後に終わったrun: {safe_text(done["conclusion"])} ({str(done["head_sha"])[:7]})'
             lines.append(line)
     return lines + ['']
@@ -290,12 +294,14 @@ def runs_size(runs):
     return total
 
 
-def render(stamp, results, size, stop=None):
+def render(stamp, results, size, stop=None, update_error=None):
     lines = [f'# 定期点検 {stamp}', '',
              '設定ファイル（config/github-work-guide.json）の全リポジトリを読み、報告するだけ（#220）。'
              'GitHubへの書き込み・削除・モデルの使用はしていない。', '']
     if stop:
         lines += ['## 停止', '', f'- {stop}', '']
+    if update_error:
+        lines += ['## checkout の更新', '', f'- 更新しなかった: {update_error}。今の版で点検した', '']
     if results:
         lines += ['## 一覧', '', '| リポジトリ | 状態 | 形式 | 要対応 | 既定ブランチのCI |', '| --- | --- | --- | --- | --- |']
         for r in results:
@@ -318,7 +324,8 @@ def notify(text):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    # No abbreviations: the restart after --update removes exactly '--update', so '--upd' must not exist.
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0], allow_abbrev=False)
     parser.add_argument('--update', action='store_true', help='move this detached check checkout to origin/main first')
     parser.add_argument('--notify', action='store_true', help='show a macOS notification with the result')
     parser.add_argument('--config', type=Path, default=CONFIG, help='target repositories')
@@ -335,11 +342,16 @@ def main(argv=None):
     if summary_path.exists():
         print(f'summary already exists: {summary_path}', file=sys.stderr)
         return 2
-    stop = update_checkout() if args.update else None
-    if args.update and not stop:
+    stop = None
+    # An update problem is reported, but the repositories are still checked with the current code.
+    update_error = update_checkout() if args.update else None
+    if args.update and not update_error:
         # The modules loaded above are last week's: start again on the updated checkout, without --update.
         rest = [a for a in (argv if argv is not None else sys.argv[1:]) if a != '--update']
-        os.execv(sys.executable, [sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), *rest])
+        try:
+            os.execv(sys.executable, [sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), *rest])
+        except OSError as error:
+            update_error = f'更新後の版で起動し直せない（{type(error).__name__}）。今の版のまま点検した'
     results = []
     if not stop:
         try:
@@ -350,7 +362,7 @@ def main(argv=None):
         now = datetime.now(timezone.utc)
         for target in config['repositories'].values():
             results.append(check_repository(target, runs, stamp, now))
-    text = render(stamp, results, runs_size(runs), stop)
+    text = render(stamp, results, runs_size(runs), stop, update_error)
     with summary_path.open('x', encoding='utf-8') as stream:
         stream.write(text)
     print(f'summary={summary_path}')
@@ -359,7 +371,7 @@ def main(argv=None):
         count = sum(attention(r) for r in results)
         notify(f'停止: {stop}' if stop else
                f'{len(results)}件を点検。停止 {len(stopped)}件、要対応の候補 {count}件。{summary_path.name}')
-    return 1 if stop or stopped else 0
+    return 1 if stop or stopped or update_error else 0
 
 
 if __name__ == '__main__':

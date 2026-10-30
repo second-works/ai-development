@@ -279,7 +279,8 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             code, text, runs = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: SimpleFake})
             saved = load_run(next((runs / 'second-works--other-repo').iterdir()))
-            self.assertIn(f'API呼出 {saved["coverage"]["calls"] + 3}回', text)  # 2 presence checks + 1 CI read
+            # simple: 1 presence check (stops at the first missing file) + 1 CI read
+            self.assertIn(f'API呼出 {saved["coverage"]["calls"] + 2}回', text)
 
     def test_unexpected_error_names_only_its_type(self):
         class Broken(SimpleFake):
@@ -302,6 +303,59 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertNotIn('--update', args)
             self.assertEqual(args[-2:], ['--runs', str(runs)])
             self.assertTrue(args[-3].endswith('scripts/periodic_check.py'))
+
+    def test_update_failure_still_checks_and_abbreviations_are_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            config = config_file(tmp, [{'name': 'other-repo'}])
+            make = lambda target: Collector(target['repo'], SimpleFake(), Limits(**target['limits']))
+            with patch.object(pc, 'update_checkout', return_value='git fetch に失敗した'), \
+                    patch.object(pc, 'collector_for', make):
+                self.assertEqual(pc.main(['--update', '--config', str(config), '--runs', str(runs)]), 1)
+            text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
+            self.assertIn('更新しなかった: git fetch に失敗した', text)
+            self.assertIn(f'| {OTHER} | 完了 |', text)
+            with self.assertRaises(SystemExit):
+                pc.main(['--upd', '--runs', str(runs)])
+            with patch.object(pc, 'update_checkout', return_value=None), \
+                    patch.object(pc.os, 'execv', side_effect=OSError('moved')), patch.object(pc, 'collector_for', make), \
+                    patch.object(pc, 'datetime', wraps=datetime) as clock:
+                clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
+                self.assertEqual(pc.main(['--update', '--config', str(config), '--runs', str(runs)]), 1)
+            self.assertIn('起動し直せない（OSError）', (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'))
+
+    def test_ci_runs_of_other_repositories_cancelled_and_format_fallback_warning(self):
+        class Runs(SimpleFake):
+            def __init__(self):
+                super().__init__()
+                base = {'head_sha': SHA, 'event': 'push', 'status': 'completed'}
+                self.workflow_runs = [
+                    dict(base, name='Bridge', event='workflow_run', conclusion='failure', created_at='2026-10-29T03:00:00Z',
+                         head_repository={'full_name': 'someone/other-repo'}),
+                    dict(base, name='Template CI', conclusion='cancelled', created_at='2026-10-29T02:00:00Z',
+                         head_repository={'full_name': OTHER})]
+            def exists(self, path, ref, timeout):
+                raise pc.Invalid('limit')
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Runs})
+            self.assertNotIn('Bridge', text)
+            self.assertNotIn('"Template CI" が', text)  # cancelled is not a warning
+            self.assertIn('警告: 形式を判定できず', text)
+
+    def test_simple_repository_costs_one_presence_call(self):
+        fake = SimpleFake()
+        Collector(OTHER, fake).repository_format('trunk')
+        self.assertEqual([r for r in fake.routes if r[0] == 'EXISTS'], [('EXISTS', '.claude/skills/steward/SKILL.md', 'trunk')])
+
+    def test_bad_head_sha_is_refused(self):
+        class Bad(SimpleFake):
+            def __init__(self):
+                super().__init__()
+                self.workflow_runs[0]['head_sha'] = 'abc\n| injected |'
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Bad})
+            self.assertNotIn('injected', text)
+            self.assertIn('取得できない: 既定ブランチの workflow run を読めない', text)
 
     def test_format_files_are_never_read_as_content(self):
         from github_work_guide.collector import GhReadOnly

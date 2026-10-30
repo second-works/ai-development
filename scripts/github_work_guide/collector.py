@@ -270,9 +270,12 @@ class Collector:
 
     def repository_format(self, branch):
         """'full' when the default branch has both lightweight-template skills, else 'simple'."""
-        found = [self.call(self.transport.exists, path, branch) for path in FORMAT_FILES]
-        require(all(type(x) is bool for x in found), 'presence result')
-        return 'full' if all(found) else 'simple'
+        for path in FORMAT_FILES:  # stops at the first missing file, so a simple repository costs one call
+            found = self.call(self.transport.exists, path, branch)
+            require(type(found) is bool, 'presence result')
+            if not found:
+                return 'simple'
+        return 'full'
 
     def branch_ci(self, branch):
         """Per workflow (by workflow_id, else name), the latest run on the default branch among the newest
@@ -285,12 +288,17 @@ class Collector:
         self.count(rows)
         latest, completed = {}, {}
         for run in rows:
-            require(isinstance(run, dict) and isinstance(run.get('name'), str) and isinstance(run.get('head_sha'), str)
+            require(isinstance(run, dict) and isinstance(run.get('name'), str)
+                    and isinstance(run.get('head_sha'), str) and re.fullmatch(r'[0-9a-f]{40}', run['head_sha']) is not None
                     and run.get('status') in ('queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending', 'action_required')
                     and (run.get('conclusion') is None or isinstance(run.get('conclusion'), str))
                     and (run.get('event') is None or isinstance(run.get('event'), str))
                     and isinstance(run.get('created_at'), str), 'workflow run schema')
             if (run.get('event') or '').startswith('pull_request'):
+                continue
+            # A run for code from another repository (a fork's branch named like ours, e.g. via workflow_run).
+            head_repo = run.get('head_repository')
+            if isinstance(head_repo, dict) and head_repo.get('full_name') not in (None, self.repo):
                 continue
             key = run.get('workflow_id') if type(run.get('workflow_id')) is int else run['name']
             row = {k: run.get(k) for k in ('name', 'status', 'conclusion', 'head_sha', 'event', 'created_at')}
