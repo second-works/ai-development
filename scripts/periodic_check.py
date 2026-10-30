@@ -12,7 +12,7 @@ Run it from a dedicated check checkout (a detached git worktree of this reposito
 first moves that checkout to origin/main; it refuses when the checkout is on a branch or has tracked
 changes, so it never moves someone's working branch.
 Exit 0 when every repository was checked or is private, 1 when any repository stopped (incomplete,
-not found, or an error; see the report), 2 for usage errors.
+not found, or an error) or --update could not update the checkout (see the report), 2 for usage errors.
 """
 import argparse
 import os
@@ -36,8 +36,8 @@ MARKER = 'runs/.periodic-check-checkout'
 RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}\Z')
 WARN_RATIO = 0.8
 STALE_DAYS = 14
-# cancelled: usually a newer push cancelled the run (concurrency); the newer run is shown next to it.
-OK_CONCLUSIONS = ('success', 'skipped', 'neutral', 'cancelled')
+# Cancelled runs are left out of last_completed in branch_ci, so they never hide or raise a failure.
+OK_CONCLUSIONS = ('success', 'skipped', 'neutral')
 FORMAT_FALLBACK = '判定できないため簡易版'
 
 
@@ -57,6 +57,8 @@ def update_checkout():
     if not (ROOT / MARKER).is_file():
         return f'{MARKER} がない。点検専用の checkout だけを更新する'
     code, out, _ = run(['git', 'symbolic-ref', '-q', 'HEAD'])
+    if code not in (0, 1):  # 1 is a detached HEAD; anything else is not a usable git checkout
+        return 'git の checkout として読めない（git がない、または repository ではない）'
     if code == 0:
         return f'checkout がブランチ {out.strip()} にある。detached の点検用 checkout だけを更新する'
     # Ignored files (runs/) are not listed; any other untracked or changed file stops the update.
@@ -306,8 +308,9 @@ def render(stamp, results, size, stop=None, update_error=None):
         lines += ['## 一覧', '', '| リポジトリ | 状態 | 形式 | 要対応 | 既定ブランチのCI |', '| --- | --- | --- | --- | --- |']
         for r in results:
             fmt = {'full': '完全版', 'simple': '簡易版'}.get(r['format'], '-')
-            ci = ('取得できない' if r['ci_error'] else '-' if r['ci'] is None else
-                  f'失敗 {len(ci_problems(r["ci"]))}件' if ci_problems(r['ci']) else '問題なし')
+            problems = ci_problems(r['ci'])
+            ci = ('取得できない' if r['ci_error'] else '-' if r['ci'] is None else 'runなし' if not r['ci'] else
+                  f'失敗 {len(problems)}件' if problems else '問題なし')
             lines.append(f'| {r["repo"]} | {state_label(r)} | {fmt} | {attention(r) if r["analysis"] else "-"} | {ci} |')
         lines.append('')
         for r in results:
@@ -370,6 +373,7 @@ def main(argv=None):
     if args.notify:
         count = sum(attention(r) for r in results)
         notify(f'停止: {stop}' if stop else
+               ('checkout を更新できない。' if update_error else '') +
                f'{len(results)}件を点検。停止 {len(stopped)}件、要対応の候補 {count}件。{summary_path.name}')
     return 1 if stop or stopped or update_error else 0
 

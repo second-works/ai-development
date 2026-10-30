@@ -147,7 +147,8 @@ class GhReadOnly:
         require(path in FORMAT_FILES and isinstance(ref, str) and 0 < len(ref) <= 255, 'invalid presence check')
         value = self._run(['--method', 'GET', '--raw-field', f'ref={ref}', content_route(self.repo, path, presence=True)],
                           timeout, missing_ok=True)
-        return value is not None
+        # A directory or submodule at that path is not the skill file.
+        return isinstance(value, dict) and value.get('type') == 'file'
 
     def branch_runs(self, branch, timeout):
         """The newest workflow runs on one branch (one page)."""
@@ -284,8 +285,9 @@ class Collector:
         no run in that page (e.g. a rare schedule) is not seen. Counted in this repository's limits."""
         value = self.call(self.transport.branch_runs, branch)
         require(isinstance(value, dict) and isinstance(value.get('workflow_runs'), list), 'workflow runs schema')
+        # One fixed-size page: counted as an API call, not against the items limit of the Issue/PR collection.
         rows = value['workflow_runs']
-        self.count(rows)
+        require(len(rows) <= MAIN_RUNS, 'workflow runs page size')
         latest, completed = {}, {}
         for run in rows:
             require(isinstance(run, dict) and isinstance(run.get('name'), str)
@@ -304,9 +306,11 @@ class Collector:
             row = {k: run.get(k) for k in ('name', 'status', 'conclusion', 'head_sha', 'event', 'created_at')}
             if key not in latest or latest[key]['created_at'] < run['created_at']:
                 latest[key] = row
-            if run['status'] == 'completed' and (key not in completed or completed[key]['created_at'] < run['created_at']):
+            # A cancelled run says nothing about the code, so it neither hides nor reports a failure.
+            if run['status'] == 'completed' and run.get('conclusion') != 'cancelled' and (
+                    key not in completed or completed[key]['created_at'] < run['created_at']):
                 completed[key] = row
-        # A newer run still in progress does not hide the result of the last finished one.
+        # A newer run still in progress (or cancelled) does not hide the result of the last finished one.
         return sorted(({**row, 'last_completed': completed.get(key)} for key, row in latest.items()),
                       key=lambda r: (r['name'], r['created_at']))
 

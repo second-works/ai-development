@@ -357,6 +357,36 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertNotIn('injected', text)
             self.assertIn('取得できない: 既定ブランチの workflow run を読めない', text)
 
+    def test_cancelled_run_does_not_hide_an_earlier_failure_and_no_runs(self):
+        class Runs(SimpleFake):
+            def __init__(self):
+                super().__init__()
+                base = {'head_sha': SHA, 'event': 'push', 'status': 'completed', 'name': 'CI'}
+                self.workflow_runs = [dict(base, conclusion='cancelled', created_at='2026-10-29T02:00:00Z'),
+                                      dict(base, conclusion='failure', created_at='2026-10-29T01:00:00Z')]
+        class NoRuns(SimpleFake):
+            def __init__(self):
+                super().__init__()
+                self.workflow_runs = []
+        with tempfile.TemporaryDirectory() as tmp:
+            text = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Runs})[1]
+            self.assertIn('警告: 既定ブランチの "CI" が "failure"', text)
+        with tempfile.TemporaryDirectory() as tmp:
+            text = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: NoRuns})[1]
+            self.assertIn('| runなし |', text)
+
+    def test_presence_needs_a_file_and_update_names_a_non_git_checkout(self):
+        from github_work_guide.collector import GhReadOnly
+        for body, expected in ((b'{"type": "file"}', True), (b'{"type": "dir"}', False), (b'[]', False)):
+            with patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0, body, b'')):
+                self.assertIs(GhReadOnly(OTHER).exists('.claude/skills/steward/SKILL.md', 'main', 1), expected)
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            (work / 'runs').mkdir()
+            (work / pc.MARKER).write_text('')
+            with patch.object(pc, 'ROOT', work):
+                self.assertIn('git の checkout として読めない', pc.update_checkout())
+
     def test_format_files_are_never_read_as_content(self):
         from github_work_guide.collector import GhReadOnly
         with self.assertRaises(pc.Invalid):
