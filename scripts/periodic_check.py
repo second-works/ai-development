@@ -101,11 +101,14 @@ def slug(repo):
     return repo.replace('/', '--')
 
 
-def previous_run(directory):
-    """Newest periodic run of this repository that loads (manifest, hashes, schema) and was complete."""
+def previous_run(directory, summaries=None):
+    """Newest periodic run of this repository that loads (manifest, hashes, schema), was complete and, when
+    summaries is given, whose report was written: changes of a run nobody saw must not become the baseline."""
     names = sorted((p for p in (directory.iterdir() if directory.is_dir() else [])
                     if RUN_NAME.fullmatch(p.name) and not p.is_symlink()), key=lambda p: p.name, reverse=True)
     for path in names:
+        if summaries is not None and not (summaries / f'{path.name[len("periodic-"):]}.md').is_file():
+            continue
         try:
             snapshot = load_run(path)
         except Exception:  # noqa: BLE001 - an unloadable run is skipped, never trusted
@@ -186,7 +189,7 @@ def check_repository(target, runs, stamp, now):
         return result
     snapshot = None
     try:
-        previous_path, previous = previous_run(directory)
+        previous_path, previous = previous_run(directory, runs / 'periodic-summaries')
         result['previous'] = previous_path.name if previous_path else None
         collector = collector_for(target)
         started = time.monotonic()
@@ -219,15 +222,16 @@ def check_repository(target, runs, stamp, now):
             else:
                 result['format'], result['format_source'] = target['format'], 'config'
             # Simple: the Issue form is not judged, so no work guide is made.
-            plan = build_plan(snapshot) if result['format'] == 'full' else None
-            changes = diff(snapshot, previous)
+            # The CI is read before planning, so a slow plan does not use up the small budget.
             try:
                 result['ci'] = after.branch_ci(branch)
             except (Invalid, KeyError, TypeError, ValueError, AttributeError):
                 result['ci_error'] = '既定ブランチの workflow run を読めない（権限・上限・通信を確認）'
+            plan = build_plan(snapshot) if result['format'] == 'full' else None
+            changes = diff(snapshot, previous)
             seconds = time.monotonic() - started
             result['analysis'] = analyse(snapshot, plan, changes, seconds, now, collector.limits, previous is not None,
-                                         collector.calls + after.calls, collect_seconds)
+                                         collector.calls, collect_seconds)
             result['analysis']['after_calls'] = after.calls
             if result['ci_error']:
                 result['analysis']['warnings'].append('既定ブランチのCIを確認できていない')
@@ -294,7 +298,7 @@ def render_repository(result):
         return lines + ['']
     limits = Limits(**result['limits'])
     lines += [f'- 形式: {"完全版（作業案内あり）" if result["format"] == "full" else "簡易版"}（{result["format_source"]}）',
-              f'- 取得: {a["status"]} / {a["items"]}件 / API呼出 {a["calls"] - a.get("after_calls", 0)}回'
+              f'- 取得: {a["status"]} / {a["items"]}件 / API呼出 {a["calls"]}回'
               f'（上限 {limits.calls}回）＋形式の判定とCIで{a.get("after_calls", 0)}回（別枠） / 全体 {a["seconds"]:.0f}秒'
               f'（取得の上限 {limits.seconds}秒）',
               f'- 前回のrun: {result["previous"] or "なし（初回）"} / 今回のrun: {result["run"]}', '',
@@ -443,7 +447,9 @@ def main(argv=None):
                    f'（更新前 {old}）。エラー出力は {log.name}。手で実行して確かめる')
         # Only a report naming the commit this check was updated from is the child's; a report of the same
         # minute without it was written by another check and is left alone.
-        written = summary_path.exists() and old in summary_path.read_text(encoding='utf-8', errors='replace')
+        mark = f'（{old} から更新した）'
+        written = (old != '不明' and summary_path.exists()
+                   and mark in summary_path.read_text(encoding='utf-8', errors='replace'))
         if written:
             # The child wrote its report and then failed (killed by the time limit, a crash): say so in it.
             with summary_path.open('a', encoding='utf-8') as stream:
@@ -477,5 +483,17 @@ def main(argv=None):
     return 1 if stop or stopped or update_error else 0
 
 
+CRASHED = 3  # an uncaught exception, told apart from 1 (a repository stopped)
+
+
+def entry():
+    try:
+        return main()
+    except Exception:  # noqa: BLE001 - the traceback goes to stderr; the exit code says it was a crash
+        import traceback
+        traceback.print_exc()
+        return CRASHED
+
+
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(entry())

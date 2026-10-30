@@ -93,6 +93,17 @@ class PreviousRunTests(unittest.TestCase):
             snap.write_text(snap.read_text().replace('Synthetic', 'Altered', 1))
             self.assertEqual(pc.previous_run(directory)[0], older)
 
+    def test_a_run_without_its_report_is_not_the_baseline(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            directory = runs / 'second-works--x'
+            older = self.save(directory, 'periodic-20261023-0900')
+            self.save(directory, 'periodic-20261030-0900')
+            summaries = runs / 'periodic-summaries'
+            summaries.mkdir(parents=True)
+            (summaries / '20261023-0900.md').write_text('x')
+            self.assertEqual(pc.previous_run(directory, summaries)[0], older)
+
     def test_no_previous(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(pc.previous_run(Path(tmp)), (None, None))
@@ -470,6 +481,23 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             with patch.object(pc, 'ROOT', work), patch.object(pc, 'run', side_effect=fake):
                 self.assertIsNone(pc.update_checkout())
         self.assertIn(['git', 'fetch', '--quiet', 'origin', '+refs/heads/main:refs/remotes/origin/main'], calls)
+
+    def test_crash_exit_code_and_unknown_old_commit_never_appends(self):
+        with patch.object(pc, 'main', side_effect=RuntimeError('boom')):
+            self.assertEqual(pc.entry(), pc.CRASHED)
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            heads = iter(['不明', 'b' * 40, 'b' * 40])
+            with patch.object(pc, 'datetime', wraps=datetime) as clock:
+                clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
+                def child(args, **kw):
+                    (runs / 'periodic-summaries' / '20261106-0900.md').write_text('# other\n不明\n', encoding='utf-8')
+                    return pc.CRASHED, '', ''
+                with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
+                        patch.object(pc, 'commit', side_effect=lambda: next(heads)):
+                    self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
+            self.assertEqual((runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'), '# other\n不明\n')
+            self.assertTrue((runs / 'periodic-summaries' / '20261106-0900-update-failure.md').is_file())
 
     def test_stale_and_unknown_conclusions_are_not_failures(self):
         rows = [{'last_completed': {'conclusion': c}} for c in ('stale', None, 'failure', 'timed_out')]
