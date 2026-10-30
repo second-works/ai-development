@@ -17,7 +17,7 @@ Nine標準のAI開発テンプレートです。Codex が計画を GitHub Issue 
 3. 標準検証を実行する（`./scripts/verify.sh`。このrepoでは全 `tests/*/run-samples.sh` を Bash 5 で実行する）。失敗・実行不能・全件skipは成功にしない。
 4. Pre-PR Review（差分全体の自己レビュー）を行い、必要修正 → 再verify → 重大問題なしを確認する。重大問題・検証不能時はcommit・PR作成・レビュー依頼へ進まず停止する。
 5. PR作成後、最終headで CI と Security を別々に確認する。結果を取得できなければ成功にせず、判断を求める。
-6. 正式レビュー（Codex Review）を最終headで行う。Risk Tier が HIGH なら、別のセッションでもレビューする。指摘は根拠を確かめ、同じPRで直す。
+6. 正式レビューを最終headで行う。種類は `.github/pr-gate-review` が決める（このrepoは2026-10-30から Claude Code。#222）。Risk Tier が HIGH なら、別のセッションでもレビューする。指摘は根拠を確かめ、同じPRで直す。
 7. headが変わったら、同じ新しいheadで検証・CI・Security・レビューを確かめ直す。`scripts/check-pr-head.sh <PR番号>` で照合できる。
 8. 人間が最終Mergeを判断する。Deploy と実利用の検収は、該当する案件の別工程として確かめる。
 

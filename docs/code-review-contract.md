@@ -23,6 +23,7 @@ Codex Code Reviewを、GitHub Actions CI後・人間の最終確認前の標準�
 - CodexのAutomatic reviewsが利用可能なリポジトリでは、原則として自動レビューを有効化する。
 - Automatic reviewsが無効または利用できない場合は、PR上で `@codex review` を実行してレビューを依頼する。
 - 実装担当Codexの自己レビューだけで完了扱いにせず、PR単位のCodex Code Review結果を確認する。
+- 正式レビューの種類は、各repoの `.github/pr-gate-review`（`codex` / `claude-code`）が決める。このrepoは2026-10-30から、利用者の方針で `claude-code`（Claude Code の `/code-review` の結果を、PRコメントの `claude-code-review:v1` 記録で残す）にした（#222）。この節のCodexの手順は、`codex` を指定したrepoで使う。`claude-code` では実装したセッションがレビューも行えるため、照合が確かめるのは記録の内容だけになる。記録はレビューの結果に基づいて書き、Risk TierがHIGHのIssueは別のセッションでもレビューする。
 
 ### レビュー観点
 

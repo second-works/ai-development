@@ -19,7 +19,7 @@ DEFAULT_REVIEW = ('codex',)
 REVIEW_KINDS = ('codex', 'claude-code')
 CODEX_BOT = 'chatgpt-codex-connector[bot]'
 TRUSTED = ('OWNER', 'MEMBER', 'COLLABORATOR')
-CLAUDE_REVIEW = re.compile(r'claude-code-review:v1 (\{[^\n]*?\}) -->')
+CLAUDE_REVIEW = re.compile(r'<!-- claude-code-review:v1 (\{[^\n]*?\}) -->')
 SKIP_REASONS = {'private': '非公開のため対象外', 'not_found': '見つからないため対象外（非公開で読む権限がないか、名前の誤り）'}
 # Review-gate sources read only for OPEN PRs (#49). Closed/merged PRs keep body, comments, head and closing links.
 GATE_FIELDS = ('checks', 'statuses', 'reviews', 'review_comments', 'threads')
@@ -257,7 +257,7 @@ def claude_review(raw, head):
     """Latest <!-- claude-code-review:v1 {...} --> from a trusted author (anyone can comment on a public repo)."""
     found = None
     for comment in raw['comments']:
-        if comment.get('author_association') not in TRUSTED:
+        if comment.get('author_association') not in TRUSTED or not isinstance(comment.get('body'), str):
             continue
         matches = CLAUDE_REVIEW.findall(comment['body'])
         if matches:
@@ -268,9 +268,15 @@ def claude_review(raw, head):
         value = strict_json(found)
     except Invalid:
         return 'invalid'
-    if not isinstance(value, dict) or value.get('commit_sha') != head:
+    # Same order as scripts/check-pr-head.sh: a record without a string commit_sha is broken; one for another
+    # head is stale; then a record without a string status is broken, and one not completed is pending.
+    if not isinstance(value, dict) or not isinstance(value.get('commit_sha'), str):
+        return 'invalid'
+    if value['commit_sha'] != head:
         return 'stale'
-    if value.get('status') != 'completed':
+    if not isinstance(value.get('status'), str):
+        return 'invalid'
+    if value['status'] != 'completed':
         return 'pending'
     if type(value.get('has_unresolved_findings')) is not bool:
         return 'invalid'
