@@ -1,0 +1,6 @@
+# 最終headの照合（scripts/check-pr-head.sh）で正式レビューとして認める種類。1行に1つ。
+# codex: Codexの要約コメント（codex-review-state:v1）
+# claude-code: OWNER / MEMBER / COLLABORATOR が投稿した <!-- claude-code-review:v1 {...} --> 付きのPRコメント
+# 照合はmainにある版を読むので、変更はmergeの後に効く。ファイルがなければ codex だけを認める。
+# 2026-10-30、実装とレビューを Claude Code で行う利用者の方針により claude-code にした（#222）。
+claude-code
