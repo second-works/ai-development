@@ -295,34 +295,50 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
     def test_update_runs_the_updated_checkout_in_a_child(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp).resolve() / 'runs'
-            calls = []
+            config = config_file(tmp, [{'name': 'other-repo', 'limits': {'seconds': 600}}])
+            calls, order = [], []
             def child(args, **kw):
                 calls.append((args, kw))
                 (runs / 'periodic-summaries' / 'child.md').write_text('x')
-                return 1, '', ''
-            with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
-                    patch.object(pc, 'commit', return_value='a' * 40):
-                self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
+                return 1, 'summary=child\n', ''
+            def update():
+                order.append('update')
+            def head():
+                order.append('commit')
+                return 'a' * 40 if 'update' not in order else 'b' * 40
+            with patch.object(pc, 'update_checkout', side_effect=update), patch.object(pc, 'run', side_effect=child), \
+                    patch.object(pc, 'commit', side_effect=head):
+                self.assertEqual(pc.main(['--update', '--notify', '--config', str(config), '--runs', str(runs)]), 1)
             args, kw = calls[0]
             self.assertNotIn('--update', args)
-            self.assertEqual(args[-2:], ['--runs', str(runs)])
             self.assertTrue(args[3].endswith('scripts/periodic_check.py'))
-            self.assertEqual(kw['env'][pc.UPDATED_ENV], 'a' * 40)
+            # Absolute paths, the commit from before the update, and the notification flag carried over.
+            self.assertEqual(args[4:], ['--config', str(config.resolve()), '--runs', str(runs), '--updated-from', 'a' * 40,
+                                        '--notify'])
+            self.assertEqual(kw['timeout'], 600 + pc.CHILD_MARGIN_SECONDS)
 
     def test_a_child_that_fails_to_start_still_leaves_a_report(self):
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp).resolve() / 'runs'
+            heads = iter(['a' * 40, 'b' * 40, 'b' * 40])
             with patch.object(pc, 'update_checkout', return_value=None), \
-                    patch.object(pc, 'run', return_value=(1, '', 'Traceback')), patch.object(pc, 'commit', return_value='不明'):
+                    patch.object(pc, 'run', return_value=(1, '', 'Traceback')), patch.object(pc, 'commit', side_effect=lambda: next(heads)):
                 self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
             text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
-            self.assertIn('更新後の版が正しく終わらなかった（終了コード 1）', text)
+            self.assertIn(f'更新後の版（{"b" * 40}）が正しく終わらなかった（終了コード 1）', text)
+            self.assertIn(f'更新前 {"a" * 40}', text)
+            self.assertNotIn('点検したコード', text)
 
     def test_report_names_the_code_and_where_it_was_updated_from(self):
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(pc.os.environ, {pc.UPDATED_ENV: 'b' * 40}), \
-                patch.object(pc, 'commit', return_value='c' * 40):
-            text = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: SimpleFake})[1]
+        with tempfile.TemporaryDirectory() as tmp, patch.object(pc, 'commit', return_value='c' * 40):
+            runs = Path(tmp).resolve() / 'runs'
+            make = lambda target: Collector(target['repo'], SimpleFake(), Limits(**target['limits']))
+            with patch.object(pc, 'collector_for', make):
+                pc.main(['--config', str(config_file(tmp, [{'name': 'other-repo'}])), '--runs', str(runs),
+                         '--updated-from', 'b' * 40])
+            text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
             self.assertIn(f'点検したコード: {"c" * 40}（{"b" * 40} から更新した）', text)
+            self.assertEqual(pc.main(['--runs', str(runs), '--updated-from', 'x; rm -rf']), 2)
 
     def test_stale_and_unknown_conclusions_are_not_failures(self):
         rows = [{'last_completed': {'conclusion': c}} for c in ('stale', None, 'failure', 'timed_out')]

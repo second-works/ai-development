@@ -33,9 +33,8 @@ from github_work_guide.core import (SKIP_REASONS, Invalid, build_plan, diff, loa
 
 # Present only in the dedicated check checkout (runs/ is not tracked). --update refuses without it.
 MARKER = 'runs/.periodic-check-checkout'
-# Set by the process that updated the checkout, for the report of the process it starts.
-UPDATED_ENV = 'PERIODIC_CHECK_UPDATED_FROM'
-CHILD_SECONDS = 4 * 3600
+# Time for the updated child beyond the sum of the repositories' own time limits.
+CHILD_MARGIN_SECONDS = 1800
 RUN_NAME = re.compile(r'periodic-\d{8}-\d{4}\Z')
 WARN_RATIO = 0.8
 STALE_DAYS = 14
@@ -352,13 +351,20 @@ def notify(text):
 
 
 def main(argv=None):
-    # No abbreviations: the restart after --update removes exactly '--update', so '--upd' must not exist.
+    # No abbreviations: options are spelled out, so a typo is an error rather than another option.
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0], allow_abbrev=False)
     parser.add_argument('--update', action='store_true', help='move this detached check checkout to origin/main first')
     parser.add_argument('--notify', action='store_true', help='show a macOS notification with the result')
     parser.add_argument('--config', type=Path, default=CONFIG, help='target repositories')
     parser.add_argument('--runs', type=Path, default=ROOT / 'runs', help='runs directory (default: runs/ of this checkout)')
+    # Given only by the process that updated the checkout, to the process it starts (shown in the report).
+    parser.add_argument('--updated-from', help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+    if args.updated_from is not None and not re.fullmatch(r'[0-9a-f]{40}|unknown', args.updated_from):
+        print('invalid --updated-from', file=sys.stderr)
+        return 2
+    # The updated child runs with cwd=ROOT, so every path it gets is absolute.
+    args.runs, args.config = args.runs.resolve(), args.config.resolve()
     runs = args.runs
     if runs.name != 'runs':
         print('--runs must be a directory named runs', file=sys.stderr)
@@ -371,22 +377,31 @@ def main(argv=None):
     if summary_path.exists():
         print(f'summary already exists: {summary_path}', file=sys.stderr)
         return 2
-    stop = None
+    stop = config = None
+    try:
+        config = load_config(args.config)
+    except (Invalid, OSError, KeyError, TypeError, ValueError):
+        stop = '設定ファイルを読めない（config/github-work-guide.json を確認）'
     # An update problem is reported, but the repositories are still checked with the current code.
+    old = commit() if args.update else None
     update_error = update_checkout() if args.update else None
     if args.update and not update_error:
         # The modules loaded above are last week's: the check runs in a new process on the updated checkout.
         # It is a child, not an exec, so a new version that fails to start still leaves a report behind.
-        rest = [a for a in (argv if argv is not None else sys.argv[1:]) if a != '--update']
+        child = [sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), '--config', str(args.config),
+                 '--runs', str(runs), '--updated-from', old if old != '不明' else 'unknown']
+        if args.notify:
+            child.append('--notify')
+        seconds = sum(t['limits'].get('seconds', 180) for t in config['repositories'].values()) if config else 4 * 3600
         before = set(summaries.iterdir())
-        code, _, _ = run([sys.executable, '-I', '-B', str(ROOT / 'scripts/periodic_check.py'), *rest],
-                         timeout=CHILD_SECONDS, env={**os.environ, UPDATED_ENV: commit()})
+        code, out, _ = run(child, timeout=seconds + CHILD_MARGIN_SECONDS)
         written = set(summaries.iterdir()) - before
         if code in (0, 1) and written:
+            print(out, end='')  # the child's summary=<path>
             return code
         text = render(stamp, [], runs_size(runs),
-                      f'更新後の版が正しく終わらなかった（終了コード {code}）。checkout は更新済み。手で実行して確かめる',
-                      commit=commit())
+                      f'更新後の版（{commit()}）が正しく終わらなかった（終了コード {code}）。checkout は更新済み'
+                      f'（更新前 {old}）。手で実行して確かめる')
         if not summary_path.exists():
             with summary_path.open('x', encoding='utf-8') as stream:
                 stream.write(text)
@@ -396,16 +411,10 @@ def main(argv=None):
         return 1
     results = []
     if not stop:
-        try:
-            config = load_config(args.config)
-        except (Invalid, OSError, KeyError, TypeError, ValueError):
-            stop = '設定ファイルを読めない（config/github-work-guide.json を確認）'
-    if not stop:
         now = datetime.now(timezone.utc)
         for target in config['repositories'].values():
             results.append(check_repository(target, runs, stamp, now))
-    updated_from = os.environ.get(UPDATED_ENV)
-    updated_from = updated_from if updated_from and re.fullmatch(r'[0-9a-f]{40}|不明', updated_from) else None
+    updated_from = {'unknown': '不明'}.get(args.updated_from, args.updated_from)
     text = render(stamp, results, runs_size(runs), stop, update_error, commit(), updated_from)
     with summary_path.open('x', encoding='utf-8') as stream:
         stream.write(text)
