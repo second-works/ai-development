@@ -94,7 +94,7 @@ macOSの `/tmp` / `/var` などsymlinkを含む絶対pathは実体path（`/priva
 - `claude-code`: OWNER / MEMBER / COLLABORATOR が書いたPRコメントの `<!-- claude-code-review:v1 {"commit_sha":"<full sha>","status":"completed","has_unresolved_findings":false} -->`。そのうち最後のものが、現head・`completed`・`has_unresolved_findings` が真偽値の `false` のとき認める。公開repoには誰でもコメントできるので、ほかの作者のコメントは読まない。
 - 認める種類のどれかで通れば、正式レビューは確認済み。どれかが現headで未解決の指摘ありなら保留する。知らない種類は通らず、`.github/pr-gate-review` を確認するよう保留に出す。
 - `codex` は、レビューの本文に指摘があっても APPROVED / COMMENTED なら確認済みとする（hermes-self-improvement での判定のまま）。指摘の有無は、未解決threadの保留と `scripts/check-pr-head.sh`（`codex-review-state:v1` の `has_unresolved_findings`）で確かめる。
-- OPEN PRの案内は、最後に `scripts/check-pr-head.sh <番号>` が READY を返すことを求める。ai-development の版は今は `claude-code` を読まないので、`claude-code` のリポジトリでは、そのリポジトリにある版で照合する。
+- OPEN PRの案内は、最後に `scripts/check-pr-head.sh <番号>` が READY を返すことを求める。照合スクリプトは軽量構成の版（#222 以降）なら `codex` と `claude-code` の両方を読む。それより前に配置したリポジトリでは、`place.sh` で更新するまで `codex` しか読まない。
 
 
 ## 取得範囲と限界
