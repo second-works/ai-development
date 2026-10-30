@@ -5,6 +5,7 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -228,7 +229,7 @@ class CheckTests(CheckHelper, unittest.TestCase):
             bad = Path(tmp) / 'bad.json'
             bad.write_text('{"version": 1}', encoding='utf-8')
             self.assertEqual(pc.main(['--config', str(bad), '--runs', str(runs)]), 1)
-            text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
+            text = next((runs / 'periodic-summaries').glob('*.md')).read_text(encoding='utf-8')
             self.assertIn('設定ファイルを読めない', text)
             with patch.object(pc, 'datetime', wraps=datetime) as clock:
                 clock.now.side_effect = lambda tz=None: datetime(2026, 10, 30, 9, 0, tzinfo=tz)
@@ -324,7 +325,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             with patch.object(pc, 'update_checkout', return_value=None), \
                     patch.object(pc, 'run', return_value=(1, '', 'Traceback')), patch.object(pc, 'commit', side_effect=lambda: next(heads)):
                 self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
-            text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
+            text = next((runs / 'periodic-summaries').glob('*.md')).read_text(encoding='utf-8')
             self.assertIn(f'更新後の版（{"b" * 40}）が正しく終わらなかった（終了コード 1）', text)
             self.assertIn(f'更新前 {"a" * 40}', text)
             self.assertNotIn('点検したコード', text)
@@ -336,7 +337,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             with patch.object(pc, 'collector_for', make):
                 pc.main(['--config', str(config_file(tmp, [{'name': 'other-repo'}])), '--runs', str(runs),
                          '--updated-from', 'b' * 40])
-            text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
+            text = next((runs / 'periodic-summaries').glob('*.md')).read_text(encoding='utf-8')
             self.assertIn(f'点検したコード: {"c" * 40}（{"b" * 40} から更新した）', text)
             self.assertEqual(pc.main(['--runs', str(runs), '--updated-from', 'x; rm -rf']), 2)
 
@@ -370,6 +371,44 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertIn('警告: 既定ブランチのCIを確認できていない', text)
             self.assertIn(f'| {OTHER} | 完了 | 簡易版 | 1 | 取得できない |', text)
 
+    def test_child_report_of_a_later_minute_and_a_crash_after_writing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp).resolve() / 'runs'
+            with patch.object(pc, 'datetime', wraps=datetime) as clock:
+                clock.now.side_effect = lambda tz=None: datetime(2026, 11, 6, 9, 0, tzinfo=tz)
+                def child(args, **kw):
+                    (runs / 'periodic-summaries' / '20261106-0901.md').write_text('# child\n', encoding='utf-8')
+                    return 1, 'summary=x\n', 'Traceback (most recent call last):\n  boom\n'
+                with patch.object(pc, 'update_checkout', return_value=None), patch.object(pc, 'run', side_effect=child), \
+                        patch.object(pc, 'commit', return_value='a' * 40):
+                    self.assertEqual(pc.main(['--update', '--runs', str(runs)]), 1)
+            self.assertFalse((runs / 'periodic-summaries' / '20261106-0900.md').exists())
+            self.assertIn('正しく終わらなかった（終了コード 1）',
+                          (runs / 'periodic-summaries' / '20261106-0901.md').read_text(encoding='utf-8'))
+
+    def test_timeout_keeps_partial_output_and_warnings_use_collection_only(self):
+        code, out, err = pc.run([sys.executable, '-c', 'import sys,time; print("started", file=sys.stderr, flush=True); time.sleep(5)'],
+                                timeout=1)
+        self.assertEqual(code, -1)
+        self.assertIn('started', err)
+        self.assertIn('timeout after 1s', err)
+        result = pc.analyse(snapshot([item(1)], calls=398), plan({}), [], 150.0, NOW, LIMITS, calls=401, collect_seconds=100.0)
+        self.assertEqual(result['warnings'], [])
+        self.assertEqual(result['calls'], 401)
+
+    def test_fetch_names_main_explicitly(self):
+        calls = []
+        def fake(args, **kw):
+            calls.append(args)
+            return (1, '', '') if args[1] == 'symbolic-ref' else (0, '', '')
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            (work / 'runs').mkdir()
+            (work / pc.MARKER).write_text('')
+            with patch.object(pc, 'ROOT', work), patch.object(pc, 'run', side_effect=fake):
+                self.assertIsNone(pc.update_checkout())
+        self.assertIn(['git', 'fetch', '--quiet', 'origin', '+refs/heads/main:refs/remotes/origin/main'], calls)
+
     def test_stale_and_unknown_conclusions_are_not_failures(self):
         rows = [{'last_completed': {'conclusion': c}} for c in ('stale', None, 'failure', 'timed_out')]
         self.assertEqual([r['conclusion'] for r in pc.ci_problems(rows)], ['failure', 'timed_out'])
@@ -382,7 +421,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             with patch.object(pc, 'update_checkout', return_value='git fetch に失敗した'), \
                     patch.object(pc, 'collector_for', make):
                 self.assertEqual(pc.main(['--update', '--config', str(config), '--runs', str(runs)]), 1)
-            text = next((runs / 'periodic-summaries').iterdir()).read_text(encoding='utf-8')
+            text = next((runs / 'periodic-summaries').glob('*.md')).read_text(encoding='utf-8')
             self.assertIn('更新しなかった: git fetch に失敗した', text)
             self.assertIn(f'| {OTHER} | 完了 |', text)
             with self.assertRaises(SystemExit):

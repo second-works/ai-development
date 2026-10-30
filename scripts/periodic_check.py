@@ -49,8 +49,11 @@ def run(args, cwd=None, timeout=300, env=None):
     """Never raises: a timeout or a missing command is a failed result, so the report is still written."""
     try:
         proc = subprocess.run(args, cwd=cwd or ROOT, capture_output=True, text=True, timeout=timeout, env=env)
-    except subprocess.TimeoutExpired:
-        return -1, '', f'timeout after {timeout}s'
+    except subprocess.TimeoutExpired as error:
+        # Keep what the process wrote before it was stopped: it is what explains a hang.
+        def text(value):
+            return value.decode('utf-8', 'replace') if isinstance(value, bytes) else (value or '')
+        return -1, text(error.stdout), text(error.stderr) + f'\ntimeout after {timeout}s'
     except OSError as error:
         return -1, '', type(error).__name__
     return proc.returncode, proc.stdout, proc.stderr
@@ -75,7 +78,8 @@ def update_checkout():
     code, out, _ = run(['git', 'status', '--porcelain', '--untracked-files=normal'])
     if code != 0 or out.strip():
         return 'checkout に変更か未追跡のファイルがある、または git status に失敗した'
-    code, _, _ = run(['git', 'fetch', '--quiet', 'origin', 'main'])
+    # An explicit refspec: a clone whose remote.origin.fetch does not cover main still gets origin/main updated.
+    code, _, _ = run(['git', 'fetch', '--quiet', 'origin', '+refs/heads/main:refs/remotes/origin/main'])
     if code != 0:
         return 'git fetch に失敗した'
     # A commit that is not on main would be left behind by the checkout below.
@@ -136,9 +140,11 @@ def warnings_for(coverage, seconds, limits):
     return warnings
 
 
-def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False, calls=None):
-    """Pure summary of one repository's check. calls: every API call of the check (collection, format, CI)."""
+def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False, calls=None, collect_seconds=None):
+    """Pure summary of one repository's check. seconds / calls: the whole check (collection, format, CI), shown
+    in the report. The 80% warnings compare the collection alone (its calls, collect_seconds) with its limits."""
     coverage = dict(snapshot['coverage'])
+    warnings = warnings_for(coverage, seconds if collect_seconds is None else collect_seconds, limits)
     if calls is not None:
         coverage['calls'] = calls
     candidates = plan['candidates'] if plan else {}
@@ -150,7 +156,7 @@ def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False, c
             'seconds': seconds, 'moved': moved, 'first': not has_previous,
             'acceptance': by_kind.get('acceptance', []), 'completion': by_kind.get('completion', []),
             'open': [(k, c['kind']) for k, c in sorted(candidates.items()) if c['kind'] != 'none'],
-            'stale': stale_open(snapshot, now), 'warnings': warnings_for(coverage, seconds, limits)}
+            'stale': stale_open(snapshot, now), 'warnings': warnings}
 
 
 def ci_problems(ci):
@@ -182,6 +188,7 @@ def check_repository(target, runs, stamp, now):
         collector = collector_for(target)
         started = time.monotonic()
         snapshot = collector.collect()
+        collect_seconds = time.monotonic() - started
         status = snapshot['coverage']['status']
         result['settings'] = snapshot['settings']
         documents = {'snapshot.json': snapshot}
@@ -217,7 +224,7 @@ def check_repository(target, runs, stamp, now):
                 result['ci_error'] = '既定ブランチの workflow run を読めない（権限・上限・通信を確認）'
             seconds = time.monotonic() - started
             result['analysis'] = analyse(snapshot, plan, changes, seconds, now, collector.limits, previous is not None,
-                                         collector.calls + after.calls)
+                                         collector.calls + after.calls, collect_seconds)
             if result['ci_error']:
                 result['analysis']['warnings'].append('既定ブランチのCIを確認できていない')
             if result['format_source'] == FORMAT_FALLBACK:
@@ -409,8 +416,9 @@ def main(argv=None):
             seconds = 24 * 3600  # this (old) code cannot read the new config; the child still has its own limits
         before = set(summaries.iterdir())
         code, out, err = run(child, timeout=seconds + CHILD_MARGIN_SECONDS)
-        written = set(summaries.iterdir()) - before
-        if code in (0, 1) and written:
+        written = sorted(p for p in set(summaries.iterdir()) - before if p.suffix == '.md')
+        # 1 is also what an uncaught exception exits with: a traceback means the child did not finish cleanly.
+        if code in (0, 1) and written and 'Traceback (most recent call last)' not in err:
             print(out, end='')  # the child's summary=<path>
             return code
         # Kept for diagnosis next to the report (runs/ is not tracked). It is local output of this program.
@@ -419,8 +427,12 @@ def main(argv=None):
             log.write_text('\n'.join(err.splitlines()[-50:]) + '\n', encoding='utf-8')
         failure = (f'更新後の版（{commit()}）が正しく終わらなかった（終了コード {code}）。checkout は更新済み'
                    f'（更新前 {old}）。エラー出力は {log.name}。手で実行して確かめる')
-        if summary_path.exists():
-            # The child wrote a report and then failed (e.g. killed by the time limit): say so in it.
+        if written:
+            # The child wrote a report (maybe under a later minute) and then failed: say so in that report.
+            summary_path = written[-1]
+            with summary_path.open('a', encoding='utf-8') as stream:
+                stream.write(f'\n## 停止\n\n- {failure}\n')
+        elif summary_path.exists():
             with summary_path.open('a', encoding='utf-8') as stream:
                 stream.write(f'\n## 停止\n\n- {failure}\n')
         else:
