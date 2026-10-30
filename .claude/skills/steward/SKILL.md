@@ -39,7 +39,7 @@ Doneから確認項目を作って依頼する。OKが出るまで次へ進ま�
 ## 6. 正式レビュー
 
 1. `.github/pr-gate-review` が指定する種類のレビューを最終headで実施する（ファイルがなければ `codex`）。
-   - `claude-code`: Claude Codeの `/code-review <PR番号>` で最終headをレビューし、指摘と対応をPRコメントに記録する。コメントの末尾に、機械可読な記録 `<!-- claude-code-review:v1 {"commit_sha":"<最終headのfull SHA>","status":"completed","has_unresolved_findings":false} -->` を1行で付ける。未対応の指摘が残るときは `has_unresolved_findings` を `true` にする。
+   - `claude-code`: Claude Codeの `/code-review <PR番号>` で最終headをレビューし、指摘と対応をPRコメントに記録する。コメントの末尾に、機械可読な記録 `<!-- claude-code-review:v1 {"commit_sha":"<最終headのfull SHA>","status":"completed","has_unresolved_findings":false} -->` を1行で付ける。未対応の指摘が残るときは `has_unresolved_findings` を `true` にする。照合はいちばん新しいコメントの記録を読むので、headが変わったら古いコメントを編集せず、新しいコメントで記録する。
    - `codex`: Codex Reviewを最終headで実施する。自動で始まらなければ `@codex review` とコメントする。
 2. 指摘がないときは、Codexでは要約コメントの更新や👍だけで終わることがある。そのheadの完了を確認してから次へ進む。headが変わったら、変更分をレビューし直して新しい記録を付ける。
 3. Risk TierがHIGHのIssueでは、実装したセッションとは別のセッションでもレビューする。
