@@ -30,11 +30,13 @@ def load_config(path=CONFIG):
     Limits(**defaults)
     rows = value['repositories']
     require(isinstance(rows, list) and rows, 'config repositories')
-    repositories = {}
+    repositories, seen = {}, set()
     for row in rows:
         require(isinstance(row, dict) and set(row) <= ENTRY_KEYS and 'name' in row, 'repository entry keys')
         full = repo_name(f'{OWNER}/{row["name"]}') if isinstance(row['name'], str) and '/' not in row['name'] else None
-        require(full is not None and full not in repositories, 'repository entry name')
+        # GitHub names ignore case, so two spellings of one repository are one entry.
+        require(full is not None and full.lower() not in seen, 'repository entry name')
+        seen.add(full.lower())
         limits = {**defaults, **limits_value(row.get('limits', {}))}
         Limits(**limits)  # over the maximum: refused here, not at the first collect
         entry = {'repo': full, 'limits': limits,

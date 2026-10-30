@@ -57,6 +57,10 @@ def main(argv=None):
         require(args.repo is None or args.repo == repo, 'run is for another repository')
         previous = load_run(args.previous) if args.previous else None
         require(previous is None or previous['repo'] == repo, '--previous is a run of another repository')
+        # An empty or partial baseline would show every item as ADDED.
+        require(previous is None or previous['coverage']['status'] == 'COMPLETE', '--previous is not a complete run')
+        # recheck keeps the saved plan's priority; a new one would be silently ignored.
+        require(args.mode != 'recheck' or not args.priority, 'recheck does not take --priority')
         if args.mode == 'excerpt':
             # Saved-run read only: verified manifest/hash, complete acquisition and a matching saved plan.
             require(args.previous is None and not args.priority, 'excerpt does not take --previous/--priority')
@@ -90,7 +94,7 @@ def main(argv=None):
                 plan, problem = planned(snapshot, args.priority)
         changes = diff(snapshot, previous)
         documents = {'snapshot.json': snapshot, 'diff.json': changes,
-                     'report.md': markdown(snapshot, changes, plan, result)}
+                     'report.md': markdown(snapshot, changes, plan, result, problem)}
         if plan is not None:
             documents['plan.json'] = plan
         if result is not None:

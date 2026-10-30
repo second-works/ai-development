@@ -889,7 +889,7 @@ def candidate_lines(key, c, related=None, evidence_ids=None):
     return lines
 
 
-def markdown(snapshot, changes, plan=None, result=None):
+def markdown(snapshot, changes, plan=None, result=None, note=None):
     # Render untrusted source only inside JSON-escaped inline text; no active raw HTML/links.
     safe = safe_text
     settings = snapshot['settings']
@@ -928,6 +928,9 @@ def markdown(snapshot, changes, plan=None, result=None):
         if done:
             lines += ['', f'## 今回対応不要（CLOSED/MERGED） {len(done)}件', '',
                       '、'.join(f'{k}: {plan["candidates"][k]["status"]["state"]}' for k in done)]
+    elif note:
+        # Acquisition was complete; the plan was left out for a fixed reason given by the caller.
+        lines += ['', f'planを作っていない（{safe(note)}）。手順は生成しない。']
     else:
         lines += ['', '取得不完全。手順は生成しない。', safe(snapshot['coverage']['errors'])]
     if result:

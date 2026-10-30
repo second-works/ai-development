@@ -462,6 +462,9 @@ class ReviewFollowUpTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertEqual(load_run(out)['coverage']['status'], 'COMPLETE')  # saved, without a plan
             self.assertFalse((out / 'plan.json').exists())
+            report = (out / 'report.md').read_text(encoding='utf-8')
+            self.assertIn('planを作っていない', report)
+            self.assertNotIn('取得不完全', report)
             # recheck: a priority item that is gone keeps the recheck result
             snap = snapshot(item(7), item(8))
             run = Path(tmp).resolve() / 'runs' / 'planned'
@@ -475,6 +478,32 @@ class ReviewFollowUpTests(unittest.TestCase):
                                  '--out', str(out)])
             self.assertEqual(code, 2)
             self.assertEqual(json.loads((out / 'recheck.json').read_text())['status'], 'STALE')
+
+    def test_non_file_setting_is_a_setting_error(self):
+        response = json.dumps({'type': 'dir', 'entries': []}).encode()
+        with patch('subprocess.run', return_value=subprocess.CompletedProcess([], 0, response, b'')):
+            with self.assertRaises(Invalid) as caught:
+                GhReadOnly(OTHER).content('.github/pr-gate-checks', 'main', 1)
+        self.assertEqual(type(caught.exception).__name__, 'SettingFileError')
+
+    def test_cli_refuses_partial_previous_priority_on_recheck_and_case_duplicates(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('report_cli', CLI)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        snap = snapshot(item(7))
+        partial = seal(snap['items'], dict(snap['coverage'], status='INCOMPLETE', errors=['x']))
+        with tempfile.TemporaryDirectory() as tmp:
+            run, prev = Path(tmp).resolve() / 'runs' / 'run', Path(tmp).resolve() / 'runs' / 'prev'
+            save_run(run, {'snapshot.json': snap, 'plan.json': build_plan(snap)})
+            save_run(prev, {'snapshot.json': partial})
+            for args in (['report', '--run', str(run), '--previous', str(prev)],
+                         ['recheck', '--run', str(run), '--target', 'issue:7', '--priority', 'issue:7']):
+                with patch.object(cli, 'collector', side_effect=AssertionError('network')) as made:
+                    self.assertEqual(cli.main(args + ['--out', str(Path(tmp).resolve() / 'runs' / 'new')]), 2)
+                made.assert_not_called()
+            with self.assertRaises(Invalid):
+                load_config(write_config(tmp, base_config(repositories=[{'name': 'a'}, {'name': 'A'}])))
 
     def test_unusable_setting_file_is_named_in_the_error(self):
         fake = OtherFake()

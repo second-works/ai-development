@@ -122,12 +122,14 @@ class GhReadOnly:
                           timeout, missing_ok=True)
         if value is None:
             return None
-        require(isinstance(value, dict) and value.get('type') == 'file' and value.get('encoding') == 'base64'
-                and isinstance(value.get('content'), str), 'content schema')
+        # A directory, symlink, submodule or a file over 1 MB is not a usable setting file.
+        if not (isinstance(value, dict) and value.get('type') == 'file' and value.get('encoding') == 'base64'
+                and isinstance(value.get('content'), str)):
+            raise SettingFileError('content schema')
         try:
             return base64.b64decode(value['content'], validate=False).decode('utf-8')
         except (ValueError, UnicodeError):
-            raise Invalid('invalid content encoding') from None
+            raise SettingFileError('invalid content encoding') from None
 
     def connection(self, kind, n, cursor, timeout):
         number(n)
