@@ -34,5 +34,6 @@ Nine標準のAI開発テンプレートです。Codex が計画を GitHub Issue 
 - レビュー: [レビュー正本](docs/code-review-contract.md)、FOLLOW-UP の記録先 [review-followups](docs/review-followups.md)
 - 旧標準の詳細（参照のみ）: [Nine開発フロー](docs/nine-standard-ai-development-flow.md)、[最小契約](docs/minimal-development-contract.md)（テストが確かめる節だけを残した抜粋）
 - 配置の手順と技術構成別の設定: [template-guide](docs/template-guide.md)
+- GitHubの作業案内と点検（githubスクリプト。対象は `config/github-work-guide.json`）: [github-work-guide](docs/github-work-guide.md)
 
 Security Preflight の手動実行には Bash 5 以上が必要です（macOS 標準の Bash 3.2 は早期に止まります）。例: `/opt/homebrew/bin/bash scripts/security-preflight.sh .`

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "owner": "second-works",
+  "limits": {"seconds": 180, "calls": 500},
+  "repositories": [
+    {"name": "ai-development"},
+    {"name": "hermes-self-improvement"},
+    {"name": "second-works"},
+    {"name": "local-rag-document-assistant"},
+    {"name": "facility-ai-assistant"},
+    {"name": "system-monitor-dashboard"},
+    {"name": "ai-business-assistant"}
+  ]
+}
