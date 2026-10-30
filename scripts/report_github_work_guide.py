@@ -5,6 +5,7 @@ collect needs --repo, which must be listed in config/github-work-guide.json. rec
 repository of the saved run, which must also be listed. report and excerpt use saved runs only.
 """
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -19,6 +20,19 @@ def collector(config_path, repo):
     """The only way this CLI reaches GitHub: an allowlisted repository with its configured limits."""
     target = entry(load_config(config_path), repo)
     return Collector(target['repo'], limits=Limits(**target['limits']), required_checks=target['required_checks'])
+
+
+PRIORITY_ID = re.compile(r'(?:issue|pr):[1-9][0-9]{0,8}\Z')
+
+
+def planned(snapshot, priority):
+    """(plan, problem). A priority ID that is not in this snapshot leaves the plan out but keeps the run."""
+    if snapshot['coverage']['status'] != 'COMPLETE':
+        return None, None
+    missing = [key for key in priority if key not in snapshot['items']]
+    if missing:
+        return None, 'priority not fetched: ' + ', '.join(missing)
+    return build_plan(snapshot, priority), None
 
 
 def main(argv=None):
@@ -52,13 +66,14 @@ def main(argv=None):
             save_run(args.out, {'excerpt.md': text})
             print(f'excerpt={len(text)} chars target={args.target} out={args.out}')
             return 0
-        # The output is checked (same rule as save_run) before any network read, so a reused or misplaced
-        # --out loses no collection.
+        # The output and the priority format are checked before any network read, so neither loses a collection.
         check_output(args.out, new=True)
-        result = None
+        require(all(isinstance(x, str) and PRIORITY_ID.fullmatch(x) for x in args.priority)
+                and len(set(args.priority)) == len(args.priority), 'invalid priority')
+        result, problem = None, None
         if args.mode == 'collect':
             snapshot = collector(args.config, repo).collect()
-            plan = build_plan(snapshot, args.priority) if snapshot['coverage']['status'] == 'COMPLETE' else None
+            plan, problem = planned(snapshot, args.priority)
         else:
             snapshot = saved
             if args.mode == 'recheck':
@@ -69,9 +84,10 @@ def main(argv=None):
                 fresh = collector(args.config, snapshot['repo']).collect()
                 result = recheck(snapshot, plan, args.target, fresh)
                 snapshot = fresh
-                plan = build_plan(fresh, plan['priority']) if fresh['coverage']['status'] == 'COMPLETE' else None
+                # A priority item that has gone (transferred, deleted) must not hide the recheck result.
+                plan, problem = planned(fresh, plan['priority'])
             else:
-                plan = build_plan(snapshot, args.priority) if snapshot['coverage']['status'] == 'COMPLETE' else None
+                plan, problem = planned(snapshot, args.priority)
         changes = diff(snapshot, previous)
         documents = {'snapshot.json': snapshot, 'diff.json': changes,
                      'report.md': markdown(snapshot, changes, plan, result)}
@@ -84,6 +100,9 @@ def main(argv=None):
         print(f'repo={snapshot["repo"]} coverage={snapshot["coverage"]["status"]}{skipped} items={len(snapshot["items"])} out={args.out}')
         if result:
             print(f'dry_run={result["status"]}')
+        if problem:
+            print(f'BLOCKED: {problem}（planは作っていない。取得結果とreport.mdは保存した）', file=sys.stderr)
+            return 2
         # A private repository is reported, not failed. A 404 is not: with the owner's gh, a listed repository
         # that cannot be seen at all is most likely a misspelled entry in the config.
         reported = snapshot['coverage']['status'] == 'COMPLETE' or snapshot['coverage'].get('skipped') == 'private'

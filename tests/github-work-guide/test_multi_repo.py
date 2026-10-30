@@ -435,6 +435,46 @@ class ReviewFollowUpTests(unittest.TestCase):
                 self.assertEqual(code, expected)
                 self.assertEqual(load_run(out)['coverage']['status'], 'SKIPPED')
 
+    def test_config_override_ignores_a_broken_checks_file(self):
+        fake = OtherFake()
+        fake.contents['.github/pr-gate-checks'] = 'x' * 300 + '\n'
+        snap = Collector(OTHER, fake, required_checks=['build']).collect()
+        self.assertEqual(snap['coverage']['status'], 'COMPLETE')
+        self.assertEqual(snap['settings']['required_checks'], ['build'])
+
+    def test_priority_problems_do_not_lose_the_collection(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('report_cli', CLI)
+        cli = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cli)
+        with tempfile.TemporaryDirectory() as tmp:
+            config = write_config(tmp, base_config(repositories=[{'name': 'other-repo'}]))
+            bad = Path(tmp).resolve() / 'runs' / 'bad'
+            with patch.object(cli, 'collector', side_effect=AssertionError('network')) as made:
+                self.assertEqual(cli.main(['collect', '--config', str(config), '--repo', OTHER, '--out', str(bad),
+                                           '--priority', 'issue:2l9']), 2)
+            made.assert_not_called()
+            out = Path(tmp).resolve() / 'runs' / 'kept'
+            with patch.object(cli, 'collector', return_value=Collector(OTHER, OtherFake())):
+                code = cli.main(['collect', '--config', str(config), '--repo', OTHER, '--out', str(out),
+                                 '--priority', 'issue:999'])
+            self.assertEqual(code, 2)
+            self.assertEqual(load_run(out)['coverage']['status'], 'COMPLETE')  # saved, without a plan
+            self.assertFalse((out / 'plan.json').exists())
+            # recheck: a priority item that is gone keeps the recheck result
+            snap = snapshot(item(7), item(8))
+            run = Path(tmp).resolve() / 'runs' / 'planned'
+            save_run(run, {'snapshot.json': snap, 'plan.json': build_plan(snap, ['issue:8'])})
+            config = write_config(tmp, base_config(repositories=[{'name': 'hermes-self-improvement'}]))
+            fake = Fake()
+            fake.items = [fake.items[0], fake.items[1]]  # issue:8 is no longer there
+            out = Path(tmp).resolve() / 'runs' / 'rechecked'
+            with patch.object(cli, 'collector', return_value=Collector(REPO, fake)):
+                code = cli.main(['recheck', '--config', str(config), '--run', str(run), '--target', 'issue:7',
+                                 '--out', str(out)])
+            self.assertEqual(code, 2)
+            self.assertEqual(json.loads((out / 'recheck.json').read_text())['status'], 'STALE')
+
     def test_unusable_setting_file_is_named_in_the_error(self):
         fake = OtherFake()
         fake.contents['.github/pr-gate-checks'] = 'x' * 201 + '\n'

@@ -220,13 +220,17 @@ class Collector:
         texts = {}
         for path in SETTING_FILES:
             texts[path] = self.call(self.transport.content, path, branch)
-        try:
-            listed = names(setting_lines(texts['.github/pr-gate-checks']), exact=True) \
-                if texts['.github/pr-gate-checks'] is not None and setting_lines(texts['.github/pr-gate-checks']) else []
-            kinds = names(setting_lines(texts['.github/pr-gate-review'], strip=True)) \
-                if texts['.github/pr-gate-review'] is not None and setting_lines(texts['.github/pr-gate-review'], strip=True) else []
-        except (Invalid, TypeError, AttributeError):
-            raise SettingFileError('setting file') from None
+        def parsed(path, strip, exact):
+            # A file whose names are overridden by the config is not read at all, so it cannot fail the run.
+            if texts[path] is None or (path == '.github/pr-gate-checks' and self.required_checks is not None):
+                return []
+            try:
+                lines = setting_lines(texts[path], strip=strip)
+                return names(lines, exact=exact) if lines else []
+            except (Invalid, TypeError, AttributeError):
+                raise SettingFileError('setting file') from None
+        listed = parsed('.github/pr-gate-checks', strip=False, exact=True)
+        kinds = parsed('.github/pr-gate-review', strip=True, exact=False)
         checks, checks_source = list(DEFAULT_CHECKS), 'default'
         if self.required_checks is not None:
             checks, checks_source = self.required_checks, 'config'
