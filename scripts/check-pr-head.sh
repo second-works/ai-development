@@ -138,12 +138,18 @@ else
   read_base_list .github/pr-gate-review REVIEW_UNAVAILABLE kinds || true
 fi
 [[ ${#kinds[@]} -gt 0 ]] || kinds=("$default_review")
+# Whitespace is not part of a kind, and empty elements ("a,,b", " ") are skipped. If nothing is left,
+# the default applies, so the loop below always has a kind (and Bash 3.2 never sees an empty array).
+named=()
+for kind in "${kinds[@]}"; do
+  kind="${kind//[[:space:]]/}"
+  [[ -z $kind ]] || named+=("$kind")
+done
+[[ ${#named[@]} -gt 0 ]] || named=("$default_review")
 
 comments="$(gh pr view "$pr" --json comments 2>/dev/null)" || report REVIEW_UNAVAILABLE "could not read PR comments"
 passed='' pending='' waiting=()
-for kind in "${kinds[@]}"; do
-  kind="${kind//[[:space:]]/}"
-  [[ -n $kind ]] || continue  # an empty element of PR_GATE_REVIEW (",," or only spaces)
+for kind in "${named[@]}"; do
   case "$kind" in
     codex)
       review="$(jq -r --arg who "$reviewer" '
