@@ -896,6 +896,8 @@ PR_GATE_REVIEW='codex' check_gate REVIEW_UNAVAILABLE "PR_GATE_REVIEW names codex
 set_data "$head_sha" "$ok_checks" "" completed false 0
 set_claude 'codex' "$(claude_comment "$head_sha" '"completed"' false)"
 PR_GATE_REVIEW='claude-code,, ' check_gate READY "empty elements of PR_GATE_REVIEW are skipped"
+set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+PR_GATE_REVIEW=', ' check_gate READY "PR_GATE_REVIEW with only empty elements falls back to codex"
 # Findings in Codex stop it even when claude-code, listed second, has passed.
 set_data "$head_sha" "$ok_checks" "$head_sha" completed true 0
 jq --argjson c "$(claude_comment "$head_sha" '"completed"' false)" '.comments += [$c]' "$fake/data/comments.json" >"$fake/data/x" && mv "$fake/data/x" "$fake/data/comments.json"
@@ -959,6 +961,8 @@ if [[ -x /bin/bash ]] && /bin/bash -c '((BASH_VERSINFO[0] < 5))'; then
   set_data "$head_sha" "$ok_checks" "" completed false 0
   set_claude 'claude-code' "$(claude_comment "$head_sha" '"completed"' false)"
   check_gate READY "claude-code review under Bash 3.2" /bin/bash
+  set_data "$head_sha" "$ok_checks" "$head_sha" completed false 0
+  PR_GATE_REVIEW=',' check_gate READY "PR_GATE_REVIEW with only empty elements under Bash 3.2" /bin/bash
 fi
 rm -f "$fake/data/pr.json"
 check_gate UNAVAILABLE "PR cannot be read"

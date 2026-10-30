@@ -268,11 +268,14 @@ def claude_review(raw, head):
         value = strict_json(found)
     except Invalid:
         return 'invalid'
-    # Same meaning as scripts/check-pr-head.sh: a record without a string commit_sha / status is broken, not pending.
-    if not isinstance(value, dict) or not isinstance(value.get('commit_sha'), str) or not isinstance(value.get('status'), str):
+    # Same order as scripts/check-pr-head.sh: a record without a string commit_sha is broken; one for another
+    # head is stale; then a record without a string status is broken, and one not completed is pending.
+    if not isinstance(value, dict) or not isinstance(value.get('commit_sha'), str):
         return 'invalid'
     if value['commit_sha'] != head:
         return 'stale'
+    if not isinstance(value.get('status'), str):
+        return 'invalid'
     if value['status'] != 'completed':
         return 'pending'
     if type(value.get('has_unresolved_findings')) is not bool:

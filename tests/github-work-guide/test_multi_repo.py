@@ -243,6 +243,8 @@ class ReviewGateTests(unittest.TestCase):
                  'no_sha': [{'body': '<!-- claude-code-review:v1 {"status":"completed","has_unresolved_findings":false} -->',
                              'author_association': 'OWNER'}],
                  'null_body': [{'body': None, 'author_association': 'OWNER'}],
+                 'stale_without_status': [{'body': '<!-- claude-code-review:v1 {"commit_sha":"' + 'b' * 40 + '"} -->',
+                                           'author_association': 'OWNER'}],
                  'not_html_comment': [{'body': 'claude-code-review:v1 ' + json.dumps(self.ok()) + ' -->', 'author_association': 'OWNER'}],
                  'broken': [{'body': '<!-- claude-code-review:v1 {"commit_sha": } -->', 'author_association': 'OWNER'}],
                  'later_stale': [claude(self.ok()), claude(self.ok(commit_sha='b' * 40))]}
