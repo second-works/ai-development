@@ -504,6 +504,95 @@ def render(stamp, results, size, stop=None, update_error=None, commit=None, upda
     return '\n'.join(lines) + '\n'
 
 
+# The browser page made from the report (#229). The report's remote text is already escaped by safe_text, so
+# only < and > are escaped here (an entity such as &lt; stays as it is); no tag can come from the report.
+PAGE_STYLE = """
+:root { color-scheme: light dark; --fg: #1f2328; --bg: #ffffff; --muted: #59636e; --line: #d1d9e0; --head: #f6f8fa; }
+@media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --muted: #9198a1; --line: #3d444d; --head: #151b23; } }
+body { margin: 0 auto; max-width: 980px; padding: 24px 16px 48px; background: var(--bg); color: var(--fg);
+       font: 15px/1.7 -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif; }
+h1 { font-size: 1.6em; border-bottom: 1px solid var(--line); padding-bottom: .3em; }
+h2 { font-size: 1.3em; margin-top: 2em; border-bottom: 1px solid var(--line); padding-bottom: .2em; }
+h3 { font-size: 1.05em; margin-top: 1.5em; }
+p { color: var(--muted); }
+ul { padding-left: 1.5em; } li { margin: .2em 0; }
+.table { overflow-x: auto; }
+table { border-collapse: collapse; } th, td { border: 1px solid var(--line); padding: 6px 12px; text-align: left; }
+th { background: var(--head); }
+"""
+TABLE_RULE = re.compile(r'\|(\s*-+\s*\|)+\Z')
+LIST_ITEM = re.compile(r'( *)- (.*)\Z')
+
+
+def inline(text):
+    return text.replace('<', '&lt;').replace('>', '&gt;')
+
+
+def to_html(report):
+    """The report's own Markdown (headings, paragraphs, tables, lists two levels deep) as one page."""
+    body, title, depth, rows = [], '定期点検', 0, []
+
+    def close_lists():
+        nonlocal depth
+        body.extend(['</li></ul>'] * depth)
+        depth = 0
+
+    def close_table():
+        if rows:
+            head, *rest = rows
+            body.append('<div class="table"><table><thead><tr>' + ''.join(f'<th>{c}</th>' for c in head) + '</tr></thead><tbody>'
+                        + ''.join('<tr>' + ''.join(f'<td>{c}</td>' for c in r) + '</tr>' for r in rest) + '</tbody></table></div>')
+            rows.clear()
+
+    for line in report.splitlines():
+        item = LIST_ITEM.match(line)
+        if line.startswith('|'):
+            close_lists()
+            if not TABLE_RULE.match(line.strip()):
+                rows.append([inline(c.strip()) for c in line.strip().strip('|').split('|')])
+            continue
+        close_table()
+        if item:
+            level = min(len(item.group(1)) // 2, 1) + 1
+            text = inline(item.group(2))
+            if depth < level:
+                # A nested item with no item above it still opens (an empty) outer item, so every </li> has one.
+                body.append('<ul><li>' * (level - depth - 1) + f'<ul><li>{text}')
+                depth = level
+            else:
+                body.extend(['</li></ul>'] * (depth - level))
+                depth = level
+                body.append(f'</li><li>{text}')
+            continue
+        close_lists()
+        heading = re.match(r'(#{1,3}) (.*)\Z', line)
+        if heading:
+            n = len(heading.group(1))
+            if n == 1:
+                title = heading.group(2)
+            body.append(f'<h{n}>{inline(heading.group(2))}</h{n}>')
+        elif line.strip():
+            body.append(f'<p>{inline(line)}</p>')
+    close_lists()
+    close_table()
+    # No script and nothing loaded from outside: the page only shows the report.
+    return ('<!doctype html>\n<html lang="ja"><head><meta charset="utf-8">'
+            '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            f'<title>{inline(title)}</title><style>{PAGE_STYLE}</style></head>\n<body>\n'
+            + '\n'.join(body) + '\n</body></html>\n')
+
+
+def write_html(report):
+    """<report>.html next to the report. Never raises: the Markdown report is what counts. Returns the page or None."""
+    try:
+        page = report.with_suffix('.html')
+        page.write_text(to_html(report.read_text(encoding='utf-8')), encoding='utf-8')
+        return page
+    except (OSError, UnicodeError, ValueError):
+        return None
+
+
 # Seconds the "open the report" window waits for a click before it closes itself.
 DIALOG_SECONDS = 24 * 3600
 OPEN_BUTTON = '報告書を開く'
@@ -618,9 +707,11 @@ def main(argv=None):
             with summary_path.open('x', encoding='utf-8') as stream:
                 stream.write(render(stamp, [], runs_size(runs), failure))
         print(f'summary={summary_path}')
+        # Made again: the stop was added to the child's report after the child made its page.
+        page = write_html(summary_path)
         # A failed child may have stopped before its own notice, so this one is always sent.
         if args.notify:
-            notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}', summary_path)
+            notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}', page or summary_path)
         return 1
     results = []
     if not stop:
@@ -641,11 +732,12 @@ def main(argv=None):
             stream.write(text)
         stopped.append('report name')
     print(f'summary={summary_path}')
+    page = write_html(summary_path)
     if args.notify:
         count = sum(attention(r) for r in results)
         notify(f'停止: {stop}' if stop else
                ('checkout を更新できない。' if update_error else '') +
-               f'{len(results)}件を点検。停止 {len(stopped)}件、要対応の候補 {count}件。{summary_path.name}', summary_path)
+               f'{len(results)}件を点検。停止 {len(stopped)}件、要対応の候補 {count}件。{summary_path.name}', page or summary_path)
     return 1 if stop or stopped or update_error else 0
 
 

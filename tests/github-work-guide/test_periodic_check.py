@@ -407,7 +407,9 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertIn('正しく終わらなかった（終了コード 1）',
                           (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'))
             notify.assert_called_once()  # the child may have stopped before its own notice
-            self.assertTrue(notify.call_args.args[1].name.startswith('20261106-0900'))
+            page = notify.call_args.args[1]
+            self.assertEqual(page.suffix, '.html')
+            self.assertIn('正しく終わらなかった', page.read_text(encoding='utf-8'))  # made after the stop was added
 
     def test_another_checks_report_of_the_same_minute_is_left_alone(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -646,8 +648,10 @@ class RunTests(unittest.TestCase):
             with patch.object(pc, 'collector_for', lambda target: Collector(target['repo'], SimpleFake(),
                                                                             Limits(**target['limits']), None)):
                 pc.main(['--notify', '--config', str(config_file(tmp, [{'name': 'other-repo'}])), '--runs', str(runs)])
-            text, report = notify.call_args.args
-            self.assertEqual(report, next((runs / 'periodic-summaries').iterdir()))
+            text, page = notify.call_args.args
+            report = next((runs / 'periodic-summaries').glob('*.md'))
+            self.assertEqual(page, report.with_suffix('.html'))  # the browser page, not the Markdown (#229)
+            self.assertTrue(page.is_file())
             self.assertIn(report.name, text)
 
 
@@ -850,3 +854,48 @@ class ReportWordingTests(unittest.TestCase):
         self.assertNotIn('x' * (pc.TITLE_CHARS + 1), text)
         self.assertIn('（要対応 3件）', text)
         self.assertIn('| second-works/a | 完了 | 簡易版 | 3 |', text)
+
+
+class PageTests(unittest.TestCase):
+    """#229: the report as a page for the browser."""
+
+    def test_headings_table_lists_and_escaping(self):
+        report = ('# 定期点検 1\n\n本文 <b>x</b>\n\n## 一覧\n\n| a | b |\n| --- | --- |\n| 1 | 2 |\n\n'
+                  '## まとめ\n\n- r1（要対応 2件）\n  - Issue #2 "&lt;script&gt;": 理由\n  - 警告\n- r2\n\n### 小見出し\n\n- なし\n')
+        page = pc.to_html(report)
+        self.assertIn('<title>定期点検 1</title>', page)
+        self.assertIn('<h1>定期点検 1</h1>', page)
+        self.assertIn('<h2>一覧</h2>', page)
+        self.assertIn('<h3>小見出し</h3>', page)
+        self.assertIn('<thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody>', page)
+        self.assertNotIn('---', page)
+        self.assertIn('<ul><li>r1（要対応 2件）<ul><li>Issue #2 "&lt;script&gt;": 理由</li><li>警告</li></ul></li>'
+                      '<li>r2</li></ul>', page.replace('\n', ''))
+        # Raw < and > become text; entities made by safe_text stay as they are (not &amp;lt;).
+        self.assertIn('<p>本文 &lt;b&gt;x&lt;/b&gt;</p>', page)
+        self.assertNotIn('&amp;lt;', page)
+        self.assertNotIn('<script', page)
+        self.assertIn("default-src 'none'", page)  # nothing is loaded or run
+
+    def test_every_list_and_table_is_closed(self):
+        for report in ('- a\n  - b', '| a |\n| --- |\n| 1 |', '  - only nested\n- top', '- a\n| t |\n- b'):
+            page = pc.to_html(report)
+            self.assertEqual(page.count('<ul>'), page.count('</ul>'), report)
+            self.assertEqual(page.count('<li>'), page.count('</li>'), report)
+            self.assertEqual(page.count('<table>'), page.count('</table>'), report)
+
+    def test_a_page_is_written_next_to_the_report_and_a_failure_is_not_fatal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            report = Path(tmp) / '20261030-0900.md'
+            report.write_text('# x\n', encoding='utf-8')
+            self.assertEqual(pc.write_html(report), report.with_suffix('.html'))
+            self.assertIn('<h1>x</h1>', report.with_suffix('.html').read_text(encoding='utf-8'))
+            self.assertIsNone(pc.write_html(Path(tmp) / 'missing.md'))
+
+    def test_the_check_writes_the_page(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, text, runs = CheckHelper().run_check(tmp, [{'name': 'other-repo'}], {OTHER: SimpleFake})
+            report = next((runs / 'periodic-summaries').glob('*.md'))
+            page = report.with_suffix('.html').read_text(encoding='utf-8')
+            self.assertIn('<h2>要対応のまとめ</h2>', page)
+            self.assertIn(f'<td>{OTHER}</td>', page)
