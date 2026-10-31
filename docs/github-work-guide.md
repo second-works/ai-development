@@ -102,8 +102,8 @@ python3 -I -B scripts/periodic_check.py --update   # 点検専用の checkout �
 
 - 点検専用の worktree: `/Users/work/Developer/ai-development-periodic-check`（`origin/main` の detached。`runs/.periodic-check-checkout` を置いてある）。
 - launchd: `~/Library/LaunchAgents/com.second-works.ai-development-periodic-check.plist`。毎週月曜9時（Mac の時刻）に `python3 -I -B scripts/periodic_check.py --update --notify` を動かす。ログは `~/Library/Logs/ai-development-periodic-check.log`。
-- hermes 側の launchd は止め、plist を `com.second-works.hsi-periodic-check.plist.disabled` に名前を変えて残した。hermes 側の点検用 worktree（`/Users/work/Developer/hsi-periodic-check`）と旧コードは消していない。削除は別の作業として人が判断する。
-- 戻すとき: `launchctl bootout gui/$(id -u)/com.second-works.ai-development-periodic-check` のあと、hermes 側の plist の名前を `.plist` に戻し、`launchctl bootstrap gui/$(id -u) <その plist>` を実行する。
+- hermes 側の launchd は止めた。2026-10-31、利用者の指示で、hermes 側の作業データを片付けた。plist（`com.second-works.hsi-periodic-check.plist`）、ログ、点検用 worktree（`/Users/work/Developer/hsi-periodic-check`）の `runs/` は、ゴミ箱の `periodic-check-cleanup-20261031` に移した。worktree は `git worktree remove` で外した（中身は git に記録済みのファイルだけ）。hermes-self-improvement の旧コードは、hermes の別のスキル（`judgment-handoff`、`work-resume`）が使っているので残している。
+- 戻すとき: `launchctl bootout gui/$(id -u)/com.second-works.ai-development-periodic-check` のあと、hermes 側の点検用 worktree を作り直し（hermes-self-improvement の `.claude/skills/periodic-check/SKILL.md` の手順）、ゴミ箱から戻した plist を `~/Library/LaunchAgents/` に `.plist` の名前で置き、`launchctl bootstrap gui/$(id -u) <その plist>` を実行する。
 
 `--notify` を付けると、点検の終わりに macOS の通知（バナー）を出し、あわせて「報告書を開く」ボタンのある画面を出す。ボタンを押すと、報告書を見やすく整えたページ（`runs/periodic-summaries/<日時>.html`）が既定のブラウザで開く（#229）。`.md` のままだと、利用者の Mac では既定のアプリがエディタなので、表や見出しが整わない。ページは点検のたびに報告書（`.md`）から作る。見出し・段落・表・2段までの箇条書きだけを変換し、スクリプトも外部の読み込みもない（Content-Security-Policy で止める）。報告の原文は safe_text で無害化済みなので、変換では `<` と `>` だけを置き換える。ページを作れなかったときは、報告書（`.md`）を開く。osascript の通知はクリックしても報告書を開けないため、画面を別に出す。画面は点検とは別のプロセスで出し、点検はボタンを待たずに終わる（Mac の前に人がいなくても、点検が止まったり `--update` の子プロセスの時間切れになったりしない）。押されないまま24時間たつと画面は自動で閉じる。報告書のパスは引数として渡し、スクリプトの本文には入れない。
 
