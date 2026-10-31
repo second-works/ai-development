@@ -635,7 +635,10 @@ class RunTests(unittest.TestCase):
         self.assertIn('報告書を開く', source)
         self.assertIn(f'giving up after {pc.DIALOG_SECONDS}', source)
         self.assertTrue(kw['start_new_session'])
-        self.assertIs(kw['stdin'], pc.subprocess.DEVNULL)
+        # No pipe is inherited: the --update parent reads the child's output to the end, and would otherwise
+        # wait until the window is closed.
+        for stream in ('stdin', 'stdout', 'stderr'):
+            self.assertIs(kw[stream], pc.subprocess.DEVNULL)
 
     def test_notice_names_the_report(self):
         with tempfile.TemporaryDirectory() as tmp, patch.object(pc, 'notify') as notify:
