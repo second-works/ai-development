@@ -22,6 +22,17 @@ pc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(pc)
 
 NOW = datetime(2026, 10, 30, tzinfo=timezone.utc)
+# The CI runs on the owner's Mac: no test may show a real notice or window there (#231). A test that checks
+# notify() replaces shutil.which, run and subprocess.Popen itself.
+NO_OSASCRIPT = patch.object(pc, 'OSASCRIPT', 'no-such-osascript-for-periodic-check-tests')
+
+
+def setUpModule():
+    NO_OSASCRIPT.start()
+
+
+def tearDownModule():
+    NO_OSASCRIPT.stop()
 PRIVATE = 'second-works/private-repo'
 LIMITS = Limits()
 
@@ -899,3 +910,24 @@ class PageTests(unittest.TestCase):
             page = report.with_suffix('.html').read_text(encoding='utf-8')
             self.assertIn('<h2>要対応のまとめ</h2>', page)
             self.assertIn(f'<td>{OTHER}</td>', page)
+
+
+class NoRealNoticeTests(unittest.TestCase):
+    """#231: --notify in a test starts nothing on the Mac."""
+
+    def test_notify_in_tests_starts_nothing(self):
+        self.assertIsNone(pc.shutil.which(pc.OSASCRIPT))
+        started = []
+        real_popen = pc.subprocess.Popen
+        def popen(args, *rest, **kw):  # git and the like still run; any osascript (banner or window) is recorded
+            if 'osascript' in str(args[0]):
+                return started.append(args)
+            return real_popen(args, *rest, **kw)
+        with patch.object(pc.subprocess, 'Popen', popen):
+            pc.notify('x', Path('/tmp/x.html'))
+            with tempfile.TemporaryDirectory() as tmp:
+                runs = Path(tmp).resolve() / 'runs'
+                with patch.object(pc, 'collector_for', lambda target: Collector(target['repo'], SimpleFake(),
+                                                                                Limits(**target['limits']), None)):
+                    pc.main(['--notify', '--config', str(config_file(tmp, [{'name': 'other-repo'}])), '--runs', str(runs)])
+        self.assertEqual(started, [])
