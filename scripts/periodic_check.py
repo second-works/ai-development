@@ -596,13 +596,15 @@ def write_html(report):
 # Seconds the "open the report" window waits for a click before it closes itself.
 DIALOG_SECONDS = 24 * 3600
 OPEN_BUTTON = '報告書を開く'
+# The tests replace it with a name that does not exist, so they never show anything on the Mac (#231).
+OSASCRIPT = 'osascript'
 
 
 def notify(text, report=None):
-    if not shutil.which('osascript'):
+    if not shutil.which(OSASCRIPT):
         return
     # The text and the path go in as arguments, never into the script source.
-    run(['osascript', '-e', 'on run argv', '-e', 'display notification (item 1 of argv) with title "GitHub 定期点検"',
+    run([OSASCRIPT, '-e', 'on run argv', '-e', 'display notification (item 1 of argv) with title "GitHub 定期点検"',
          '-e', 'end run', '--', text], timeout=30)
     if report is None:
         return
@@ -614,7 +616,7 @@ def notify(text, report=None):
               f'default button "{OPEN_BUTTON}" giving up after {DIALOG_SECONDS}',
               f'if button returned of answer is "{OPEN_BUTTON}" then do shell script "open " & quoted form of (item 2 of argv)',
               'end run']
-    args = ['osascript'] + [x for line in script for x in ('-e', line)] + ['--', text, str(report)]
+    args = [OSASCRIPT] + [x for line in script for x in ('-e', line)] + ['--', text, str(report)]
     try:
         subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                          start_new_session=True)
