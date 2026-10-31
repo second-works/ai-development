@@ -105,7 +105,7 @@ python3 -I -B scripts/periodic_check.py --update   # 点検専用の checkout �
 - hermes 側の launchd は止め、plist を `com.second-works.hsi-periodic-check.plist.disabled` に名前を変えて残した。hermes 側の点検用 worktree（`/Users/work/Developer/hsi-periodic-check`）と旧コードは消していない。削除は別の作業として人が判断する。
 - 戻すとき: `launchctl bootout gui/$(id -u)/com.second-works.ai-development-periodic-check` のあと、hermes 側の plist の名前を `.plist` に戻し、`launchctl bootstrap gui/$(id -u) <その plist>` を実行する。
 
-`--notify` を付けると、点検の終わりに macOS の通知（バナー）を出し、あわせて「報告書を開く」ボタンのある画面を出す。ボタンを押すと報告書（`runs/periodic-summaries/<日時>.md`）が既定のアプリで開く。osascript の通知はクリックしても報告書を開けないため、画面を別に出す。画面は点検とは別のプロセスで出し、点検はボタンを待たずに終わる（Mac の前に人がいなくても、点検が止まったり `--update` の子プロセスの時間切れになったりしない）。押されないまま24時間たつと画面は自動で閉じる。報告書のパスは引数として渡し、スクリプトの本文には入れない。
+`--notify` を付けると、点検の終わりに macOS の通知（バナー）を出し、あわせて「報告書を開く」ボタンのある画面を出す。ボタンを押すと、報告書を見やすく整えたページ（`runs/periodic-summaries/<日時>.html`）が既定のブラウザで開く（#229）。`.md` のままだと、利用者の Mac では既定のアプリがエディタなので、表や見出しが整わない。ページは点検のたびに報告書（`.md`）から作る。見出し・段落・表・2段までの箇条書きだけを変換し、スクリプトも外部の読み込みもない（Content-Security-Policy で止める）。報告の原文は safe_text で無害化済みなので、変換では `<` と `>` だけを置き換える。ページを作れなかったときは、報告書（`.md`）を開く。osascript の通知はクリックしても報告書を開けないため、画面を別に出す。画面は点検とは別のプロセスで出し、点検はボタンを待たずに終わる（Mac の前に人がいなくても、点検が止まったり `--update` の子プロセスの時間切れになったりしない）。押されないまま24時間たつと画面は自動で閉じる。報告書のパスは引数として渡し、スクリプトの本文には入れない。
 
 ## 非公開のリポジトリ
 
