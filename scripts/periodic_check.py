@@ -61,6 +61,7 @@ CONCLUSION_LABELS = {'success': '成功', 'failure': '失敗', 'skipped': '実�
 DYNAMIC_EVENT = 'dynamic'
 ITEM_KEY = re.compile(r'(issue|pr):(\d+)\Z')
 DATE = re.compile(r'(\d{4}-\d{2}-\d{2})T')
+TITLE_CHARS = 60
 
 
 def item_label(key):
@@ -74,7 +75,10 @@ def item_label(key):
 def item_text(key, titles):
     """The number and, when known, the title (remote text, so escaped)."""
     title = titles.get(key)
-    return item_label(key) + (f' {safe_text(title)}' if isinstance(title, str) and title else '')
+    if not (isinstance(title, str) and title):
+        return item_label(key)
+    # A long title would bury the reason; the number leads to the whole title.
+    return item_label(key) + ' ' + safe_text(title if len(title) <= TITLE_CHARS else title[:TITLE_CHARS] + '…')
 
 
 def day(value):
@@ -373,7 +377,8 @@ def notices(results):
                      'と正式レビューで読んでいる。実際の CI の名前と違うと、PR の判定がずれることがある')
     no_runs = [r['repo'] for r in checked if r['ci'] == [] and not r['ci_error']]
     if no_runs:
-        lines.append(f'既定ブランチに CI の実行記録がない: {names(no_runs)}。CI がないか、最近動いていない')
+        lines.append(f'既定ブランチに CI の実行記録がない: {names(no_runs)}。CI がないか、最近動いていないか、'
+                     '新しい実行がすべて PR のもの')
     for r in results:
         dynamic = [run for run in ci_problems(r['ci']) if run.get('event') == DYNAMIC_EVENT]
         if dynamic:
@@ -381,7 +386,8 @@ def notices(results):
                          'で、push で動く通常の CI とは別')
     for r in checked:
         stale = r['analysis']['stale']
-        dates = sorted(day(when) for _, _, when in stale if when != '不明')
+        # Only real dates: an escaped odd value would sort before them and be shown as the oldest.
+        dates = sorted(m.group(1) for _, _, when in stale if isinstance(when, str) and (m := DATE.match(when)))
         if len(stale) >= 3:
             lines.append(f'{r["repo"]} は、{STALE_DAYS}日以上動いていない OPEN が{len(stale)}件ある'
                          + (f'（いちばん古い最終更新 {dates[0]}）' if dates else '') + '。続けるか閉じるかをまとめて決めるとよい')
@@ -392,10 +398,12 @@ def summary_lines(results):
     """Every repository's things to look at, gathered at the top of the report."""
     lines = []
     for r in results:
-        found = ([f'停止: {r["stop"]}'] if r['stop'] else []) + attention_lines(r)
-        if found:
-            # A nested list, not a heading: "## <repo>" is the repository's own section below.
-            lines += [f'- {r["repo"]}（{len(found)}件）'] + [f'  - {x}' for x in found]
+        found = attention_lines(r)
+        if r['stop'] or found:
+            # A nested list, not a heading: "## <repo>" is the repository's own section below. The count is the
+            # one in the table (a stop is shown, not counted).
+            lines.append(f'- {r["repo"]}（{"停止。" if r["stop"] else ""}要対応 {len(found)}件）')
+            lines += ([f'  - 停止: {r["stop"]}'] if r['stop'] else []) + [f'  - {x}' for x in found]
     return (lines or ['- なし']) + ['']
 
 

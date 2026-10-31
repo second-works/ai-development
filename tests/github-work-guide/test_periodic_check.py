@@ -767,9 +767,9 @@ class ReportWordingTests(unittest.TestCase):
         self.assertLess(top.index('## 一覧'), top.index('## 要対応のまとめ'))
         self.assertLess(top.index('## 要対応のまとめ'), top.index('## 気づいた点'))
         # One Issue that is both a candidate and stale is one line with both reasons, with its title.
-        self.assertIn('- second-works/a（3件）\n  - Issue #2 "Close &lt;me&gt;": 完了範囲の確認（関連PRはマージ済み。'
+        self.assertIn('- second-works/a（要対応 3件）\n  - Issue #2 "Close &lt;me&gt;": 完了範囲の確認（関連PRはマージ済み。'
                       'Closeは人が判断）、14日以上動いていない（最終更新 2026-09-01）', top)
-        self.assertIn('- second-works/b（1件）\n  - 警告: 既定ブランチの "npm in /. - Update #1" が失敗（fffffff）。'
+        self.assertIn('- second-works/b（要対応 1件）\n  - 警告: 既定ブランチの "npm in /. - Update #1" が失敗（fffffff）。'
                       'GitHub が自動で動かした実行', top)
         self.assertNotIn('second-works/c（', top)
         for note in ('非公開のため読んでいない: second-works/d',
@@ -803,5 +803,15 @@ class ReportWordingTests(unittest.TestCase):
         text = pc.render('20261030-0900', [stopped], 0)
         self.assertNotIn('簡易版では使わない', text)
         self.assertNotIn('.github/pr-gate-review がない: ', text)
-        self.assertIn('- second-works/a（1件）\n  - 停止: 取得が不完全', text)
+        self.assertIn('- second-works/a（停止。要対応 0件）\n  - 停止: 取得が不完全', text)
         self.assertIn('点検が止まったリポジトリがある: second-works/a', text)
+
+    def test_oldest_date_ignores_odd_values_and_long_titles_are_cut(self):
+        stale = [('issue:1', 't', 'odd'), ('issue:2', 't', '2026-09-01T00:00:00Z'), ('issue:3', 't', '2026-08-18T00:00:00Z')]
+        row = result_row('second-works/a', analysis=analysis_row(stale=stale, titles={'issue:2': 'x' * 100}))
+        text = pc.render('20261030-0900', [row], 0)
+        self.assertIn('いちばん古い最終更新 2026-08-18）', text)
+        self.assertIn('Issue #2 "' + 'x' * pc.TITLE_CHARS + '…"', text)
+        self.assertNotIn('x' * (pc.TITLE_CHARS + 1), text)
+        self.assertIn('（要対応 3件）', text)
+        self.assertIn('| second-works/a | 完了 | 簡易版 | 3 |', text)
