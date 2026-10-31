@@ -407,6 +407,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             self.assertIn('正しく終わらなかった（終了コード 1）',
                           (runs / 'periodic-summaries' / '20261106-0900.md').read_text(encoding='utf-8'))
             notify.assert_called_once()  # the child may have stopped before its own notice
+            self.assertTrue(notify.call_args.args[1].name.startswith('20261106-0900'))
 
     def test_another_checks_report_of_the_same_minute_is_left_alone(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -614,6 +615,37 @@ class RunTests(unittest.TestCase):
         args = calls[0]
         self.assertNotIn('do shell script', ' '.join(args[:args.index('--')]))
         self.assertEqual(args[-1], '停止: "x" & do shell script "id"')
+
+    def test_report_window_opens_the_report_and_is_not_waited_for(self):
+        started = []
+        class Popen:
+            def __init__(self, args, **kw):
+                started.append((args, kw))
+        report = Path('/tmp/runs/periodic-summaries/x" & do shell script "id.md')
+        with patch.object(pc, 'run', lambda args, **kw: (0, '', '')), patch.object(pc.subprocess, 'Popen', Popen), \
+                patch.object(pc.shutil, 'which', lambda name: '/usr/bin/osascript'):
+            pc.notify('7件を点検。', report)
+            pc.notify('banner only')
+        self.assertEqual(len(started), 1)  # without a report, only the banner
+        args, kw = started[0]
+        source = ' '.join(args[:args.index('--')])
+        self.assertEqual(args[args.index('--') + 1:], ['7件を点検。', str(report)])
+        self.assertNotIn('id.md', source)
+        self.assertIn('quoted form of (item 2 of argv)', source)
+        self.assertIn('報告書を開く', source)
+        self.assertIn(f'giving up after {pc.DIALOG_SECONDS}', source)
+        self.assertTrue(kw['start_new_session'])
+        self.assertIs(kw['stdin'], pc.subprocess.DEVNULL)
+
+    def test_notice_names_the_report(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(pc, 'notify') as notify:
+            runs = Path(tmp).resolve() / 'runs'
+            with patch.object(pc, 'collector_for', lambda target: Collector(target['repo'], SimpleFake(),
+                                                                            Limits(**target['limits']), None)):
+                pc.main(['--notify', '--config', str(config_file(tmp, [{'name': 'other-repo'}])), '--runs', str(runs)])
+            text, report = notify.call_args.args
+            self.assertEqual(report, next((runs / 'periodic-summaries').iterdir()))
+            self.assertIn(report.name, text)
 
 
 class UpdateGuardTests(unittest.TestCase):
