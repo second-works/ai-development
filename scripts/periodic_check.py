@@ -29,8 +29,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from github_work_guide.collector import Collector, Limits  # noqa: E402
 from github_work_guide.config import CONFIG, load_config  # noqa: E402
-from github_work_guide.core import (SKIP_REASONS, Invalid, build_plan, diff, load_run, markdown,  # noqa: E402
-                                    safe_text, save_run)
+from github_work_guide.core import (KINDS, SKIP_REASONS, Invalid, build_plan, diff, load_run, markdown,  # noqa: E402
+                                    safe_text, save_run, settings_text)
 
 # Present only in the dedicated check checkout (runs/ is not tracked). --update refuses without it.
 MARKER = 'runs/.periodic-check-checkout'
@@ -47,6 +47,45 @@ OK_CONCLUSIONS = ('success', 'skipped', 'neutral', 'stale')  # stale: GitHub ret
 FORMAT_FALLBACK = '判定できないため簡易版'
 # Budget for the format check (up to 2 calls) and the CI read (1 call) after the collection.
 AFTER_LIMITS = Limits(calls=5, seconds=120)
+
+# Japanese words for the values the report shows (#225). The saved JSON keeps the original values.
+COVERAGE_LABELS = {'COMPLETE': '完了', 'INCOMPLETE': '不完全', 'SKIPPED': '対象外'}
+CHANGE_LABELS = {'ADDED': '新規', 'CHANGED': '更新あり', 'UNAVAILABLE': '今回は取得できない（削除・解決とは限らない）'}
+FORMAT_SOURCE_LABELS = {'repository': 'リポジトリの構成から判定', 'config': '設定ファイルで指定'}
+RUN_STATUS_LABELS = {'completed': '完了', 'in_progress': '実行中', 'queued': '待機中', 'waiting': '待機中',
+                     'requested': '待機中', 'pending': '待機中'}
+CONCLUSION_LABELS = {'success': '成功', 'failure': '失敗', 'skipped': '実行せず（条件外）', 'neutral': '中立',
+                     'stale': '古いため打ち切り', 'cancelled': '中止', 'timed_out': '時間切れ',
+                     'action_required': '操作待ち', 'startup_failure': '起動失敗'}
+# A run started by GitHub itself for a dependency update (Dependabot), not by a push of the project.
+DYNAMIC_EVENT = 'dynamic'
+ITEM_KEY = re.compile(r'(issue|pr):(\d+)\Z')
+DATE = re.compile(r'(\d{4}-\d{2}-\d{2})T')
+
+
+def item_label(key):
+    """issue:163 -> Issue #163, pr:17 -> PR #17. Keys come from validated snapshots; anything else is escaped."""
+    match = ITEM_KEY.fullmatch(key)
+    if not match:
+        return safe_text(key)
+    return f'{"Issue" if match.group(1) == "issue" else "PR"} #{match.group(2)}'
+
+
+def item_text(key, titles):
+    """The number and, when known, the title (remote text, so escaped)."""
+    title = titles.get(key)
+    return item_label(key) + (f' {safe_text(title)}' if isinstance(title, str) and title else '')
+
+
+def day(value):
+    """The date part of a GitHub time, or the escaped value when it is not one."""
+    match = DATE.match(value) if isinstance(value, str) else None
+    return match.group(1) if match else safe_text(value)
+
+
+def word(labels, value):
+    """A Japanese word for a known value; an unknown value (new on GitHub) is shown escaped as it is."""
+    return labels.get(value) or safe_text(value if value is not None else '-')
 
 
 def run(args, cwd=None, timeout=300, env=None):
@@ -159,11 +198,16 @@ def analyse(snapshot, plan, changes, seconds, now, limits, has_previous=False, c
     for key, c in sorted(candidates.items()):
         by_kind.setdefault(c['kind'], []).append((key, c['label']))
     moved = [(x['target'], x['status']) for x in changes if x['status'] in ('ADDED', 'CHANGED', 'UNAVAILABLE')]
-    return {'status': coverage['status'], 'items': len(snapshot['items']), 'calls': coverage.get('calls'),
-            'seconds': seconds, 'moved': moved, 'first': not has_previous,
-            'acceptance': by_kind.get('acceptance', []), 'completion': by_kind.get('completion', []),
-            'open': [(k, c['kind']) for k, c in sorted(candidates.items()) if c['kind'] != 'none'],
-            'stale': stale_open(snapshot, now), 'warnings': warnings}
+    result = {'status': coverage['status'], 'items': len(snapshot['items']), 'calls': coverage.get('calls'),
+              'seconds': seconds, 'moved': moved, 'first': not has_previous,
+              'acceptance': by_kind.get('acceptance', []), 'completion': by_kind.get('completion', []),
+              'open': [(k, c['kind']) for k, c in sorted(candidates.items()) if c['kind'] != 'none'],
+              'stale': stale_open(snapshot, now), 'warnings': warnings}
+    # Titles of the Issues/PRs the report names, so a reader sees what each number is (#225).
+    named = ({k for k, _ in result['acceptance']} | {k for k, _ in result['completion']}
+             | {k for k, _, _ in result['stale']} | {k for k, _ in result['open']} | {k for k, _ in moved})
+    result['titles'] = {k: snapshot['items'][k].get('title') for k in sorted(named) if k in snapshot['items']}
+    return result
 
 
 def ci_problems(ci):
@@ -240,7 +284,8 @@ def check_repository(target, runs, stamp, now):
                 result['analysis']['warnings'].append('形式を判定できず、作業案内（親の検収待ち・完了範囲確認）を作っていない'
                                                       '（上限・権限・通信を確認）')
             note = None if plan else '簡易版（Issueの書式を判定しない）'
-            documents.update({'diff.json': changes, 'report.md': markdown(snapshot, changes, plan, None, note)})
+            documents.update({'diff.json': changes,
+                              'report.md': markdown(snapshot, changes, plan, None, note, plan is not None)})
             if plan is not None:
                 documents['plan.json'] = plan
         save_run(out, documents)
@@ -272,6 +317,88 @@ def attention(result):
     return count
 
 
+def attention_lines(result):
+    """The things to look at, one line each (attention() counts the same things). An Issue that is both a
+    candidate and stale is one line with both reasons."""
+    a, lines = result['analysis'], []
+    if a:
+        titles, reasons = a.get('titles', {}), {}
+        for key, _ in a['acceptance']:
+            reasons.setdefault(key, []).append('親の検収待ち（人が最終検収する）')
+        for key, _ in a['completion']:
+            reasons.setdefault(key, []).append('完了範囲の確認（関連PRはマージ済み。Closeは人が判断）')
+        for key, _, when in a['stale']:
+            reasons.setdefault(key, []).append(
+                f'{STALE_DAYS}日以上動いていない（最終更新 {"不明" if when == "不明" else day(when)}）')
+        lines += [f'{item_text(key, titles)}: {"、".join(r)}' for key, r in reasons.items()]
+        lines += [f'警告: {w}' for w in a['warnings']]
+    for r in ci_problems(result['ci']):
+        line = f'警告: 既定ブランチの {safe_text(r["name"])} が{word(CONCLUSION_LABELS, r["conclusion"])}（{str(r["head_sha"])[:7]}）'
+        if r.get('event') == DYNAMIC_EVENT:
+            line += '。GitHub が自動で動かした実行（依存関係の自動更新など）'
+        lines.append(line)
+    return lines
+
+
+def default_settings(result):
+    s = result['settings']
+    return bool(s) and s['checks_source'] == 'default' and s['review_source'] == 'default'
+
+
+def names(repos):
+    return '、'.join(repos)
+
+
+def notices(results):
+    """Notes made by fixed rules from what was read (no model): things that change how to read the report."""
+    lines = []
+    checked = [r for r in results if r['analysis']]
+    stopped = [r['repo'] for r in results if r['stop']]
+    if stopped:
+        lines.append(f'点検が止まったリポジトリがある: {names(stopped)}。各節の「停止」を確認する')
+    private = [r['repo'] for r in results if r['skipped'] == 'private']
+    if private:
+        lines.append(f'非公開のため読んでいない: {names(private)}。公開に切り替えると次回から点検する')
+    first = [r['repo'] for r in checked if r['analysis']['first']]
+    if first:
+        lines.append(f'前回の記録がないため、前回からの変化は次回から出る: '
+                     + ('点検した全リポジトリ' if len(first) == len(checked) else names(first)))
+    simple_default = [r['repo'] for r in results if default_settings(r) and r['format'] == 'simple']
+    if simple_default:
+        lines.append(f'.github/pr-gate-review がない: {names(simple_default)}。必須チェックと正式レビューは'
+                     '簡易版では使わないので、結果に影響しない')
+    full_default = [r['repo'] for r in results if default_settings(r) and r['format'] == 'full']
+    if full_default:
+        lines.append(f'.github/pr-gate-review がない完全版: {names(full_default)}。作業案内は既定値の必須チェック'
+                     'と正式レビューで読んでいる。実際の CI の名前と違うと、PR の判定がずれることがある')
+    no_runs = [r['repo'] for r in checked if r['ci'] == [] and not r['ci_error']]
+    if no_runs:
+        lines.append(f'既定ブランチに CI の実行記録がない: {names(no_runs)}。CI がないか、最近動いていない')
+    for r in results:
+        dynamic = [run for run in ci_problems(r['ci']) if run.get('event') == DYNAMIC_EVENT]
+        if dynamic:
+            lines.append(f'{r["repo"]} の CI の失敗 {len(dynamic)}件は、GitHub が自動で動かした実行（依存関係の自動更新など）'
+                         'で、push で動く通常の CI とは別')
+    for r in checked:
+        stale = r['analysis']['stale']
+        dates = sorted(day(when) for _, _, when in stale if when != '不明')
+        if len(stale) >= 3:
+            lines.append(f'{r["repo"]} は、{STALE_DAYS}日以上動いていない OPEN が{len(stale)}件ある'
+                         + (f'（いちばん古い最終更新 {dates[0]}）' if dates else '') + '。続けるか閉じるかをまとめて決めるとよい')
+    return lines or ['なし']
+
+
+def summary_lines(results):
+    """Every repository's things to look at, gathered at the top of the report."""
+    lines = []
+    for r in results:
+        found = ([f'停止: {r["stop"]}'] if r['stop'] else []) + attention_lines(r)
+        if found:
+            # A nested list, not a heading: "## <repo>" is the repository's own section below.
+            lines += [f'- {r["repo"]}（{len(found)}件）'] + [f'  - {x}' for x in found]
+    return (lines or ['- なし']) + ['']
+
+
 def state_label(result):
     if result['skipped'] == 'private':
         return '対象外（非公開）'
@@ -292,47 +419,44 @@ def render_repository(result):
         lines += [f'- 停止: {result["stop"]}']
     settings = result['settings']
     if settings:
-        lines.append(f'- 既定ブランチ: {safe_text(settings["default_branch"])} / 必須check（{settings["checks_source"]}）: '
-                     f'{safe_text(settings["required_checks"])} / 正式レビュー（{settings["review_source"]}）: '
-                     f'{safe_text(settings["review"])}')
+        # Unused only when the simple format was decided; a stopped check does not know the format yet.
+        lines.append(f'- {settings_text(settings, result["format"] != "simple")}')
     if not a:
         return lines + ['']
     limits = Limits(**result['limits'])
-    lines += [f'- 形式: {"完全版（作業案内あり）" if result["format"] == "full" else "簡易版"}（{result["format_source"]}）',
-              f'- 取得: {a["status"]} / {a["items"]}件 / API呼出 {a["calls"]}回'
+    source = FORMAT_SOURCE_LABELS.get(result['format_source'], result['format_source'])
+    titles = a.get('titles', {})
+    lines += [f'- 形式: {"完全版（作業案内あり）" if result["format"] == "full" else "簡易版"}（{source}）',
+              f'- 取得: {word(COVERAGE_LABELS, a["status"])} / {a["items"]}件 / API呼出 {a["calls"]}回'
               f'（上限 {limits.calls}回）＋形式の判定とCIで{a.get("after_calls", 0)}回（別枠） / 全体 {a["seconds"]:.0f}秒'
               f'（取得の上限 {limits.seconds}秒）',
-              f'- 前回のrun: {result["previous"] or "なし（初回）"} / 今回のrun: {result["run"]}', '',
+              f'- 前回の記録: {result["previous"] or "なし（初回）"} / 今回の記録: {result["run"]}', '',
               '### 前回からの変化', '']
     if a['first']:
-        lines.append('- 前回のrunがないため、差分は次回から')
+        lines.append('- 前回の記録がないため、変化は次回から')
     elif a['moved']:
-        lines += [f'- {key}: {status}' for key, status in a['moved']]
+        lines += [f'- {item_text(key, titles)}: {word(CHANGE_LABELS, status)}' for key, status in a['moved']]
     else:
-        lines.append('- 変化なし（取得範囲内）')
+        lines.append('- 変化なし（取得した範囲で）')
     lines += ['', '### 要対応の候補', '']
-    lines += [f'- 親の検収待ち: {key}（人の最終検収）' for key, _ in a['acceptance']]
-    lines += [f'- 完了範囲確認: {key}（関連PRはMerge済み。Closeは人が判断）' for key, _ in a['completion']]
-    lines += [f'- {STALE_DAYS}日以上動いていないOPEN: {key}（最終更新 {safe_text(when)}）' for key, _, when in a['stale']]
-    lines += [f'- 警告: {w}' for w in a['warnings']]
-    lines += [f'- 警告: 既定ブランチの {safe_text(r["name"])} が {safe_text(r["conclusion"])}（{str(r["head_sha"])[:7]}）'
-              for r in ci_problems(result['ci'])]
-    if not attention(result):
-        lines.append('- なし')
+    lines += [f'- {x}' for x in attention_lines(result)] or ['- なし']
     if result['format'] == 'full':
-        lines += ['', '### 案内の対象（OPEN）', '']
-        lines += [f'- {key}: {kind}' for key, kind in a['open']] or ['- なし']
+        lines += ['', '### 案内の対象（未完了のIssue/PR）', '']
+        lines += [f'- {item_text(key, titles)}: {KINDS[kind][0] if kind in KINDS else safe_text(kind)}'
+                  for key, kind in a['open']] or ['- なし']
     lines += ['', '### 既定ブランチのCI', '']
     if result['ci_error']:
         lines.append(f'- 取得できない: {result["ci_error"]}')
     elif not result['ci']:
-        lines.append('- workflow run がない')
+        lines.append('- 実行記録がない')
     else:
         for r in result['ci']:
-            line = f'- {safe_text(r["name"])}: {r["status"]}/{safe_text(r["conclusion"] or "-")} ({str(r["head_sha"])[:7]})'
+            state = (word(CONCLUSION_LABELS, r['conclusion']) if r['status'] == 'completed'
+                     else word(RUN_STATUS_LABELS, r['status']))
+            line = f'- {safe_text(r["name"])}: {state}（{str(r["head_sha"])[:7]}）'
             done = r.get('last_completed')
             if done and done['created_at'] != r['created_at']:
-                line += f' / 最後に終わったrun: {safe_text(done["conclusion"])} ({str(done["head_sha"])[:7]})'
+                line += f' / 最後に終わった実行: {word(CONCLUSION_LABELS, done["conclusion"])}（{str(done["head_sha"])[:7]}）'
             lines.append(line)
     return lines + ['']
 
@@ -348,7 +472,8 @@ def runs_size(runs):
 def render(stamp, results, size, stop=None, update_error=None, commit=None, updated_from=None):
     lines = [f'# 定期点検 {stamp}（UTC）', '',
              '設定ファイル（config/github-work-guide.json）の全リポジトリを読み、報告するだけ（#220）。'
-             'GitHubへの書き込み・削除・モデルの使用はしていない。', '']
+             'GitHubへの書き込み・削除・モデルの使用はしていない。'
+             '「要対応のまとめ」と「気づいた点」も、読んだデータから決まった規則で作っている。', '']
     if commit:
         lines += [f'点検したコード: {commit}' + (f'（{updated_from} から更新した）' if updated_from else ''), '']
     if stop:
@@ -360,13 +485,14 @@ def render(stamp, results, size, stop=None, update_error=None, commit=None, upda
         for r in results:
             fmt = {'full': '完全版', 'simple': '簡易版'}.get(r['format'], '-')
             problems = ci_problems(r['ci'])
-            ci = ('取得できない' if r['ci_error'] else '-' if r['ci'] is None else 'runなし' if not r['ci'] else
+            ci = ('取得できない' if r['ci_error'] else '-' if r['ci'] is None else '実行記録なし' if not r['ci'] else
                   f'失敗 {len(problems)}件' if problems else '問題なし')
             lines.append(f'| {r["repo"]} | {state_label(r)} | {fmt} | {attention(r) if r["analysis"] else "-"} | {ci} |')
-        lines.append('')
+        lines += ['', '## 要対応のまとめ', ''] + summary_lines(results)
+        lines += ['## 気づいた点', ''] + [f'- {x}' for x in notices(results)] + ['']
         for r in results:
             lines += render_repository(r)
-    lines += ['## runs/ の容量', '', f'- {size / 1_000_000:.1f} MB（自動で削除しない）', '']
+    lines += ['## 記録（runs/）の容量', '', f'- {size / 1_000_000:.1f} MB（自動で削除しない）', '']
     return '\n'.join(lines) + '\n'
 
 

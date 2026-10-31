@@ -164,12 +164,12 @@ class CheckTests(CheckHelper, unittest.TestCase):
             self.assertIn(f'| {PRIVATE} | 対象外（非公開） | - |', text)
             self.assertIn('非公開のため対象外', text)
             full, simple = text.split(f'## {OTHER}')[0], text.split(f'## {OTHER}')[1].split(f'## {PRIVATE}')[0]
-            self.assertIn('### 案内の対象（OPEN）', full)
-            self.assertNotIn('### 案内の対象（OPEN）', simple)
-            self.assertIn('簡易版（repository）', simple)
+            self.assertIn('### 案内の対象（未完了のIssue/PR）', full)
+            self.assertNotIn('### 案内の対象（未完了のIssue/PR）', simple)
+            self.assertIn('簡易版（リポジトリの構成から判定）', simple)
             # Only the latest run of each workflow, on the repository's own default branch.
-            self.assertIn('- "CI": completed/"failure"', simple)
-            self.assertIn('警告: 既定ブランチの "CI" が "failure"', simple)
+            self.assertIn('- "CI": 失敗（', simple)
+            self.assertIn('警告: 既定ブランチの "CI" が失敗', simple)
             self.assertIn('既定ブランチ: "trunk"', simple)
             self.assertIn('GitHubへの書き込み・削除・モデルの使用はしていない', text)
             full_run = next((runs / 'second-works--hermes-self-improvement').iterdir())
@@ -188,16 +188,16 @@ class CheckTests(CheckHelper, unittest.TestCase):
                 clock.now.side_effect = lambda tz=None: datetime(2026, 10, 30, 9, 0, tzinfo=tz)
                 code, text, _ = self.run_check(tmp, rows, {OTHER: SimpleFake})
             self.assertEqual(code, 0)
-            self.assertIn('前回のrun: periodic-20261023-0900', text)
-            self.assertIn('- 変化なし（取得範囲内）', text)
+            self.assertIn('前回の記録: periodic-20261023-0900', text)
+            self.assertIn('- 変化なし（取得した範囲で）', text)
 
     def test_config_format_overrides_detection(self):
         rows = [{'name': 'other-repo', 'format': 'full'}, {'name': 'hermes-self-improvement', 'format': 'simple'}]
         with tempfile.TemporaryDirectory() as tmp:
             code, text, _ = self.run_check(tmp, rows, {OTHER: SimpleFake, REPO: Fake})
             self.assertEqual(code, 0)
-            self.assertIn('完全版（作業案内あり）（config）', text.split(f'## {OTHER}')[1].split('## ')[0])
-            self.assertIn('簡易版（config）', text.split(f'## {REPO}')[1])
+            self.assertIn('完全版（作業案内あり）（設定ファイルで指定）', text.split(f'## {OTHER}')[1].split('## ')[0])
+            self.assertIn('簡易版（設定ファイルで指定）', text.split(f'## {REPO}')[1])
 
     def test_limits_are_per_repository(self):
         rows = [{'name': 'hermes-self-improvement', 'limits': {'calls': 2}}, {'name': 'other-repo'}]
@@ -282,9 +282,9 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Runs})
             self.assertNotIn('Fork CI', text)
-            self.assertIn('最後に終わったrun: "failure"', text)
-            self.assertIn('警告: 既定ブランチの "Template CI" が "failure"', text)
-            self.assertIn('警告: 既定ブランチの "CI" が "failure"', text)
+            self.assertIn('最後に終わった実行: 失敗', text)
+            self.assertIn('警告: 既定ブランチの "Template CI" が失敗', text)
+            self.assertIn('警告: 既定ブランチの "CI" が失敗', text)
             self.assertIn('失敗 2件', text)
 
     def test_calls_include_format_and_ci(self):
@@ -378,7 +378,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             # 2 calls let the collection finish only just; the format check and CI still run.
             code, text, _ = self.run_check(tmp, [{'name': 'other-repo', 'limits': {'calls': 15}}], {OTHER: SimpleFake})
             self.assertIn(f'| {OTHER} | 完了 | 簡易版 |', text)
-            self.assertIn('"CI": completed', text)
+            self.assertIn('- "CI": 失敗（', text)
         class NoRuns(SimpleFake):
             def branch_runs(self, branch, timeout):
                 raise pc.Invalid('403')
@@ -551,7 +551,7 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
             code, text, _ = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Bad})
             self.assertNotIn('injected', text)
             # Only the odd run is skipped; the other run of the same workflow is still read.
-            self.assertIn('- "CI": completed/"success" (bbbbbbb)', text)
+            self.assertIn('- "CI": 成功（bbbbbbb）', text)
 
     def test_cancelled_run_does_not_hide_an_earlier_failure_and_no_runs(self):
         class Runs(SimpleFake):
@@ -566,10 +566,10 @@ class ReviewFollowUpTests(CheckHelper, unittest.TestCase):
                 self.workflow_runs = []
         with tempfile.TemporaryDirectory() as tmp:
             text = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: Runs})[1]
-            self.assertIn('警告: 既定ブランチの "CI" が "failure"', text)
+            self.assertIn('警告: 既定ブランチの "CI" が失敗', text)
         with tempfile.TemporaryDirectory() as tmp:
             text = self.run_check(tmp, [{'name': 'other-repo'}], {OTHER: NoRuns})[1]
-            self.assertIn('| runなし |', text)
+            self.assertIn('| 実行記録なし |', text)
 
     def test_presence_needs_a_file_and_update_names_a_non_git_checkout(self):
         from github_work_guide.collector import GhReadOnly
@@ -702,3 +702,106 @@ class TransportTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+def result_row(repo, **changes):
+    """One repository's result as check_repository returns it (render() is pure, so no GitHub is needed)."""
+    row = {'repo': repo, 'stop': None, 'skipped': None, 'format': 'simple', 'format_source': 'repository',
+           'analysis': None, 'ci': [], 'ci_error': None, 'previous': None, 'run': 'periodic-20261030-0900',
+           'limits': {}, 'settings': {'default_branch': 'main', 'required_checks': ['verification', 'Security Preflight'],
+                                      'checks_source': 'default', 'review': ['codex'], 'review_source': 'default'}}
+    row.update(changes)
+    return row
+
+
+def analysis_row(**changes):
+    row = {'status': 'COMPLETE', 'items': 4, 'calls': 10, 'seconds': 1.0, 'moved': [], 'first': False,
+           'acceptance': [], 'completion': [], 'open': [], 'stale': [], 'warnings': [], 'titles': {}}
+    row.update(changes)
+    return row
+
+
+def ci_run(name, conclusion, event='push', status='completed'):
+    run = {'name': name, 'status': status, 'conclusion': conclusion, 'head_sha': 'f' * 40, 'event': event,
+           'created_at': '2026-10-29T00:00:00Z'}
+    return dict(run, last_completed=dict(run) if status == 'completed' else None)
+
+
+class ReportWordingTests(unittest.TestCase):
+    """#225: Japanese wording, defaults shown as defaults, and the summary and notes at the top."""
+
+    def test_labels(self):
+        self.assertEqual((pc.item_label('issue:163'), pc.item_label('pr:17')), ('Issue #163', 'PR #17'))
+        self.assertEqual(pc.item_label('x:<1>'), '"x:&lt;1&gt;"')  # anything unexpected stays escaped
+        self.assertEqual(pc.word(pc.CONCLUSION_LABELS, 'failure'), '失敗')
+        self.assertEqual(pc.word(pc.CONCLUSION_LABELS, 'brand_new'), '"brand_new"')  # a new GitHub value as it is
+        self.assertEqual((pc.day('2026-08-18T15:24:38Z'), pc.day('<b>')), ('2026-08-18', '"&lt;b&gt;"'))
+
+    def test_settings_show_a_default_as_a_default(self):
+        from github_work_guide.core import settings_text
+        settings = result_row('r')['settings']
+        self.assertIn('リポジトリに設定なし（.github/pr-gate-review がない。簡易版では使わない）', settings_text(settings, False))
+        used = settings_text(settings, True)
+        self.assertIn('リポジトリに設定なし', used)
+        self.assertIn('既定値の必須チェック "verification"、"Security Preflight"、正式レビュー "codex" で読む', used)
+        own = dict(settings, checks_source='repository', required_checks=['CI'], review_source='repository',
+                   review=['claude-code'])
+        self.assertEqual(settings_text(own), '既定ブランチ: "main" / 必須チェック: "CI"（.github/pr-gate-review）'
+                                             ' / 正式レビュー: "claude-code"（.github/pr-gate-review）')
+        self.assertNotIn('（default）', used)
+
+    def test_summary_and_notes_at_the_top(self):
+        stale = [('issue:2', 't', '2026-09-01T00:00:00Z'), ('issue:3', 't', '2026-08-18T15:24:38Z'),
+                 ('issue:4', 't', '2026-09-02T00:00:00Z')]
+        results = [
+            result_row('second-works/a', analysis=analysis_row(
+                completion=[('issue:2', 'completion')], stale=stale, moved=[('pr:5', 'ADDED')],
+                titles={'issue:2': 'Close <me>', 'pr:5': 'New'})),
+            result_row('second-works/b', ci=[ci_run('CI', 'success'), ci_run('npm in /. - Update #1', 'failure', 'dynamic')],
+                       analysis=analysis_row(first=True)),
+            result_row('second-works/c', format='full', analysis=analysis_row(open=[('issue:9', 'scope')])),
+            result_row('second-works/d', skipped='private', settings=None),
+        ]
+        text = pc.render('20261030-0900', results, 0)
+        top = text.split('## second-works/a')[0]
+        self.assertLess(top.index('## 一覧'), top.index('## 要対応のまとめ'))
+        self.assertLess(top.index('## 要対応のまとめ'), top.index('## 気づいた点'))
+        # One Issue that is both a candidate and stale is one line with both reasons, with its title.
+        self.assertIn('- second-works/a（3件）\n  - Issue #2 "Close &lt;me&gt;": 完了範囲の確認（関連PRはマージ済み。'
+                      'Closeは人が判断）、14日以上動いていない（最終更新 2026-09-01）', top)
+        self.assertIn('- second-works/b（1件）\n  - 警告: 既定ブランチの "npm in /. - Update #1" が失敗（fffffff）。'
+                      'GitHub が自動で動かした実行', top)
+        self.assertNotIn('second-works/c（', top)
+        for note in ('非公開のため読んでいない: second-works/d',
+                     '前回からの変化は次回から出る: second-works/b',
+                     '.github/pr-gate-review がない: second-works/a、second-works/b。',
+                     '.github/pr-gate-review がない完全版: second-works/c。',
+                     'CI の実行記録がない: second-works/a、second-works/c。',
+                     'second-works/b の CI の失敗 1件は、GitHub が自動で動かした実行',
+                     'second-works/a は、14日以上動いていない OPEN が3件ある（いちばん古い最終更新 2026-08-18）'):
+            self.assertIn(note, top)
+        self.assertIn('- PR #5 "New": 新規', text)
+        self.assertIn('- Issue #9: 対象範囲確認', text)
+        self.assertIn('- "npm in /. - Update #1": 失敗（fffffff）', text)
+        self.assertIn('取得: 完了 / 4件', text)
+        self.assertIn('| second-works/a | 完了 | 簡易版 | 3 | 実行記録なし |', text)
+        # The count in the table and the lines of the summary agree.
+        self.assertEqual(pc.attention(results[0]), len(pc.attention_lines(results[0])))
+
+    def test_nothing_to_look_at(self):
+        text = pc.render('20261030-0900', [result_row('second-works/a', ci=[ci_run('CI', 'success')],
+                                                      settings=dict(result_row('x')['settings'], checks_source='repository',
+                                                                    review_source='repository'),
+                                                      analysis=analysis_row())], 0)
+        self.assertIn('## 要対応のまとめ\n\n- なし\n', text)
+        self.assertIn('## 気づいた点\n\n- なし\n', text)
+        self.assertNotIn('completed', text)
+        self.assertNotIn('COMPLETE', text)
+
+    def test_stopped_repository_does_not_claim_the_simple_format(self):
+        stopped = result_row('second-works/a', format=None, stop='取得が不完全')
+        text = pc.render('20261030-0900', [stopped], 0)
+        self.assertNotIn('簡易版では使わない', text)
+        self.assertNotIn('.github/pr-gate-review がない: ', text)
+        self.assertIn('- second-works/a（1件）\n  - 停止: 取得が不完全', text)
+        self.assertIn('点検が止まったリポジトリがある: second-works/a', text)

@@ -842,6 +842,26 @@ def safe_text(value):
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('`', '&#96;').replace('[', '&#91;').replace(']', '&#93;')
 
 
+def safe_list(values):
+    """Each value JSON-escaped on its own, joined with 、 (no JSON brackets in the report)."""
+    return '、'.join(safe_text(v) for v in values) or 'なし'
+
+
+def settings_text(settings, used=True):
+    """One line for the repository settings. A default is shown as a default, never as the repository's own
+    setting (#225). used: whether the checks and review are read at all (the simple format does not)."""
+    gate = '.github/pr-gate-review'
+    line = f'既定ブランチ: {safe_text(settings["default_branch"])}'
+    if settings['checks_source'] == 'default' and settings['review_source'] == 'default':
+        if used:
+            return (line + f' / 必須チェック・正式レビュー: リポジトリに設定なし（{gate} がない。既定値の必須チェック '
+                    f'{safe_list(settings["required_checks"])}、正式レビュー {safe_list(settings["review"])} で読む）')
+        return line + f' / 必須チェック・正式レビュー: リポジトリに設定なし（{gate} がない。簡易版では使わない）'
+    sources = {'repository': gate, 'config': '設定ファイル', 'default': f'{gate} に書かれていないため既定値'}
+    return (line + f' / 必須チェック: {safe_list(settings["required_checks"])}（{sources[settings["checks_source"]]}）'
+            f' / 正式レビュー: {safe_list(settings["review"])}（{sources[settings["review_source"]]}）')
+
+
 def candidate_lines(key, c, related=None, evidence_ids=None):
     """Markdown for one candidate. `related` / `evidence_ids` narrow the output for an excerpt (#51)."""
     safe = safe_text
@@ -895,7 +915,7 @@ def candidate_lines(key, c, related=None, evidence_ids=None):
     return lines
 
 
-def markdown(snapshot, changes, plan=None, result=None, note=None):
+def markdown(snapshot, changes, plan=None, result=None, note=None, checks_used=True):
     # Render untrusted source only inside JSON-escaped inline text; no active raw HTML/links.
     safe = safe_text
     settings = snapshot['settings']
@@ -906,8 +926,7 @@ def markdown(snapshot, changes, plan=None, result=None, note=None):
              '閉じたPRのcheck・status・レビュー・レビューコメント・threadの変化は、差分・再確認で比較しない（「変化なし」を意味しない）。',
              '新規モデル通信0、GitHub書込0。意味精度・人の確認時間・有用性検収は未確認。']
     if settings:
-        lines.append(f'既定ブランチ: {safe(settings["default_branch"])} / 必須check（{settings["checks_source"]}）: '
-                     f'{safe(settings["required_checks"])} / 正式レビュー（{settings["review_source"]}）: {safe(settings["review"])}')
+        lines.append(settings_text(settings, checks_used))
     if snapshot['coverage']['status'] == 'SKIPPED':
         lines += ['', f'{SKIP_REASONS[snapshot["coverage"]["skipped"]]}。Issue/PRは読んでいない。']
         gone = sum(x['status'] == 'UNAVAILABLE' for x in changes)
