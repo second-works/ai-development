@@ -96,17 +96,16 @@ python3 -I -B scripts/periodic_check.py --update   # 点検専用の checkout �
 
 終了コード: 全リポジトリを点検できた（非公開による対象外を含む）なら0、どれかが停止したら1、既存の報告があるなど使い方の誤りは2、点検自体が例外で終わったら3。`--notify` で macOS の通知を出す。runs/ は自動で削除しない。
 
-### 自動実行への移行（未実施）
+### 自動実行（2026-10-31 に切り替え済み）
 
-hermes-self-improvement 側の週1回の点検（利用者の Mac の launchd と、hermes の点検専用 worktree。設定は hermes-self-improvement の `.claude/skills/periodic-check/SKILL.md`）は、移行が終わるまでそのまま動かす。切り替えと旧コードの削除は、別の作業として人が判断する。
+2026-10-31、利用者の承認を得て、週1回の点検を hermes-self-improvement 版から ai-development 版に切り替えた（#227）。
 
-切り替えるときの手順の例（利用者の Mac で、人が行う）:
+- 点検専用の worktree: `/Users/work/Developer/ai-development-periodic-check`（`origin/main` の detached。`runs/.periodic-check-checkout` を置いてある）。
+- launchd: `~/Library/LaunchAgents/com.second-works.ai-development-periodic-check.plist`。毎週月曜9時（Mac の時刻）に `python3 -I -B scripts/periodic_check.py --update --notify` を動かす。ログは `~/Library/Logs/ai-development-periodic-check.log`。
+- hermes 側の launchd は止め、plist を `com.second-works.hsi-periodic-check.plist.disabled` に名前を変えて残した。hermes 側の点検用 worktree（`/Users/work/Developer/hsi-periodic-check`）と旧コードは消していない。削除は別の作業として人が判断する。
+- 戻すとき: `launchctl bootout gui/$(id -u)/com.second-works.ai-development-periodic-check` のあと、hermes 側の plist の名前を `.plist` に戻し、`launchctl bootstrap gui/$(id -u) <その plist>` を実行する。
 
-1. ai-development の点検専用 worktree を作る（例: `git -C <ai-development の checkout> worktree add --detach <点検専用 worktree> origin/main`）。
-2. その worktree に `runs/` を作り、空のファイル `runs/.periodic-check-checkout` を置く（`--update` はこの目印がある checkout だけを動かす）。
-3. 手で1回 `python3 -I -B scripts/periodic_check.py --update` を実行し、報告を確かめる。
-4. launchd の plist を、hermes 側の例（`.claude/skills/periodic-check/SKILL.md`）と同じ形で、ProgramArguments を新しい worktree の `scripts/periodic_check.py --update --notify` に、WorkingDirectory を新しい worktree にして置く。
-5. 新しい点検が動くのを確かめてから、hermes 側の plist を外す。
+`--notify` を付けると、点検の終わりに macOS の通知（バナー）を出し、あわせて「報告書を開く」ボタンのある画面を出す。ボタンを押すと報告書（`runs/periodic-summaries/<日時>.md`）が既定のアプリで開く。osascript の通知はクリックしても報告書を開けないため、画面を別に出す。画面は点検とは別のプロセスで出し、点検はボタンを待たずに終わる（Mac の前に人がいなくても、点検が止まったり `--update` の子プロセスの時間切れになったりしない）。押されないまま24時間たつと画面は自動で閉じる。報告書のパスは引数として渡し、スクリプトの本文には入れない。
 
 ## 非公開のリポジトリ
 

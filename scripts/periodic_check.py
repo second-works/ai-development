@@ -504,11 +504,33 @@ def render(stamp, results, size, stop=None, update_error=None, commit=None, upda
     return '\n'.join(lines) + '\n'
 
 
-def notify(text):
-    if shutil.which('osascript'):
-        # The text goes in as an argument, never into the script source.
-        run(['osascript', '-e', 'on run argv', '-e', 'display notification (item 1 of argv) with title "GitHub 定期点検"',
-             '-e', 'end run', '--', text], timeout=30)
+# Seconds the "open the report" window waits for a click before it closes itself.
+DIALOG_SECONDS = 24 * 3600
+OPEN_BUTTON = '報告書を開く'
+
+
+def notify(text, report=None):
+    if not shutil.which('osascript'):
+        return
+    # The text and the path go in as arguments, never into the script source.
+    run(['osascript', '-e', 'on run argv', '-e', 'display notification (item 1 of argv) with title "GitHub 定期点検"',
+         '-e', 'end run', '--', text], timeout=30)
+    if report is None:
+        return
+    # A window with a button that opens the report (#227): a click on a notification from osascript cannot.
+    # It is started on its own and not waited for, so a check never hangs (or hits the --update child's time
+    # limit) while nobody is at the Mac; it closes itself after DIALOG_SECONDS.
+    script = ['on run argv',
+              f'set answer to display dialog (item 1 of argv) with title "GitHub 定期点検" buttons {{"閉じる", "{OPEN_BUTTON}"}} '
+              f'default button "{OPEN_BUTTON}" giving up after {DIALOG_SECONDS}',
+              f'if button returned of answer is "{OPEN_BUTTON}" then do shell script "open " & quoted form of (item 2 of argv)',
+              'end run']
+    args = ['osascript'] + [x for line in script for x in ('-e', line)] + ['--', text, str(report)]
+    try:
+        subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    except OSError:
+        pass  # the banner above was shown; the report is still written and its path printed
 
 
 def main(argv=None):
@@ -598,7 +620,7 @@ def main(argv=None):
         print(f'summary={summary_path}')
         # A failed child may have stopped before its own notice, so this one is always sent.
         if args.notify:
-            notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}')
+            notify(f'停止: 更新後の版が正しく終わらなかった。{summary_path.name}', summary_path)
         return 1
     results = []
     if not stop:
@@ -623,7 +645,7 @@ def main(argv=None):
         count = sum(attention(r) for r in results)
         notify(f'停止: {stop}' if stop else
                ('checkout を更新できない。' if update_error else '') +
-               f'{len(results)}件を点検。停止 {len(stopped)}件、要対応の候補 {count}件。{summary_path.name}')
+               f'{len(results)}件を点検。停止 {len(stopped)}件、要対応の候補 {count}件。{summary_path.name}', summary_path)
     return 1 if stop or stopped or update_error else 0
 
 
